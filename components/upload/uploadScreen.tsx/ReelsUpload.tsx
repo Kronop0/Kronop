@@ -102,18 +102,26 @@ export default function ReelsUpload({
       return;
     }
 
-    // UI Component - Delegate to Bridge Controller
-    if (onUpload) {
-      // Bridge controls the upload
-      await onUpload(selectedFile.uri, {
+    // Direct connection to reels.js folder
+    try {
+      const reelsHandler = require('../reels.js');
+      const result = await reelsHandler.receiveFile(selectedFile.uri, {
         ...reelData,
         size: selectedFile.size,
         type: selectedFile.mimeType || 'video/mp4',
         name: selectedFile.name
       });
-    } else {
-      // Fallback for standalone usage
-      Alert.alert('Upload Disabled', 'Reel upload is currently disabled. The app will work normally once a new storage service is configured.');
+      
+      if (result.success) {
+        Alert.alert('Success', result.message);
+        onClose();
+        router.replace('/');
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Upload failed for Reels');
     }
   };
 

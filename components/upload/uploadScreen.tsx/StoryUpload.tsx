@@ -155,35 +155,23 @@ export default function StoryUpload({
       return;
     }
 
-    // UI Component - Delegate to Bridge Controller
-    if (onUpload) {
-      // Bridge controls the upload
-      await onUpload(selectedFile, storyData);
-    } else {
-      // Fallback for standalone usage - Bunny removed, set url to null
-      setInternalUploading(true);
-      try {
-        const storyMetadata = {
-          ...storyData,
-          userId: 'guest_user',
-          uploadId: `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          url: null, // Fallback
-          appName: 'Kronop',
-          timestamp: Date.now()
-        };
-        console.log('Story metadata prepared:', storyMetadata);
-        Alert.alert('Success', 'Story metadata prepared successfully!');
+    // Direct connection to story.js folder
+    try {
+      const storyHandler = require('../story.js');
+      const result = await storyHandler.receiveFile(selectedFile, storyData);
+      
+      if (result.success) {
+        Alert.alert('Success', result.message);
         setSelectedFile(null);
         setStoryData({ title: '', type: 'photo', duration: 15, isPrivate: false });
-        setInternalUploadProgress(0);
-        setInternalUploading(false);
         onClose();
         router.replace('/');
-      } catch (error: any) {
-        console.error('Story preparation failed:', error);
-        Alert.alert('Preparation Failed', error.message || 'Failed to prepare story');
-        setInternalUploading(false);
+      } else {
+        Alert.alert('Error', result.message);
       }
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Upload failed for Story');
     }
   };
 

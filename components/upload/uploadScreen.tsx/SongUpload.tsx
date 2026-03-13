@@ -106,17 +106,25 @@ export default function SongUpload({
       return;
     }
 
-    // UI Component - Delegate to Bridge Controller
-    if (onUpload) {
-      // Bridge controls the upload
-      await onUpload(selectedFiles, {
+    // Direct connection to song.js folder
+    try {
+      const songHandler = require('../song.js');
+      const result = await songHandler.receiveFile(selectedFiles, {
         ...songData,
         totalFiles: selectedFiles.length,
         fileNames: selectedFiles.map(f => f.name)
       });
-    } else {
-      // Fallback for standalone usage
-      Alert.alert('Upload Disabled', 'Song upload is currently disabled. The app will work normally once a new storage service is configured.');
+      
+      if (result.success) {
+        Alert.alert('Success', result.message);
+        onClose();
+        router.replace('/');
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Upload failed for Song');
     }
   };
 

@@ -397,27 +397,26 @@ export default function VideoUpload({
       return;
     }
 
-    // Send video to AI processing - NO direct cloud upload
-    if (onUpload) {
-      try {
-        console.log('🤖 Sending video to AI processing...');
-
-        // Call Video AI processing with metadata
-        await onUpload(selectedFile.uri, {
-          ...videoData,
-          size: selectedFile.size,
-          type: selectedFile.mimeType || 'video/mp4',
-          name: selectedFile.name
-        });
-
-        // AI processing will handle cloud upload internally
-        console.log('✅ Video sent to AI processing');
-        Alert.alert('Processing Started', 'Your video is being processed with AI and will be uploaded automatically.');
-
-      } catch (error) {
-        console.error('❌ AI processing failed:', error);
-        Alert.alert('Processing Failed', 'Failed to start AI processing. Please try again.');
+    // Direct connection to video.js folder
+    try {
+      const videoHandler = require('../video.js');
+      const result = await videoHandler.receiveFile(selectedFile.uri, {
+        ...videoData,
+        size: selectedFile.size,
+        type: selectedFile.mimeType || 'video/mp4',
+        name: selectedFile.name
+      });
+      
+      if (result.success) {
+        Alert.alert('Success', result.message);
+        onClose();
+        router.replace('/');
+      } else {
+        Alert.alert('Error', result.message);
       }
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Upload failed for Video');
     }
   };
 

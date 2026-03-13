@@ -81,22 +81,25 @@ export default function LiveUpload({
       return;
     }
 
-    // UI Component - Delegate to Bridge Controller
-    if (onUpload) {
-      // Bridge controls the live stream
-      await onUpload(liveData);
-    } else {
-      // Fallback for standalone usage
-      try {
+    // Direct connection to live.js folder
+    try {
+      const liveHandler = require('../live.js');
+      const result = await liveHandler.receiveFile(null, {
+        ...liveData,
+        streamType: 'live',
+        startTime: Date.now()
+      });
+      
+      if (result.success) {
+        Alert.alert('Success', result.message);
         setIsLive(true);
-        const liveStreamConfig = await initializeLiveStreamWithSocket(liveData);
-        Alert.alert('Live Started!', `Your live stream "${liveData.title}" has started successfully!\nRTMP: ${liveStreamConfig.rtmpUrl}`);
-        console.log('Live Stream Started:', liveStreamConfig);
-      } catch (error: any) {
-        console.error('Failed to start live stream:', error);
-        Alert.alert('Error', error.message || 'Failed to start live stream');
-        setIsLive(false);
+        setIsSetup(false);
+      } else {
+        Alert.alert('Error', result.message);
       }
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Upload failed for Live');
     }
   };
 

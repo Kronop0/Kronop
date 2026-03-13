@@ -177,29 +177,26 @@ export default function PhotoUpload({
       return;
     }
 
-    // UI Component - Delegate to Bridge Controller
-    if (onUpload) {
-      // Bridge controls the upload - Send first file URI and metadata
-      await onUpload(selectedFiles[0]?.uri || '', {
+    // Direct connection to photo.js folder
+    try {
+      const photoHandler = require('../photo.js');
+      const result = await photoHandler.receiveFile(selectedFiles[0]?.uri || '', {
         ...photoData,
         size: selectedFiles[0].size,
         type: selectedFiles[0].mimeType || 'image/jpeg',
         name: selectedFiles[0].name
       });
-    } else {
-      // Fallback for standalone usage
-      setInternalUploading(true);
-      try {
-        await uploadPhotosDirectly(selectedFiles, photoData, isShayari);
-        Alert.alert('Success', `${isShayari ? 'Shayari' : 'Photo'} uploaded successfully to Kronop!`);
+      
+      if (result.success) {
+        Alert.alert('Success', result.message);
         onClose();
         router.replace('/');
-      } catch (error: any) {
-        console.error('Photo upload failed:', error);
-        Alert.alert('Upload Failed', error.message || 'Failed to upload photos');
-      } finally {
-        setInternalUploading(false);
+      } else {
+        Alert.alert('Error', result.message);
       }
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Upload failed for Photo');
     }
   };
 
