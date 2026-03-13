@@ -33,15 +33,15 @@ const API_KEYS = {
 
 // ==================== DATABASE CONFIGURATION ====================
 const DATABASE_CONFIG = {
-  MONGODB_URI: process.env.MONGODB_URI || process.env.EXPO_PUBLIC_MONGODB_URI,
+  MONGODB_URI: process.env.EXPO_PUBLIC_MONGODB_URI || process.env.MONGODB_URI,
   REDIS_TTL_SECONDS: parseInt(process.env.REDIS_TTL_SECONDS || '30', 10)
 };
 
 // ==================== SERVER CONFIGURATION ====================
 const SERVER_CONFIG = {
-  PORT: Number(process.env.PORT) || 8000,
-  NODE_ENV: process.env.NODE_ENV || 'development',
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-76zy.onrender.com'
+  PORT: Number(process.env.EXPO_PUBLIC_PORT) || 8000,
+  NODE_ENV: process.env.EXPO_PUBLIC_ENVIRONMENT || 'development',
+  API_BASE_URL: process.env.EXPO_PUBLIC_BASE_URL || process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-76zy.onrender.com'
 };
 
 // ==================== HELPER FUNCTIONS ====================

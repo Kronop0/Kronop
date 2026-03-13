@@ -9,7 +9,8 @@ async function clearAllContent() {
     console.log('🔗 Connecting to MongoDB...');
     
     // Connect to database - ONLY ENVIRONMENT VARIABLES
-    await mongoose.connect(process.env.MONGODB_URI || process.env.EXPO_PUBLIC_MONGODB_URI);
+    const MONGODB_URI = process.env.EXPO_PUBLIC_MONGODB_URI || process.env.MONGODB_URI;
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ Connected to MongoDB');
 
     // Clear all content

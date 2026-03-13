@@ -3,8 +3,8 @@ export const R2_CONFIG = {
   endpoint: 'https://kronop-videos.r2.cloudflarestorage.com',
   bucket: 'kronop-reels-videos',
   region: 'auto',
-  accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-  secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+  accessKeyId: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID || '',
+  secretAccessKey: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY || '',
   publicReadUrl: 'https://reels.kronop.app', // Custom domain for public access
 };
 

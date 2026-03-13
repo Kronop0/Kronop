@@ -44,7 +44,7 @@ const connectToDatabase = async () => {
     return mongoose.connection;
   }
 
-  const mongoUri = process.env.MONGODB_URI || process.env.EXPO_PUBLIC_MONGODB_URI;
+  const mongoUri = process.env.EXPO_PUBLIC_MONGODB_URI || process.env.MONGODB_URI;
   if (!mongoUri) {
     console.error('❌ MongoDB URI not found in environment variables');
     console.error('🔍 Available env vars:', Object.keys(process.env).filter(key => key.includes('MONGO')));

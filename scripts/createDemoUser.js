@@ -18,8 +18,7 @@ const demoUserData = {
 async function createDemoUser() {
   try {
     // Connect to MongoDB - ONLY ENVIRONMENT VARIABLES
-    const MONGODB_URI = process.env.MONGODB_URI || 
-                       process.env.EXPO_PUBLIC_MONGODB_URI;
+    const MONGODB_URI = process.env.EXPO_PUBLIC_MONGODB_URI || process.env.MONGODB_URI;
     
     console.log('🔗 Connecting to MongoDB...');
     console.log(`📍 URI: ${MONGODB_URI}`); // Removed hardcoded MongoDB URLs

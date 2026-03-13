@@ -37,6 +37,30 @@ const reelsHandler = {
           },
           isDemo: true // Always demo mode
         };
+      } else {
+        // If R2 is configured, attempt real upload
+        console.log('🚀 Sending to R2 server handler...');
+        const result = await r2UploadHandler.uploadReel(fileUri, metadata?.name || 'reel.mp4', metadata);
+        
+        if (result.success) {
+          console.log('✅ R2 upload successful:', result);
+          return {
+            success: true,
+            message: 'Reel uploaded successfully to Cloudflare R2',
+            fileId: result.fileId,
+            fileName: result.fileName,
+            publicUrl: result.publicUrl,
+            uploadTime: result.uploadTime,
+            metadata: {
+              title: metadata?.title || '',
+              category: metadata?.category || '',
+              tags: metadata?.tags || [],
+              description: metadata?.description || ''
+            }
+          };
+        } else {
+          throw new Error(result.message || 'Upload failed');
+        }
       }
     } catch (error) {
       console.error('❌ Reels upload error:', error);

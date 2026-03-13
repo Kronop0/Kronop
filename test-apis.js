@@ -12,7 +12,7 @@ const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
 console.log('🧪 Testing Kronop APIs at:', API_BASE);
 console.log('📝 Using Environment Configuration:');
-console.log('   MongoDB:', process.env.EXPO_PUBLIC_MONGODB_URI || process.env.MONGODB_URI ? '✅ Connected' : '❌ Missing');
+console.log('   MongoDB:', process.env.EXPO_PUBLIC_MONGODB_URI ? '✅ Connected' : '❌ Missing');
 console.log('   Supabase:', process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Configured' : '❌ Missing');
 console.log('   OneSignal:', process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID ? '✅ Configured' : '❌ Missing');
 console.log('');
@@ -133,7 +133,7 @@ async function runTests() {
   console.log('🌍 ENVIRONMENT CONFIGURATION SUMMARY');
   console.log('='.repeat(60));
   console.log(`🔗 API Base URL: ${API_BASE}`);
-  console.log(`📊 MongoDB: ${process.env.EXPO_PUBLIC_MONGODB_URI || process.env.MONGODB_URI ? '✅ Configured' : '❌ Missing'}`);
+  console.log(`📊 MongoDB: ${process.env.EXPO_PUBLIC_MONGODB_URI ? '✅ Configured' : '❌ Missing'}`);
   console.log(`️ Supabase: ${process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Configured' : '❌ Missing'}`);
   console.log(`🔔 OneSignal: ${process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID ? '✅ Configured' : '❌ Missing'}`);
   console.log(`🤖 Groq AI: ${process.env.EXPO_PUBLIC_GROQ_API_KEY ? '✅ Configured' : '❌ Missing'}`);

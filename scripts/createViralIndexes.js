@@ -6,7 +6,7 @@ const Content = require('../models/Content');
 const User = require('../models/User');
 
 // Connection string - update with your MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || process.env.EXPO_PUBLIC_MONGODB_URI;
+const MONGODB_URI = process.env.EXPO_PUBLIC_MONGODB_URI || process.env.MONGODB_URI;
 
 async function createOptimizedIndexes() {
   try {
