@@ -1,7 +1,7 @@
 // R2 Upload Server - React Native Compatible (Fixed Auth)
 // Uses proper AWS signature for Cloudflare R2
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import CryptoJS from 'crypto-js';
 
 // Helper function to get file extension (React Native compatible)
@@ -92,7 +92,7 @@ const r2UploadHandler = {
       const now = new Date();
       const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
       const dateStamp = amzDate.substr(0, 8);
-      const region = 'auto';
+      const region = 'us-east-1'; // R2 uses us-east-1 for signature
       const service = 's3';
       
       const headers = {
