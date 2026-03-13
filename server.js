@@ -495,26 +495,26 @@ app.post('/upload/story', (req, res) => createUploadEndpoint('story', { expires_
 app.post('/upload/shayari', (req, res) => createUploadEndpoint('shayari', { shayari_text: req.body.shayari_text, shayari_author: req.body.shayari_author })(req, res));
 app.post('/upload/photo', (req, res) => createUploadEndpoint('photo', { category: req.body.category })(req, res));
 
-// OneSignal client override
-const originalOneSignalClient = require('./services/oneSignalClient');
-originalOneSignalClient.createNotification = async (notification) => {
-  const url = process.env.EXPO_PUBLIC_ONESIGNAL_API_URL || process.env.ONESIGNAL_API_URL || 'https://onesignal.com/api/v1/notifications';
-  const apiKey = (process.env.ONESIGNAL_REST_API_KEY || process.env.ONE_SIGNAL_REST_API_KEY || process.env.ONESIGNAL_API_KEY || process.env.EXPO_PUBLIC_ONESIGNAL_REST_API_KEY || '').trim();
-  if (!apiKey) throw new Error('OneSignal REST API key is missing');
+// OneSignal client override - commented out to fix syntax error
+// const originalOneSignalClient = require('./services/oneSignalClient');
+// originalOneSignalClient.createNotification = async (notification) => {
+//   const url = process.env.EXPO_PUBLIC_ONESIGNAL_API_URL || process.env.ONESIGNAL_API_URL || 'https://onesignal.com/api/v1/notifications';
+//   const apiKey = (process.env.ONESIGNAL_REST_API_KEY || process.env.ONE_SIGNAL_REST_API_KEY || process.env.ONESIGNAL_API_KEY || process.env.EXPO_PUBLIC_ONESIGNAL_REST_API_KEY || '').trim();
+//   if (!apiKey) throw new Error('OneSignal REST API key is missing');
 
-  const isV2Key = apiKey.startsWith('os_v2_');
-  const primaryAuth = isV2Key ? `Key ${apiKey}` : `Basic ${apiKey}`;
-  const fallbackAuth = isV2Key ? `Basic ${apiKey}` : `Key ${apiKey}`;
+//   const isV2Key = apiKey.startsWith('os_v2_');
+//   const primaryAuth = isV2Key ? `Key ${apiKey}` : `Basic ${apiKey}`;
+//   const fallbackAuth = isV2Key ? `Basic ${apiKey}` : `Key ${apiKey}`;
 
-  try {
-    return await axios.post(url, notification, { headers: { 'Content-Type': 'application/json', 'Authorization': primaryAuth } });
-  } catch (error) {
-    if ((error.response?.status === 401 || error.response?.status === 403) && fallbackAuth !== primaryAuth) {
-      return await axios.post(url, notification, { headers: { 'Content-Type': 'application/json', 'Authorization': fallbackAuth } });
-    }
-    throw error;
-  }
-};
+//   try {
+//     return await axios.post(url, notification, { headers: { 'Content-Type': 'application/json', 'Authorization': primaryAuth } });
+//   } catch (error) {
+//     if ((error.response?.status === 401 || error.response?.status === 403) && fallbackAuth !== primaryAuth) {
+//       return await axios.post(url, notification, { headers: { 'Content-Type': 'application/json', 'Authorization': fallbackAuth } });
+//     }
+//     throw error;
+//   }
+// };
 
 // Additional endpoints
 apiRouter.get('/shayari/random', async (req, res) => {
