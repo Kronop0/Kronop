@@ -81,8 +81,13 @@
       "eas": {
         "projectId": "b119a84a-5a57-4eb1-9a69-e50bb1cfd408"
       },
-      "EXPO_PUBLIC_SUPABASE_URL": "https://gwcninkeyevhvzvttejw.supabase.co",
-      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_cW3yIEO181NiuycpfdTVrQ_ObM5jro7"
+      "EXPO_PUBLIC_SUPABASE_URL": "",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
+      "EXPO_PUBLIC_DEV_API_URL": "",
+      "EXPO_PUBLIC_R2_ACCESS_KEY_ID": "",
+      "EXPO_PUBLIC_R2_SECRET_ACCESS_KEY": "",
+      "EXPO_PUBLIC_BUCKET_REELS": "",
+      "EXPO_PUBLIC_R2_ENDPOINT": ""
     }
   }
 }

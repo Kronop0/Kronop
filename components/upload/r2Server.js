@@ -50,7 +50,7 @@ const r2UploadHandler = {
       console.log('🎬 Uploading reel to R2:', fileName);
       
       // Validate required environment variables
-      if (!process.env.R2_ACCESS_KEY || !process.env.R2_SECRET_KEY || !process.env.R2_BUCKET_NAME || !process.env.R2_ENDPOINT) {
+      if (!process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID || !process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY || !process.env.EXPO_PUBLIC_BUCKET_REELS || !process.env.EXPO_PUBLIC_R2_ENDPOINT) {
         throw new Error('Missing required R2 environment variables');
       }
 
@@ -81,9 +81,9 @@ const r2UploadHandler = {
       const contentType = contentTypes[fileExtension.toLowerCase()] || 'video/mp4';
 
       // Create R2 upload URL
-      const bucketName = process.env.R2_BUCKET_NAME;
+      const bucketName = process.env.EXPO_PUBLIC_BUCKET_REELS;
       const objectKey = `Reels/${uniqueFileName}`;
-      const endpoint = process.env.R2_ENDPOINT.replace(/\/$/, '');
+      const endpoint = process.env.EXPO_PUBLIC_R2_ENDPOINT.replace(/\/$/, '');
       const uploadUrl = `${endpoint}/${bucketName}/${objectKey}`;
       
       console.log('🚀 Starting R2 upload...');
@@ -107,14 +107,14 @@ const r2UploadHandler = {
       const stringToSign = getStringToSign(amzDate, credentialScope, canonicalRequest);
       
       // Derive signing key
-      const kDate = getSignature(`AWS4${process.env.R2_SECRET_KEY}`, dateStamp);
+      const kDate = getSignature(`AWS4${process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY}`, dateStamp);
       const kRegion = getSignature(kDate, region);
       const kService = getSignature(kRegion, service);
       const kSigning = getSignature(kService, 'aws4_request');
       
       const signature = getSignature(kSigning, stringToSign);
       
-      const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${process.env.R2_ACCESS_KEY}/${credentialScope}, SignedHeaders=${Object.keys(headers).sort().map(k => k.toLowerCase()).join(';')}, Signature=${signature}`;
+      const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID}/${credentialScope}, SignedHeaders=${Object.keys(headers).sort().map(k => k.toLowerCase()).join(';')}, Signature=${signature}`;
       
       // Upload using fetch API with proper auth
       const response = await fetch(uploadUrl, {

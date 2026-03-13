@@ -104,7 +104,7 @@ export default function ReelsUpload({
 
     // Direct connection to reels.js folder
     try {
-      const reelsHandler = require('../reels.js');
+      const reelsHandler = require('../reels.js').default;
       const result = await reelsHandler.receiveFile(selectedFile.uri, {
         ...reelData,
         size: selectedFile.size,
@@ -113,7 +113,11 @@ export default function ReelsUpload({
       });
       
       if (result.success) {
-        Alert.alert('Success', result.message);
+        if (result.isDemo) {
+          Alert.alert('Demo Mode', result.message + '\n\nNote: This is a demo upload. No actual file was uploaded to cloud.');
+        } else {
+          Alert.alert('Success', result.message);
+        }
         onClose();
         router.replace('/');
       } else {

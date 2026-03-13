@@ -22,9 +22,15 @@ const getApiBaseUrl = () => {
     return cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
   }
   
+  // Check for Supabase configuration
+  if (process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+    console.log('[NETWORK_CONFIG]: Using Supabase configuration');
+    return process.env.EXPO_PUBLIC_SUPABASE_URL;
+  }
+  
   // Development fallback
   if (__DEV__) {
-    const devUrl = process.env.DEV_API_URL || 'http://localhost:3000';
+    const devUrl = process.env.EXPO_PUBLIC_DEV_API_URL || 'http://localhost:5000';
     const cleanBase = devUrl.replace(/\/+$/, '');
     console.log('[NETWORK_CONFIG]: Using development URL');
     return cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
