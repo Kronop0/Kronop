@@ -9,70 +9,6 @@ import StatusBarOverlay from '../common/StatusBarOverlay';
 import { theme } from '../../constants/theme';
 import { API_BASE_URL } from '../../constants/network';
 
-// Bunny CDN Optimization Service
-class BunnyCDNOptimizer {
-  private static instance: BunnyCDNOptimizer;
-  private imageCache = new Map<string, string>();
-  private preloadQueue: string[] = [];
-  private isPreloading = false;
-
-  static getInstance(): BunnyCDNOptimizer {
-    if (!BunnyCDNOptimizer.instance) {
-      BunnyCDNOptimizer.instance = new BunnyCDNOptimizer();
-    }
-    return BunnyCDNOptimizer.instance;
-  }
-
-  // Optimize image URL for Bunny CDN with lazy loading
-  optimizeImageUrl(url: string, width: number, height: number, quality: number = 80): string {
-    if (!url) return '';
-    
-    // Check cache first
-    const cacheKey = `${url}-${width}x${height}-${quality}`;
-    if (this.imageCache.has(cacheKey)) {
-      return this.imageCache.get(cacheKey)!;
-    }
-
-    // Bunny CDN transformation parameters
-    let optimizedUrl = url;
-    
-    if (url.includes('b-cdn.net') || url.includes('cdn.bunny.net')) {
-      // Add Bunny CDN optimization parameters
-      const separator = url.includes('?') ? '&' : '?';
-      optimizedUrl = `${url}${separator}width=${width}&height=${height}&quality=${quality}&format=webp&auto_optimize=true`;
-    }
-
-    // Cache the optimized URL
-    this.imageCache.set(cacheKey, optimizedUrl);
-    return optimizedUrl;
-  }
-
-  // Preload images for smooth scrolling
-  async preloadImages(urls: string[]) {
-    if (this.isPreloading) return;
-    
-    this.isPreloading = true;
-    const batchSize = 3; // Preload 3 images at a time
-    
-    for (let i = 0; i < urls.length; i += batchSize) {
-      const batch = urls.slice(i, i + batchSize);
-      
-      await Promise.all(
-        batch.map(url => 
-          Image.prefetch(this.optimizeImageUrl(url, 200, 200, 60))
-        )
-      );
-    }
-    
-    this.isPreloading = false;
-  }
-
-  // Clear cache to free memory
-  clearCache() {
-    this.imageCache.clear();
-    this.preloadQueue = [];
-  }
-}
 
 // Redis-like Frontend Cache Service
 class FrontendCacheService {
@@ -151,7 +87,6 @@ export default function ViralScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const bunnyOptimizer = BunnyCDNOptimizer.getInstance();
   const cacheService = FrontendCacheService.getInstance();
 
   // Memoized fetch function with caching
@@ -160,7 +95,6 @@ export default function ViralScreen() {
     
     if (refresh) {
       cacheService.clear();
-      bunnyOptimizer.clearCache();
     }
 
     try {
@@ -189,11 +123,6 @@ export default function ViralScreen() {
         setViralContent(prev => [...prev, ...newData]);
       }
 
-      // Preload next batch images
-      if (newData.length > 0) {
-        const imageUrls = newData.slice(0, 5).map((item: ViralContentItem) => item.thumbnail_url || item.image_url).filter(Boolean);
-        bunnyOptimizer.preloadImages(imageUrls);
-      }
 
       setHasMore(newData.length === 20);
       return newData;
@@ -218,7 +147,7 @@ export default function ViralScreen() {
       
       return mockData;
     }
-  }, [bunnyOptimizer, cacheService]);
+  }, [cacheService]);
 
   // Initial load
   useEffect(() => {
@@ -254,12 +183,7 @@ export default function ViralScreen() {
 
   // Memoized render item for performance
   const renderItem = useCallback(({ item, index }: { item: ViralContentItem; index: number }) => {
-    const optimizedThumbnail = bunnyOptimizer.optimizeImageUrl(
-      item.thumbnail_url || item.image_url || '',
-      Math.floor(SCREEN_WIDTH * 0.9),
-      Math.floor(ITEM_HEIGHT * 0.7),
-      70
-    );
+    const imageUri = item.thumbnail_url || item.image_url || '';
 
     return (
       <TouchableOpacity
@@ -274,7 +198,7 @@ export default function ViralScreen() {
         }}
       >
         <Image
-          source={{ uri: optimizedThumbnail }}
+          source={{ uri: imageUri }}
           style={styles.thumbnail}
           contentFit="cover"
           transition={200}
@@ -318,7 +242,7 @@ export default function ViralScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [bunnyOptimizer, router]);
+  }, [router]);
 
   // Memoized list header
   const ListHeader = useMemo(() => (

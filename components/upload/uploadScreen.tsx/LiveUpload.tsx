@@ -124,7 +124,7 @@ export default function LiveUpload({
 
   // Real-time Socket Live Stream Initialization - DISABLED
   const initializeLiveStreamWithSocket = async (metadata: any) => {
-    // BunnyCDN live streaming disabled - returning mock result
+    // Live streaming disabled - returning mock result
     const streamId = `live_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     return {

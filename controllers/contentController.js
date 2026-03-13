@@ -62,7 +62,7 @@ const getUserVideos = async (req, res) => {
 // Add missing getUserStories - NOW PUBLIC!
 const getUserStories = async (req, res) => {
     try {
-        // BunnyCDN service removed - returning empty data
+        // Service disabled - returning empty data
         res.json({ success: true, data: [] });
     } catch (error) {
         console.error('❌ Public getUserStories error:', error);

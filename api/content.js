@@ -61,20 +61,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/content/sync/status - Get sync status
-router.get('/sync/status', async (req, res) => {
-  try {
-    const status = await BunnyContentService.getSyncStatus();
-    res.json({ 
-      success: true, 
-      data: status,
-      message: 'Sync status retrieved successfully'
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 router.get('/:type', async (req, res) => {
   try {
     const { type } = req.params;
@@ -212,33 +198,6 @@ router.post('/:id/like', async (req, res) => {
   }
 });
 
-router.post('/sync/all', async (req, res) => {
-  try {
-    // const results = await BunnyContentService.syncAllContent();
-    const results = { reels: [], videos: [], photos: [], stories: [], shayari: [] };
-    res.json({ success: true, data: results });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.post('/sync/:type', async (req, res) => {
-  try {
-    const { type } = req.params;
-    const validTypes = ['reels', 'video', 'live', 'story'];
-    
-    if (!validTypes.includes(type)) {
-      return res.status(400).json({ error: 'Invalid sync type' });
-    }
-
-    // const results = await BunnyContentService.syncContentType(type);
-    const results = [];
-    res.json({ success: true, data: results });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // New enhanced endpoints for BunnyContentService
 router.get('/frontend/all', async (req, res) => {
   try {
@@ -280,26 +239,6 @@ router.get('/frontend/:type', async (req, res) => {
   }
 });
 
-router.post('/sync/force', async (req, res) => {
-  try {
-    // const results = await BunnyContentService.forceSyncAll();
-    const results = { reels: [], videos: [], photos: [], stories: [], shayari: [] };
-    res.json({ success: true, data: results });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.get('/sync/status', async (req, res) => {
-  try {
-    // const status = await BunnyContentService.getSyncStatus();
-    const status = { lastSync: null, isRunning: false, totalItems: 0 };
-    res.json({ success: true, data: status });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 router.get('/live/active', async (req, res) => {
   try {
     const liveStreams = await DatabaseService.getActiveLiveStreams();
@@ -312,26 +251,6 @@ router.get('/live/active', async (req, res) => {
 router.post('/stories/cleanup', async (req, res) => {
   try {
     const result = await DatabaseService.deactivateExpiredStories();
-    res.json({ success: true, data: result });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.get('/security/check/:type', async (req, res) => {
-  try {
-    const { type } = req.params;
-    const securityStatus = await SignedUrlService.checkBunnySecuritySettings(type);
-    res.json({ success: true, data: securityStatus });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.post('/security/enable/:type', async (req, res) => {
-  try {
-    const { type } = req.params;
-    const result = await SignedUrlService.enableBunnyTokenSecurity(type);
     res.json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -425,89 +344,6 @@ router.delete('/saved/:contentId', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to remove saved content' 
-    });
-  }
-});
-
-// POST /api/content/cleanup - Clean up missing videos from MongoDB
-router.post('/cleanup', async (req, res) => {
-  try {
-    
-    const results = await BunnySyncService.cleanupAllMissingVideos();
-    
-    const totalDeleted = Object.values(results).reduce((sum, result) => sum + result.deleted, 0);
-    const totalVerified = Object.values(results).reduce((sum, result) => sum + result.verified, 0);
-    
-    
-    res.json({ 
-      success: true, 
-      message: 'Cleanup completed successfully',
-      data: {
-        results,
-        summary: {
-          totalDeleted,
-          totalVerified,
-          timestamp: new Date().toISOString()
-        }
-      }
-    });
-  } catch (error) {
-    console.error('❌ Manual cleanup failed:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/content/sync-and-cleanup - Complete sync and cleanup process
-router.post('/sync-and-cleanup', async (req, res) => {
-  try {
-    
-    const results = await BunnySyncService.syncAndCleanup();
-    
-    
-    res.json({ 
-      success: true, 
-      message: 'Sync & cleanup completed successfully',
-      data: results
-    });
-  } catch (error) {
-    console.error('❌ Sync & cleanup failed:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET /api/content/validate/:id - Validate specific video before showing
-router.get('/validate/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { type = 'Reel' } = req.query;
-    
-    // Get video from database
-    const video = await DatabaseService.getContentById(id, type);
-    
-    if (!video) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Video not found' 
-      });
-    }
-    
-    // Validate video exists in BunnyCDN
-    const isValid = await BunnySyncService.validateVideoBeforeShow(video);
-    
-    res.json({ 
-      success: true, 
-      data: {
-        videoId: id,
-        type,
-        isValid,
-        url: video.url
-      }
-    });
-  } catch (error) {
-    console.error('Video validation error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
     });
   }
 });

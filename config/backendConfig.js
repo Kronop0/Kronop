@@ -2,41 +2,10 @@
 // Node.js compatible configuration for production deployment
 // All environment variables centralized here
 
-// ==================== BUNNY CDN CONFIGURATION ====================
-const LIBRARY_ID_MAP = {
-  reels: process.env.EXPO_PUBLIC_BUNNY_LIBRARY_ID_REELS,
-  video: process.env.EXPO_PUBLIC_BUNNY_LIBRARY_ID_VIDEO, 
-  live: process.env.EXPO_PUBLIC_BUNNY_LIBRARY_ID_LIVE
-};
 
-// ==================== STORAGE ZONES ====================
-const STORAGE_ZONES = {
-  photo: {
-    name: process.env.EXPO_PUBLIC_BUNNY_STORAGE_NAME_PHOTO,
-    accessKey: process.env.EXPO_PUBLIC_BUNNY_STORAGE_KEY_PHOTO,
-    host: process.env.EXPO_PUBLIC_BUNNY_STORAGE_HOST_PHOTO
-  },
-  shayari: {
-    name: process.env.EXPO_PUBLIC_BUNNY_STORAGE_NAME_SHAYARI,
-    accessKey: process.env.EXPO_PUBLIC_BUNNY_STORAGE_KEY_SHAYARI,
-    host: process.env.EXPO_PUBLIC_BUNNY_STORAGE_HOST_SHAYARI
-  },
-  story: {
-    name: process.env.EXPO_PUBLIC_BUNNY_STORAGE_NAME_STORY,
-    accessKey: process.env.EXPO_PUBLIC_BUNNY_STORAGE_KEY_STORY,
-    host: process.env.EXPO_PUBLIC_BUNNY_STORAGE_HOST_STORY
-  }
-};
 
 // ==================== API KEYS ====================
 const API_KEYS = {
-  BUNNY: process.env.EXPO_PUBLIC_BUNNY_API_KEY,
-  BUNNY_ACCESS_KEY: process.env.EXPO_PUBLIC_BUNNY_ACCESS_KEY,
-  BUNNY_ACCESS_KEY_REELS: process.env.EXPO_PUBLIC_BUNNY_ACCESS_KEY_REELS,
-  BUNNY_ACCESS_KEY_VIDEO: process.env.EXPO_PUBLIC_BUNNY_ACCESS_KEY_VIDEO,
-  BUNNY_ACCESS_KEY_LIVE: process.env.EXPO_PUBLIC_BUNNY_ACCESS_KEY_LIVE,
-  BUNNY_ACCESS_KEY_STORY: process.env.EXPO_PUBLIC_BUNNY_ACCESS_KEY_STORY,
-  
   // AI Supporter
   AI_SUPPORT: process.env.EXPO_PUBLIC_AI_SUPPORT_KEY,
   STABLE_DIFFUSION: process.env.EXPO_PUBLIC_STABLE_DIFFUSION_KEY,
@@ -76,38 +45,10 @@ const SERVER_CONFIG = {
 };
 
 // ==================== HELPER FUNCTIONS ====================
-const getBunnyConfigByType = (type) => {
-  const configs = {
-    reels: {
-      libraryId: LIBRARY_ID_MAP.reels,
-      host: process.env.EXPO_PUBLIC_BUNNY_HOST_REELS,
-      apiKey: API_KEYS.BUNNY_ACCESS_KEY_REELS || API_KEYS.BUNNY
-    },
-    video: {
-      libraryId: LIBRARY_ID_MAP.video,
-      host: process.env.EXPO_PUBLIC_BUNNY_HOST_VIDEO, 
-      apiKey: API_KEYS.BUNNY_ACCESS_KEY_VIDEO || API_KEYS.BUNNY
-    },
-    live: {
-      libraryId: LIBRARY_ID_MAP.live,
-      host: process.env.EXPO_PUBLIC_BUNNY_HOST_LIVE,
-      apiKey: API_KEYS.BUNNY_ACCESS_KEY_LIVE || API_KEYS.BUNNY
-    }
-  };
-  
-  return configs[type] || configs.reels;
-};
 
-const getStorageConfigByType = (type) => {
-  return STORAGE_ZONES[type] || STORAGE_ZONES.photo;
-};
 
 module.exports = {
-  LIBRARY_ID_MAP,
-  STORAGE_ZONES,
   API_KEYS,
   DATABASE_CONFIG,
-  SERVER_CONFIG,
-  getBunnyConfigByType,
-  getStorageConfigByType
+  SERVER_CONFIG
 };

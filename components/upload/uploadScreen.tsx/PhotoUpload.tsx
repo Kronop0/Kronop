@@ -205,7 +205,7 @@ export default function PhotoUpload({
 
   // Direct Upload Function for Photos - DISABLED
   const uploadPhotosDirectly = async (files: any[], metadata: any, isShayari: boolean = false) => {
-    // BunnyCDN upload disabled - returning mock results
+    // Upload service disabled - returning mock results
     const uploadResults = [];
     
     for (let i = 0; i < files.length; i++) {

@@ -13,7 +13,6 @@ const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 console.log('🧪 Testing Kronop APIs at:', API_BASE);
 console.log('📝 Using Environment Configuration:');
 console.log('   MongoDB:', process.env.EXPO_PUBLIC_MONGODB_URI || process.env.MONGODB_URI ? '✅ Connected' : '❌ Missing');
-console.log('   BunnyCDN:', process.env.EXPO_PUBLIC_BUNNY_API_KEY ? '✅ Configured' : '❌ Missing');
 console.log('   Supabase:', process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Configured' : '❌ Missing');
 console.log('   OneSignal:', process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID ? '✅ Configured' : '❌ Missing');
 console.log('');
@@ -110,14 +109,6 @@ async function runTests() {
   await testEndpoint('GET', '/shayari/random', null, 'Random Shayari');
   await testEndpoint('GET', '/frontend/all', null, 'Frontend All Content');
   
-  // Test BunnyCDN Integration
-  console.log('\n🐰 Testing BunnyCDN Integration...');
-  const syncResult = await testEndpoint('POST', '/content/sync', null, 'BunnyCDN Sync');
-  
-  if (syncResult && syncResult.success) {
-    const totalItems = syncResult.data?.totalItems || 0;
-    console.log(`   📊 Synced ${totalItems} items from BunnyCDN`);
-  }
 
   // ==================== RESULTS SUMMARY ====================
   console.log('\n' + '='.repeat(60));
@@ -143,9 +134,7 @@ async function runTests() {
   console.log('='.repeat(60));
   console.log(`🔗 API Base URL: ${API_BASE}`);
   console.log(`📊 MongoDB: ${process.env.EXPO_PUBLIC_MONGODB_URI || process.env.MONGODB_URI ? '✅ Configured' : '❌ Missing'}`);
-  console.log(`🐰 BunnyCDN API Key: ${process.env.EXPO_PUBLIC_BUNNY_API_KEY ? '✅ Configured' : '❌ Missing'}`);
-  console.log(`📹 BunnyCDN Libraries: ${process.env.EXPO_PUBLIC_BUNNY_LIBRARY_ID_VIDEO ? '✅ Configured' : '❌ Missing'}`);
-  console.log(`🗄️ Supabase: ${process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Configured' : '❌ Missing'}`);
+  console.log(`️ Supabase: ${process.env.EXPO_PUBLIC_SUPABASE_URL ? '✅ Configured' : '❌ Missing'}`);
   console.log(`🔔 OneSignal: ${process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID ? '✅ Configured' : '❌ Missing'}`);
   console.log(`🤖 Groq AI: ${process.env.EXPO_PUBLIC_GROQ_API_KEY ? '✅ Configured' : '❌ Missing'}`);
   console.log(`🔍 Google Search: ${process.env.EXPO_PUBLIC_GOOGLE_SEARCH_KEY ? '✅ Configured' : '❌ Missing'}`);
@@ -154,7 +143,6 @@ async function runTests() {
   console.log('1. If any tests failed, check the corresponding service configuration');
   console.log('2. Verify all environment variables are properly set in Koyeb');
   console.log('3. Test frontend connectivity with the backend APIs');
-  console.log('4. Monitor BunnyCDN sync status for content updates');
   
   console.log('\n✅ API Testing Complete!');
   

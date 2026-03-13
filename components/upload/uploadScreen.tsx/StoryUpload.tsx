@@ -160,13 +160,19 @@ export default function StoryUpload({
       // Bridge controls the upload
       await onUpload(selectedFile, storyData);
     } else {
-      // Fallback for standalone usage
+      // Fallback for standalone usage - Bunny removed, set url to null
       setInternalUploading(true);
       try {
-        await uploadStoryDirectly(selectedFile, storyData, (progress) => {
-          setInternalUploadProgress(progress.percentage);
-        });
-        Alert.alert('Success', 'Story uploaded successfully to Kronop!');
+        const storyMetadata = {
+          ...storyData,
+          userId: 'guest_user',
+          uploadId: `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          url: null, // Fallback
+          appName: 'Kronop',
+          timestamp: Date.now()
+        };
+        console.log('Story metadata prepared:', storyMetadata);
+        Alert.alert('Success', 'Story metadata prepared successfully!');
         setSelectedFile(null);
         setStoryData({ title: '', type: 'photo', duration: 15, isPrivate: false });
         setInternalUploadProgress(0);
@@ -174,61 +180,13 @@ export default function StoryUpload({
         onClose();
         router.replace('/');
       } catch (error: any) {
-        console.error('Story upload failed:', error);
-        Alert.alert('Upload Failed', error.message || 'Failed to upload story');
+        console.error('Story preparation failed:', error);
+        Alert.alert('Preparation Failed', error.message || 'Failed to prepare story');
         setInternalUploading(false);
       }
     }
   };
 
-  // Direct Upload Function for Stories
-  const uploadStoryDirectly = async (file: any, metadata: any, onProgress?: (progress: any) => void) => {
-    const BUNNY_API_KEY = process.env.EXPO_PUBLIC_BUNNY_API_KEY || '';
-    const BUNNY_STORAGE_ZONE = process.env.EXPO_PUBLIC_BUNNY_STORAGE_ZONE || 'kronop';
-    
-    try {
-      // Upload directly to BunnyCDN
-      const fileName = `kronop_story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${file.name.split('.').pop() || 'jpg'}`;
-      const bunnyUrl = `https://storage.bunnycdn.net/${BUNNY_STORAGE_ZONE}/${fileName}`;
-      
-      // Update progress
-      if (onProgress) onProgress({ percentage: 50 });
-      
-      const response = await fetch(bunnyUrl, {
-        method: 'PUT',
-        headers: {
-          'AccessKey': BUNNY_API_KEY,
-          'Content-Type': file.mimeType || 'image/jpeg'
-        },
-        body: file
-      });
-      
-      if (!response.ok) {
-        throw new Error(`BunnyCDN upload failed: ${response.status}`);
-      }
-      
-      // Update progress
-      if (onProgress) onProgress({ percentage: 100 });
-      
-      // Save metadata
-      const storyMetadata = {
-        ...metadata,
-        userId: 'guest_user',
-        uploadId: `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        url: `https://${BUNNY_STORAGE_ZONE}.b-cdn.net/${fileName}`,
-        appName: 'Kronop',
-        timestamp: Date.now(),
-        fileName
-      };
-      
-      console.log('Story upload completed:', storyMetadata);
-      return storyMetadata;
-      
-    } catch (error: any) {
-      console.error('Story upload failed:', error);
-      throw error;
-    }
-  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -404,12 +362,20 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   subtitle: {
+    fontSize: theme.typography.fontSize.xxl,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.md,
+  },
   uploadArea: {
     padding: 8,
   },
-
-// ... (rest of the code remains the same)
-    padding: theme.spacing.xxl,
+  uploadButton: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: theme.colors.border.secondary,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
     alignItems: 'center',
     backgroundColor: theme.colors.background.secondary,
   },

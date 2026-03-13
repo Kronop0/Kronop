@@ -43,7 +43,7 @@ interface VideoItem {
 const mockVideos: VideoItem[] = [
   {
     id: '1',
-    uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
     title: 'Big Buck Bunny - Animated Short Film',
     channelName: 'NatureChannel',
     channelLogo: 'https://picsum.photos/seed/nature/200/200.jpg',

@@ -12,11 +12,6 @@ const storySchema = new mongoose.Schema({
     default: 'Story',
     enum: ['Story']
   },
-  bunny_id: {
-    type: String,
-    required: false,
-    default: null
-  },
   url: {
     type: String,
     required: true

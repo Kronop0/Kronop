@@ -56,7 +56,7 @@ export default function ZeroDataReWatchTest() {
       addTestResult('🎬 Testing video cache...');
       
       // Test video URL (replace with actual video URL)
-      const testVideoUrl = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
+      const testVideoUrl = 'https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_1MB.mp4';
       
       const cachedPath = await ZeroDataVideoCacheService.cacheVideo(testVideoUrl, 'high');
       
@@ -76,7 +76,7 @@ export default function ZeroDataReWatchTest() {
     try {
       addTestResult('🔄 Testing Zero Data Re-watch...');
       
-      const testVideoUrl = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
+      const testVideoUrl = 'https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_1MB.mp4';
       
       // Check if video is cached
       const isCached = await ZeroDataVideoCacheService.isVideoCached(testVideoUrl);
@@ -101,9 +101,9 @@ export default function ZeroDataReWatchTest() {
       
       // Cache multiple videos to test LRU
       const testUrls = [
-        'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
-        'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_2MB.mp4',
-        'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_3MB.mp4'
+        'https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_1MB.mp4',
+        'https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_2MB.mp4',
+        'https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_3MB.mp4'
       ];
       
       for (const url of testUrls) {
@@ -122,7 +122,7 @@ export default function ZeroDataReWatchTest() {
     try {
       addTestResult('🌐 Testing proxy server...');
       
-      const testVideoUrl = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
+      const testVideoUrl = 'https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_1MB.mp4';
       
       const optimizedUrl = await LocalVideoProxyServer.getOptimizedVideoUrl(testVideoUrl, ZeroDataVideoCacheService);
       

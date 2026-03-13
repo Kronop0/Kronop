@@ -1,10 +1,17 @@
-import { StoryFile } from '../app/(tabs)/Story';
+interface StoryFile {
+  id: string;
+  name: string;
+  uri: string;
+  size: number;
+  type: 'image' | 'video';
+  timestamp: string;
+}
 
 export const mockStoryFiles: StoryFile[] = [
   {
     id: 'story_1',
     name: 'Sunset Beach Video.mp4',
-    uri: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
+    uri: 'https://sample-videos.com/video321/mp4/720/sintel_720p_1mb.mp4',
     size: 5242880,
     type: 'video',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago

@@ -270,7 +270,6 @@ const getSmartFeed = async (contentType, req, res) => {
     
     res.json({ success: true, data, message: `Smart ${contentType} feed`, isSmartFeed: true });
   } catch (error) {
-    // Fallback disabled - BunnyCDN removed
     res.json({ success: false, error: 'Content service unavailable', data: [] });
   }
 };
@@ -353,7 +352,7 @@ app.post('/upload/url', async (req, res) => {
     
     contentId = `${contentType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // BunnyCDN upload disabled
+    // Fallback disabled
     uploadUrl = '';
     res.json({ success: false, error: 'Upload service disabled', uploadUrl: '', contentId: '', contentType: '', fileName: '', fileSize: 0 });
   } catch (error) {
