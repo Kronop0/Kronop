@@ -1,7 +1,7 @@
 // Production MongoDB Clear via API
 // Uses existing API endpoints to clear content
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-9gju.onrender.com';
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-76zy.onrender.com';
 
 async function clearViaAPI() {
   console.log('🧹 Starting MongoDB Cleanup via Production API...');

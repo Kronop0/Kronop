@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import LocalVault from './Storage/LocalVault';
 import { API_KEYS } from '@/constants/Config';
 
-const KRONOP_API_URL = 'https://kronop-9gju.onrender.com';
+const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
 
 interface ReelData {
   id: string;

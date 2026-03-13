@@ -1,7 +1,7 @@
 // MongoDB Complete Cleanup Script
 // Clears all content data: Reels, Stories, Photos, Videos, Shayari
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-9gju.onrender.com';
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-76zy.onrender.com';
 
 async function clearMongoDB() {
   console.log('🧹 Starting MongoDB Complete Cleanup...');

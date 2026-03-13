@@ -20,7 +20,7 @@ import { API_KEYS } from '@/constants/Config';
 import { initializeTurboBridge } from './Native/TurboBridge';
 
 // API URL for Reels
-const KRONOP_API_URL = 'https://kronop-9gju.onrender.com';
+const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 

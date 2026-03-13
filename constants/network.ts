@@ -31,7 +31,7 @@ const getApiBaseUrl = () => {
   }
 
   // Production fallback to Render URL
-  const renderUrl = 'https://kronop-9gju.onrender.com';
+  const renderUrl = 'https://kronop-76zy.onrender.com';
   const cleanBase = renderUrl.replace(/\/+$/, '');
   console.log('[NETWORK_CONFIG]: Using Render fallback URL');
   return cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;

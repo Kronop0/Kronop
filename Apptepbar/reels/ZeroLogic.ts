@@ -1,7 +1,7 @@
 import { API_KEYS } from '@/constants/Config';
 import { getVideoUrl } from './CloudConfig';
 
-const KRONOP_API_URL = 'https://kronop-9gju.onrender.com';
+const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
 
 // Like/Unlike API
 export const toggleLike = async (videoId: string, isCurrentlyLiked: boolean): Promise<boolean> => {
