@@ -17,6 +17,9 @@ export const API_KEYS = {
   // Groq AI API Key (for Support Chat)
   GROQ: process.env.EXPO_PUBLIC_GROQ_API_KEY || '',
   
+  // Spreadsheet API
+  SPREADSHEET_API_KEY: 'srv-d6pslm75gffc73dqs8sg',
+  
   // Additional API Keys
   PIXABAY: process.env.EXPO_PUBLIC_PIXABAY_KEY || '',
   FLICKR: process.env.EXPO_PUBLIC_FLICKR_KEY || '',
@@ -41,7 +44,7 @@ export const API_KEYS = {
   MONGODB_URI: process.env.MONGODB_URI || process.env.EXPO_PUBLIC_MONGODB_URI,
   
   // KRONOP BACKEND URL - SINGLE SOURCE OF TRUTH
-  KRONOP_API_URL: process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-9gju.onrender.com',
+  KRONOP_API_URL: process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-76zy.onrender.com',
 };
 
 

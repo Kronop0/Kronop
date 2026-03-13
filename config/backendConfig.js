@@ -72,7 +72,7 @@ const DATABASE_CONFIG = {
 const SERVER_CONFIG = {
   PORT: Number(process.env.PORT) || 8000,
   NODE_ENV: process.env.NODE_ENV || 'development',
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-9gju.onrender.com'
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL || 'https://kronop-76zy.onrender.com'
 };
 
 // ==================== HELPER FUNCTIONS ====================
