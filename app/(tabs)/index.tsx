@@ -7,6 +7,7 @@ import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { StoryViewer, StorySection } from '../../Apptepbar/Story';
 import { theme } from '../../constants/theme';
 import { useAlert } from '../../template';
+import { API_BASE_URL } from '../../constants/network';
 // import { Story } from '../../types/story'; // Removed - types folder deleted
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
@@ -82,7 +83,7 @@ export default function HomeScreen() {
     setStoriesLoading(true);
     try {
       // Use the new story service for grouped stories
-      const result = await fetch('http://localhost:3000/api/stories');
+      const result = await fetch(`${API_BASE_URL}/stories`);
       const data = await result.json();
       if (data.success) {
         setGroupedStories(data.data as any);
@@ -213,7 +214,7 @@ export default function HomeScreen() {
   const loadInitialPhotos = async () => {
     setPhotosLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/photos');
+      const response = await fetch(`${API_BASE_URL}/photos`);
       const result = await response.json();
       const photos = result?.data || [];
       if (result && result.length > 0) {
@@ -243,7 +244,7 @@ export default function HomeScreen() {
 
   // Compressed header button handlers
   const handleNotificationPress = () => router.push('/notifications' as any);
-  const handleSearchPress = () => router.push('/search-user' as any);
+  const handleSearchPress = () => router.push('/search-user/index' as any);
   const handleChatPress = () => router.push('/chat' as any);
   const handleMusicPress = () => router.push('/music' as any);
   const handleUploadPress = () => setShowUploadModal(true);
@@ -297,7 +298,7 @@ export default function HomeScreen() {
     setPhotosLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/api/photos');
+      const response = await fetch(`${API_BASE_URL}/photos`);
       const result = await response.json();
       const photos = result?.data || [];
       if (result) {

@@ -24,7 +24,7 @@ const getApiBaseUrl = () => {
   
   // Development fallback
   if (__DEV__) {
-    const devUrl = process.env.DEV_API_URL || 'http://0.0.0.0:3000';
+    const devUrl = process.env.DEV_API_URL || 'http://localhost:3000';
     const cleanBase = devUrl.replace(/\/+$/, '');
     console.log('[NETWORK_CONFIG]: Using development URL');
     return cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;

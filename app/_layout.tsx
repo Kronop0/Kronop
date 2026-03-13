@@ -282,7 +282,7 @@ export default function RootLayout() {
                   }}
                 >
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="login" />
+              <Stack.Screen name="onboarding" />
               <Stack.Screen name="edit-profile" />
               <Stack.Screen name="help-center" />
 
@@ -307,17 +307,7 @@ export default function RootLayout() {
               />
 
               <Stack.Screen 
-                name="search-user" 
-                options={{ 
-                  headerShown: false,
-                  animation: 'none',
-                  presentation: 'modal',
-                  contentStyle: { backgroundColor: '#000' }
-                }} 
-              />
-
-              <Stack.Screen 
-                name="songs" 
+                name="search-user/index" 
                 options={{ 
                   headerShown: false,
                   animation: 'none',
