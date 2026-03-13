@@ -12,11 +12,10 @@ module.exports = function (api) {
     plugins: [
       '@babel/plugin-syntax-import-meta',
       'react-native-reanimated/plugin',
-      'transform-remove-console',
     ],
     env: {
       production: {
-        plugins: ['transform-remove-console'],
+        plugins: [],
       },
     },
   };

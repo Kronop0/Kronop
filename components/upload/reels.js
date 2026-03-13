@@ -1,32 +1,49 @@
-// Reels Upload Handler
-// Receives reel files from ReelsUpload.tsx component
+// Reels Upload Handler - Frontend Only
+// Calls dedicated R2 server for secure upload
+
+import r2UploadHandler from './r2Server.js';
 
 const reelsHandler = {
-  receiveFile: async (fileData, metadata) => {
+  receiveFile: async (fileUri, metadata) => {
     try {
-      console.log('Reels file received:', fileData);
-      console.log('Metadata:', metadata);
+      console.log('🎬 Reels file received:', fileUri);
+      console.log('📊 Metadata:', metadata);
+
+      // Call R2 server handler directly with file URI
+      console.log('🚀 Sending to R2 server handler...');
+      const result = await r2UploadHandler.uploadReel(fileUri, metadata?.name || 'reel.mp4', metadata);
       
-      // Mock response for now
-      return {
-        success: true,
-        message: 'Upload successful for Reels',
-        fileId: `reel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        fileName: metadata?.name || 'unknown_reel.mp4',
-        fileSize: metadata?.size || 0,
-        category: metadata?.category || 'Entertainment',
-        tags: metadata?.tags || [],
-        timestamp: new Date().toISOString()
-      };
+      if (result.success) {
+        console.log('✅ R2 upload successful:', result);
+        return {
+          success: true,
+          message: 'Reel uploaded successfully to Cloudflare R2',
+          fileId: result.fileId,
+          fileName: result.fileName,
+          publicUrl: result.publicUrl,
+          uploadTime: result.uploadTime,
+          metadata: {
+            title: metadata?.title || '',
+            category: metadata?.category || '',
+            tags: metadata?.tags || [],
+            description: metadata?.description || ''
+          }
+        };
+      } else {
+        throw new Error(result.message || 'Upload failed');
+      }
+
     } catch (error) {
-      console.error('Reels upload error:', error);
+      console.error('❌ Reels upload error:', error);
       return {
         success: false,
-        message: 'Upload failed for Reels',
-        error: error.message
+        message: 'Reel upload failed',
+        error: error.message,
+        fileId: null,
+        publicUrl: null
       };
     }
   }
 };
 
-module.exports = reelsHandler;
+export default reelsHandler;

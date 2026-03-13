@@ -74,6 +74,7 @@ export default function StoryScreen() {
     } catch (error) {
       Alert.alert('Error', 'Failed to pick files');
       console.error(error);
+      console.log(error);
     }
   };
 

@@ -109,6 +109,7 @@ export default function UserDataScreen() {
       setTotalData(total);
     } catch (error) {
       console.error('Error:', error);
+      console.log(error);
     } finally {
       setLoading(false);
     }

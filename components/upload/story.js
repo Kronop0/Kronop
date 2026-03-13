@@ -1,29 +1,54 @@
-// Story Upload Handler
-// Receives story files from StoryUpload.tsx component
+// Story Upload Handler - Frontend Only
+// Calls dedicated R2 server for secure upload
+
+const r2UploadHandler = require('./r2Server');
 
 const storyHandler = {
   receiveFile: async (fileData, metadata) => {
     try {
-      console.log('Story file received:', fileData);
-      console.log('Metadata:', metadata);
+      console.log('📖 Story file received:', fileData);
+      console.log('📊 Metadata:', metadata);
+
+      // Get file as buffer
+      let fileBuffer;
+      if (fileData && fileData.uri) {
+        const fileResponse = await fetch(fileData.uri);
+        fileBuffer = await fileResponse.arrayBuffer();
+        fileBuffer = Buffer.from(fileBuffer);
+      }
+
+      if (!fileBuffer) {
+        throw new Error('Failed to read file data');
+      }
+
+      // Call R2 server handler directly
+      console.log('🚀 Sending to R2 server handler...');
+      const result = await r2UploadHandler.uploadStory(fileBuffer, metadata?.name || 'story.jpg', metadata);
       
-      // Mock response for now
-      return {
-        success: true,
-        message: 'Upload successful for Story',
-        fileId: `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        fileName: metadata?.name || 'unknown_story.jpg',
-        fileSize: metadata?.size || 0,
-        storyType: metadata?.type || 'photo',
-        duration: metadata?.duration || 15,
-        timestamp: new Date().toISOString()
-      };
+      if (result.success) {
+        console.log('✅ R2 upload successful:', result);
+        return {
+          success: true,
+          message: 'Story uploaded successfully to Cloudflare R2',
+          fileId: result.fileId,
+          fileName: result.fileName,
+          publicUrl: result.publicUrl,
+          uploadTime: result.uploadTime,
+          storyType: metadata?.type || 'photo',
+          duration: metadata?.duration || 15
+        };
+      } else {
+        throw new Error(result.message || 'Upload failed');
+      }
+
     } catch (error) {
-      console.error('Story upload error:', error);
+      console.error('❌ Story upload error:', error);
       return {
         success: false,
-        message: 'Upload failed for Story',
-        error: error.message
+        message: 'Story upload failed to Cloudflare R2',
+        error: error.message,
+        fileId: null,
+        publicUrl: null
       };
     }
   }

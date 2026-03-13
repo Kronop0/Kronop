@@ -55,6 +55,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login Error:', error);
+    console.log(error);
     res.status(500).json({ 
       success: false,
       error: 'गलत पासवर्ड या ईमेल!' 
@@ -128,6 +129,7 @@ router.post('/google-login', async (req, res) => {
 
   } catch (error) {
     console.error('Google Login Error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });

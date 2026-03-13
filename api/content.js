@@ -57,6 +57,8 @@ router.get('/', async (req, res) => {
       message: 'All synced content retrieved successfully'
     });
   } catch (error) {
+    console.error('Content sync error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -88,6 +90,7 @@ router.get('/:type', async (req, res) => {
     res.json({ success: true, data: contentWithUrls });
   } catch (error) {
     console.error(`Get Content Error (${req.params.type}):`, error);
+    console.log(error);
     res.status(200).json({ success: false, error: error.message, data: [] });
   }
 });
@@ -102,6 +105,8 @@ router.get('/user/:userId', async (req, res) => {
     const content = [];
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('User content error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -114,6 +119,8 @@ router.get('/video/user', async (req, res) => {
     const content = [];
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('User video error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -126,6 +133,8 @@ router.get('/photo/user', async (req, res) => {
     const content = [];
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('User photo error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -138,6 +147,8 @@ router.get('/reels/user', async (req, res) => {
     const content = [];
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('User reels error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -149,6 +160,8 @@ router.post('/', async (req, res) => {
     const content = null;
     res.status(201).json({ success: true, data: content });
   } catch (error) {
+    console.error('Create content error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -161,6 +174,8 @@ router.put('/:id', async (req, res) => {
     const content = null;
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('Update content error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -172,6 +187,8 @@ router.delete('/:id', async (req, res) => {
     // DatabaseService removed
     res.json({ success: true, message: 'Content deleted successfully' });
   } catch (error) {
+    console.error('Delete content error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -183,6 +200,8 @@ router.post('/:id/view', async (req, res) => {
     const content = null;
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('Increment views error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -194,6 +213,8 @@ router.post('/:id/like', async (req, res) => {
     const content = null;
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('Increment likes error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -211,6 +232,8 @@ router.get('/frontend/all', async (req, res) => {
     const content = { data: [], pagination: { page: 1, limit: 20, total: 0 } };
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('Frontend all content error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -235,6 +258,8 @@ router.get('/frontend/:type', async (req, res) => {
     const content = { data: [], pagination: { page: 1, limit: 20, total: 0 } };
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('Frontend type content error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -244,6 +269,8 @@ router.get('/live/active', async (req, res) => {
     const liveStreams = await DatabaseService.getActiveLiveStreams();
     res.json({ success: true, data: liveStreams });
   } catch (error) {
+    console.error('Live streams error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -253,6 +280,8 @@ router.post('/stories/cleanup', async (req, res) => {
     const result = await DatabaseService.deactivateExpiredStories();
     res.json({ success: true, data: result });
   } catch (error) {
+    console.error('Stories cleanup error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -282,6 +311,7 @@ router.get('/saved', async (req, res) => {
     });
   } catch (error) {
     console.error('Get saved content error:', error);
+    console.log(error);
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to retrieve saved content' 
@@ -311,6 +341,7 @@ router.post('/saved', async (req, res) => {
     });
   } catch (error) {
     console.error('Save content error:', error);
+    console.log(error);
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to save content' 
@@ -341,6 +372,7 @@ router.delete('/saved/:contentId', async (req, res) => {
     });
   } catch (error) {
     console.error('Unsave content error:', error);
+    console.log(error);
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to remove saved content' 

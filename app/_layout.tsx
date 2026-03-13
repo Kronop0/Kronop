@@ -1,7 +1,72 @@
-// MUST BE AT THE VERY TOP - Critical polyfills for mipd and web3 libraries
+// MUST BE AT THE VERY TOP - Critical polyfills and error handling
 import 'react-native-get-random-values';
 import 'text-encoding-polyfill';
 global.Buffer = require('buffer').Buffer;
+
+// ==================== GLOBAL ERROR HANDLER ====================
+// Import React Native modules for error handling
+import { LogBox, Platform } from 'react-native';
+
+// CRITICAL: Ensure all errors are visible - DO NOT IGNORE ANY ERRORS
+LogBox.ignoreAllLogs(); // Call the function, don't assign boolean
+LogBox.ignoreLogs([]); // Pass empty array to clear ignored logs
+// Note: ignoreAllWarnings doesn't exist, we'll handle warnings through our custom handler
+
+// Global Error Handler - Catches ALL errors and throws them to terminal
+const setupGlobalErrorHandler = () => {
+  // Override console.error to ensure all errors go to terminal
+  const originalConsoleError = console.error;
+  const originalConsoleWarn = console.warn;
+  
+  console.error = (...args) => {
+    // Force terminal output with clear formatting
+    originalConsoleError('🔴 GLOBAL ERROR:', ...args);
+    
+    // Also log with stack trace if available
+    if (args[0] instanceof Error && args[0].stack) {
+      originalConsoleError('🔴 STACK TRACE:', args[0].stack);
+    }
+  };
+  
+  console.warn = (...args) => {
+    originalConsoleWarn('🟡 GLOBAL WARNING:', ...args);
+  };
+
+  // Handle unhandled promise rejections
+  if (typeof process !== 'undefined' && process.on) {
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('🔴 UNHANDLED PROMISE REJECTION:', reason);
+      console.error('🔴 PROMISE:', promise);
+    });
+    
+    process.on('uncaughtException', (error) => {
+      console.error('🔴 UNCAUGHT EXCEPTION:', error);
+      console.error('🔴 STACK:', error.stack);
+    });
+  }
+
+  // React Native ErrorUtils setup
+  if (Platform.OS !== 'web' && typeof require !== 'undefined') {
+    try {
+      const ErrorUtils = require('react-native').ErrorUtils;
+      if (ErrorUtils && ErrorUtils.setGlobalHandler) {
+        ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
+          console.error('🔴 REACT NATIVE GLOBAL ERROR:', error);
+          console.error('🔴 IS FATAL:', isFatal);
+          console.error('🔴 STACK:', error.stack);
+        });
+      }
+    } catch (e) {
+      console.warn('Could not setup ErrorUtils:', e);
+    }
+  }
+};
+
+// Initialize global error handling immediately
+setupGlobalErrorHandler();
+
+// Test the global error handler (remove this in production)
+console.error('🧪 Global Error Handler Test - This should appear in terminal');
 
 // Global type declarations - use type augmentation
 declare global {

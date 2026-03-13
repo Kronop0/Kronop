@@ -127,6 +127,7 @@ router.get('/', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Smart photos feed error:', error);
+    console.log(error);
     // Fallback to basic content if smart feed fails
     try {
       const fallbackPhotos = await DatabaseService.getContentByType('Photo', parsedPage, parsedLimit, 0);
@@ -140,6 +141,8 @@ router.get('/', async (req, res) => {
         error: 'Smart feed temporarily unavailable'
       });
     } catch (fallbackError) {
+      console.error('Fallback error:', fallbackError);
+      console.log(fallbackError);
       res.status(500).json({ 
         success: false, 
         error: error.message,
@@ -160,6 +163,8 @@ router.get('/user', async (req, res) => {
     
     res.json({ success: true, data: contentWithUrls });
   } catch (error) {
+    console.error('User photos error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -179,6 +184,8 @@ router.get('/categories', async (req, res) => {
       message: 'Photo categories retrieved successfully'
     });
   } catch (error) {
+    console.error('Photo categories error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -199,6 +206,8 @@ router.post('/:id/like', async (req, res) => {
     
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('Photo like error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -219,6 +228,8 @@ router.post('/:id/view', async (req, res) => {
     
     res.json({ success: true, data: content });
   } catch (error) {
+    console.error('Photo view error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -239,6 +250,8 @@ router.post('/:id/save', async (req, res) => {
     
     res.json({ success: true, data: result });
   } catch (error) {
+    console.error('Photo save error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -255,6 +268,8 @@ router.get('/interests/:userId', async (req, res) => {
       message: 'User interest profile retrieved successfully'
     });
   } catch (error) {
+    console.error('Photo interests error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -276,6 +291,8 @@ router.post('/track/batch', async (req, res) => {
       message: `Tracked ${interactions.length} interactions successfully`
     });
   } catch (error) {
+    console.error('Photo batch track error:', error);
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 });

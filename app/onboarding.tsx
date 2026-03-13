@@ -29,6 +29,20 @@ export default function OnboardingScreen() {
   const { showAlert } = useAlert();
   const { user } = useAuth();
   const router = useRouter();
+
+  // Force Log Test Function
+  const handleForceLog = () => {
+    console.log("🔥 FORCE TEST: This should appear in terminal!");
+    console.error("🔥 FORCE ERROR: This error should appear in terminal!");
+    console.warn("🔥 FORCE WARNING: This warning should appear in terminal!");
+    
+    // Test with different methods
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write("🔥 PROCESS STDOUT TEST\n");
+    }
+    
+    showAlert("Force Log Test", "Check terminal for logs! 3 test messages sent.");
+  };
   
 
   const [username, setUsername] = useState('');
@@ -184,6 +198,16 @@ export default function OnboardingScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Complete Your Profile</Text>
           <Text style={styles.subtitle}>Tell us more about yourself</Text>
+          
+          {/* Force Log Test Button */}
+          <TouchableOpacity 
+            style={styles.forceLogButton} 
+            onPress={handleForceLog}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="bug-report" size={20} color="#fff" />
+            <Text style={styles.forceLogButtonText}>Force Log Test</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Avatar Upload */}
@@ -531,5 +555,21 @@ const styles = StyleSheet.create({
   skipButtonText: {
     color: theme.colors.text.tertiary,
     fontSize: theme.typography.fontSize.md,
+  },
+  forceLogButton: {
+    backgroundColor: '#ff4444',
+    borderRadius: theme.borderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  forceLogButtonText: {
+    color: '#fff',
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
   },
 });

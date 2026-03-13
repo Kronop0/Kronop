@@ -163,6 +163,7 @@ export function useNetworkRetry<T>(
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
       console.error('Network error:', err);
+      console.log(err);
     } finally {
       setIsLoading(false);
     }
