@@ -66,7 +66,7 @@ const setupGlobalErrorHandler = () => {
 setupGlobalErrorHandler();
 
 // Test the global error handler (remove this in production)
-console.error('🧪 Global Error Handler Test - This should appear in terminal');
+// console.error('🧪 Global Error Handler Test - This should appear in terminal');
 
 // Global type declarations - use type augmentation
 declare global {

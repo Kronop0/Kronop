@@ -14,12 +14,12 @@ import * as FileSystem from 'expo-file-system';
 import StatusBarOverlay from '../../components/common/StatusBarOverlay';
 import AppLogo from '../../components/common/AppLogo';
 import HeaderButton from '../../components/common/HeaderButton';
-import StoryUpload from '../../components/upload/uploadScreen.tsx/StoryUpload.tsx';
-import PhotoUpload from '../../components/upload/uploadScreen.tsx/PhotoUpload.tsx';
-import VideoUpload from '../../components/upload/uploadScreen.tsx/VideoUpload.tsx';
-import ReelsUpload from '../../components/upload/uploadScreen.tsx/ReelsUpload.tsx';
-import LiveUpload from '../../components/upload/uploadScreen.tsx/LiveUpload.tsx';
-import SongUpload from '../../components/upload/uploadScreen.tsx/SongUpload.tsx';
+import StoryUpload from '../../components/upload/story.jsa/StoryUpload.tsx';
+import PhotoUpload from '../../components/upload/photo.tsa/PhotoUpload.tsx';
+import VideoUpload from '../../components/upload/video.jsa/VideoUpload.tsx';
+import ReelsUpload from '../../components/upload/reels.jsa/ReelsUpload.tsx';
+import LiveUpload from '../../components/upload/live.jsa/LiveUpload.tsx';
+import SongUpload from '../../components/upload/song.jsa/SongUpload.tsx';
 
 // Photo categories - TEXT ONLY, HORIZONTAL SCROLL WITH PROPER FILTERING
 const PHOTO_CATEGORIES = [

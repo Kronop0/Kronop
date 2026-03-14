@@ -61,7 +61,7 @@ class TurboBridge {
   private startTime = Date.now();
 
   constructor() {
-    this.nativeRenderer = NativeModules.KronopNativeRenderer as NativeRendererInterface;
+    this.nativeRenderer = NativeModules.KronopNativeRenderer as NativeRendererInterface || null;
     this.performanceMetrics = {
       fps: 0,
       memoryUsage: 0,
@@ -86,6 +86,13 @@ class TurboBridge {
   async initialize(): Promise<boolean> {
     try {
       console.log('🚀 Initializing Turbo Bridge with Native Renderer');
+      
+      // Check if native renderer is available
+      if (!this.nativeRenderer) {
+        console.warn('⚠️ Native renderer not available - using fallback mode');
+        this.isInitialized = true;
+        return true;
+      }
       
       // Create native renderer
       this.rendererId = await this.nativeRenderer.create();
@@ -158,8 +165,13 @@ class TurboBridge {
    * Render video frame using Native Renderer
    */
   async renderFrame(frameData: ArrayBuffer, width: number, height: number): Promise<void> {
-    if (!this.isInitialized || !this.rendererId) {
+    if (!this.isInitialized) {
       console.error('❌ Turbo Bridge not initialized');
+      return;
+    }
+    
+    if (!this.nativeRenderer || !this.rendererId) {
+      // Fallback mode - just log and continue
       return;
     }
 
@@ -221,8 +233,13 @@ class TurboBridge {
    * Decode video using hardware acceleration
    */
   async decodeVideo(videoData: ArrayBuffer, dataSize: number): Promise<boolean> {
-    if (!this.isInitialized || !this.rendererId) {
+    if (!this.isInitialized) {
       console.error('❌ Turbo Bridge not initialized');
+      return false;
+    }
+    
+    if (!this.nativeRenderer || !this.rendererId) {
+      // Fallback mode
       return false;
     }
 

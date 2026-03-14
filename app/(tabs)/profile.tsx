@@ -18,12 +18,12 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
 // Import upload components
-import StoryUpload from '../../components/upload/uploadScreen.tsx/StoryUpload.tsx';
-import PhotoUpload from '../../components/upload/uploadScreen.tsx/PhotoUpload.tsx';
-import ReelsUpload from '../../components/upload/uploadScreen.tsx/ReelsUpload.tsx';
-import VideoUpload from '../../components/upload/uploadScreen.tsx/VideoUpload.tsx';
-import LiveUpload from '../../components/upload/uploadScreen.tsx/LiveUpload.tsx';
-import SongUpload from '../../components/upload/uploadScreen.tsx/SongUpload.tsx';
+import StoryUpload from '../../components/upload/story.jsa/StoryUpload.tsx';
+import PhotoUpload from '../../components/upload/photo.tsa/PhotoUpload.tsx';
+import ReelsUpload from '../../components/upload/reels.jsa/ReelsUpload.tsx';
+import VideoUpload from '../../components/upload/video.jsa/VideoUpload.tsx';
+import LiveUpload from '../../components/upload/live.jsa/LiveUpload.tsx';
+import SongUpload from '../../components/upload/song.jsa/SongUpload.tsx';
 
 const mockUserData = {
   displayName: 'Aman Angoriya',

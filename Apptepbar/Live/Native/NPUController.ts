@@ -58,7 +58,7 @@ class NPUController {
 
   constructor(config: AIProcessingConfig) {
     this.config = config;
-    this.nativeNPU = NativeModules.KronopAISharpnessEngine;
+    this.nativeNPU = NativeModules.KronopAISharpnessEngine || null;
     
     this.modelInfo = {
       name: 'sharpness_enhancement_v2',
@@ -87,6 +87,13 @@ class NPUController {
   async initialize(): Promise<boolean> {
     try {
       console.log('🧠 Initializing NPU Controller');
+      
+      // Check if native NPU is available
+      if (!this.nativeNPU) {
+        console.warn('⚠️ Native NPU not available - using fallback mode');
+        this.isInitialized = true;
+        return true;
+      }
       
       // Check NPU availability
       const npuAvailable = await this.checkNPUAvailability();
@@ -132,6 +139,11 @@ class NPUController {
    */
   private async checkNPUAvailability(): Promise<boolean> {
     try {
+      if (!this.nativeNPU) {
+        console.warn('⚠️ Native NPU not available');
+        return false;
+      }
+      
       if (Platform.OS === 'android') {
         // Check Android NNAPI availability
         const isNPUAvailable = await this.nativeNPU.isNPUAvailable();
@@ -157,6 +169,11 @@ class NPUController {
    */
   private async checkCoreMLAvailability(): Promise<boolean> {
     try {
+      if (!this.nativeNPU) {
+        console.warn('⚠️ Native NPU not available for CoreML check');
+        return false;
+      }
+      
       // Check if CoreML framework is available
       const coreMLFramework = await this.nativeNPU.checkCoreMLFramework();
       return coreMLFramework !== null;
@@ -172,6 +189,11 @@ class NPUController {
   private async loadAIModel(): Promise<boolean> {
     try {
       console.log('📦 Loading AI model for NPU processing');
+      
+      if (!this.nativeNPU) {
+        console.warn('⚠️ Native NPU not available - skipping model loading');
+        return false;
+      }
       
       // Model path based on platform
       const modelPath = Platform.OS === 'android' 
@@ -334,14 +356,16 @@ class NPUController {
   /**
    * Adjust processing parameters based on frame analysis
    */
-  private adjustProcessingParameters(analysis: FrameAnalysisResult): void {
+  adjustProcessingParameters(analysis: FrameAnalysisResult): void {
     // Dynamic parameter adjustment
     this.config.sharpnessStrength = analysis.recommendedSharpness;
     this.config.noiseReductionLevel = analysis.recommendedNoiseReduction;
     
     // Update native parameters
-    this.nativeNPU.setSharpness(this.config.sharpnessStrength);
-    this.nativeNPU.setNoiseReduction(this.config.noiseReductionLevel);
+    if (this.nativeNPU) {
+      this.nativeNPU.setSharpness(this.config.sharpnessStrength);
+      this.nativeNPU.setNoiseReduction(this.config.noiseReductionLevel);
+    }
     
     console.log(`🎛️ Adjusted parameters: Sharpness=${this.config.sharpnessStrength}, Noise=${this.config.noiseReductionLevel}`);
   }

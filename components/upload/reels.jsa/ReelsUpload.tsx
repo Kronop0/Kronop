@@ -104,7 +104,7 @@ export default function ReelsUpload({
 
     // Direct connection to reels.js folder
     try {
-      const reelsHandler = require('../reels.js').default;
+      const reelsHandler = require('./reels.js').default;
       const result = await reelsHandler.receiveFile(selectedFile.uri, {
         ...reelData,
         size: selectedFile.size,

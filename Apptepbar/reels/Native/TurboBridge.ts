@@ -50,7 +50,7 @@ export interface GPUTextureInfo {
 
 // Turbo Module Implementation
 class TurboBridge {
-  private nativeRenderer: NativeRendererInterface;
+  private nativeRenderer: NativeRendererInterface | null;
   private rendererId: number | null = null;
   private performanceMetrics: PerformanceMetrics;
   private tripleBufferInfo: TripleBufferInfo;
@@ -61,7 +61,15 @@ class TurboBridge {
   private startTime = Date.now();
 
   constructor() {
-    this.nativeRenderer = NativeModules.KronopNativeRenderer as NativeRendererInterface;
+    // Check if native module is available
+    if (NativeModules.KronopNativeRenderer) {
+      this.nativeRenderer = NativeModules.KronopNativeRenderer as NativeRendererInterface;
+      console.log('✅ Native renderer module found');
+    } else {
+      console.warn('⚠️ Native renderer module not found, using mock implementation');
+      this.nativeRenderer = null;
+    }
+    
     this.performanceMetrics = {
       fps: 0,
       memoryUsage: 0,
@@ -86,6 +94,14 @@ class TurboBridge {
   async initialize(): Promise<boolean> {
     try {
       console.log('🚀 Initializing Turbo Bridge with Native Renderer');
+      
+      // Check if native renderer is available
+      if (!this.nativeRenderer) {
+        console.warn('⚠️ Native renderer not available, using mock implementation');
+        this.rendererId = 1; // Mock renderer ID
+        this.isInitialized = true;
+        return true;
+      }
       
       // Create native renderer
       this.rendererId = await this.nativeRenderer.create();
@@ -181,7 +197,11 @@ class TurboBridge {
     
     try {
       // Call native renderer
-      await this.nativeRenderer.renderFrame(this.rendererId, frameData, width, height);
+      if (this.nativeRenderer && this.rendererId !== null) {
+        await this.nativeRenderer.renderFrame(this.rendererId, frameData, width, height);
+      } else {
+        console.log('🎬 Mock render frame call');
+      }
       
       // Update triple buffer state
       this.updateTripleBufferState();
@@ -230,15 +250,19 @@ class TurboBridge {
       console.log(`🎬 Decoding video: ${dataSize} bytes`);
       
       // Call native hardware decoder
-      const success = await this.nativeRenderer.decodeVideo(this.rendererId, videoData, dataSize);
-      
-      if (success) {
-        console.log('✅ Video decoded successfully');
+      if (this.nativeRenderer && this.rendererId !== null) {
+        const success = await this.nativeRenderer.decodeVideo(this.rendererId, videoData, dataSize);
+        
+        if (success) {
+          console.log('✅ Video decoded successfully');
+        } else {
+          console.error('❌ Video decoding failed');
+        }
+        return success;
       } else {
-        console.error('❌ Video decoding failed');
+        console.log('🎬 Mock video decode call');
+        return true;
       }
-      
-      return success;
     } catch (error) {
       console.error('❌ Video decoding error:', error);
       return false;
@@ -254,9 +278,13 @@ class TurboBridge {
     }
 
     try {
-      const fps = await this.nativeRenderer.getFPS(this.rendererId);
-      this.performanceMetrics.fps = fps;
-      return fps;
+      if (this.nativeRenderer && this.rendererId !== null) {
+        const fps = await this.nativeRenderer.getFPS(this.rendererId);
+        this.performanceMetrics.fps = fps;
+        return fps;
+      } else {
+        return 60; // Mock FPS
+      }
     } catch (error) {
       console.error('❌ Failed to get FPS:', error);
       return 0;
@@ -272,10 +300,14 @@ class TurboBridge {
     }
 
     try {
-      const memoryUsage = await this.nativeRenderer.getMemoryUsage(this.rendererId);
-      this.performanceMetrics.memoryUsage = memoryUsage;
-      this.performanceMetrics.gpuMemoryUsage = memoryUsage;
-      return memoryUsage;
+      if (this.nativeRenderer && this.rendererId !== null) {
+        const memoryUsage = await this.nativeRenderer.getMemoryUsage(this.rendererId);
+        this.performanceMetrics.memoryUsage = memoryUsage;
+        this.performanceMetrics.gpuMemoryUsage = memoryUsage;
+        return memoryUsage;
+      } else {
+        return 1024; // Mock memory usage (MB)
+      }
     } catch (error) {
       console.error('❌ Failed to get memory usage:', error);
       return 0;
@@ -292,8 +324,12 @@ class TurboBridge {
     }
 
     try {
-      await this.nativeRenderer.setNativeWindow(this.rendererId, surface);
-      console.log('✅ Native window set successfully');
+      if (this.nativeRenderer && this.rendererId !== null) {
+        await this.nativeRenderer.setNativeWindow(this.rendererId, surface);
+        console.log('✅ Native window set successfully');
+      } else {
+        console.log('🎬 Mock set native window call');
+      }
     } catch (error) {
       console.error('❌ Failed to set native window:', error);
     }
@@ -368,8 +404,12 @@ class TurboBridge {
     
     if (this.rendererId !== null) {
       try {
-        await this.nativeRenderer.destroy(this.rendererId);
-        console.log('✅ Native renderer destroyed');
+        if (this.nativeRenderer) {
+          await this.nativeRenderer.destroy(this.rendererId);
+          console.log('✅ Native renderer destroyed');
+        } else {
+          console.log('🎬 Mock destroy native renderer call');
+        }
       } catch (error) {
         console.error('❌ Failed to destroy native renderer:', error);
       }

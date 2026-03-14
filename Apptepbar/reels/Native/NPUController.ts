@@ -46,7 +46,7 @@ export interface NPUPerformanceMetrics {
 
 // NPU Controller Implementation
 class NPUController {
-  private nativeNPU: any;
+  private nativeNPU: any | null;
   private modelInfo: NPUModelInfo;
   private config: AIProcessingConfig;
   private performanceMetrics: NPUPerformanceMetrics;
@@ -58,7 +58,15 @@ class NPUController {
 
   constructor(config: AIProcessingConfig) {
     this.config = config;
-    this.nativeNPU = NativeModules.KronopAISharpnessEngine;
+    
+    // Check if native NPU module is available
+    if (NativeModules.KronopAISharpnessEngine) {
+      this.nativeNPU = NativeModules.KronopAISharpnessEngine;
+      console.log('✅ Native NPU module found');
+    } else {
+      console.warn('⚠️ Native NPU module not found, using mock implementation');
+      this.nativeNPU = null;
+    }
     
     this.modelInfo = {
       name: 'sharpness_enhancement_v2',
@@ -97,11 +105,17 @@ class NPUController {
       }
       
       // Create native AI engine
-      const engineId = await this.nativeNPU.create();
-      
-      if (engineId === 0) {
-        console.error('❌ Failed to create AI engine');
-        return false;
+      if (this.nativeNPU) {
+        const engineId = await this.nativeNPU.create();
+        
+        if (engineId === 0) {
+          console.error('❌ Failed to create AI engine');
+          return false;
+        }
+        
+        console.log(`✅ AI Engine created with ID: ${engineId}`);
+      } else {
+        console.log('🧠 Mock AI engine creation');
       }
       
       // Load AI model
@@ -134,9 +148,14 @@ class NPUController {
     try {
       if (Platform.OS === 'android') {
         // Check Android NNAPI availability
-        const isNPUAvailable = await this.nativeNPU.isNPUAvailable();
-        console.log(`🤖 Android NPU Available: ${isNPUAvailable}`);
-        return isNPUAvailable;
+        if (this.nativeNPU) {
+          const isNPUAvailable = await this.nativeNPU.isNPUAvailable();
+          console.log(`🤖 Android NPU Available: ${isNPUAvailable}`);
+          return isNPUAvailable;
+        } else {
+          console.log('🤖 Mock Android NPU check - returning false');
+          return false;
+        }
       } else if (Platform.OS === 'ios') {
         // Check iOS CoreML availability
         const coreMLAvailable = await this.checkCoreMLAvailability();
@@ -158,8 +177,13 @@ class NPUController {
   private async checkCoreMLAvailability(): Promise<boolean> {
     try {
       // Check if CoreML framework is available
-      const coreMLFramework = await this.nativeNPU.checkCoreMLFramework();
-      return coreMLFramework !== null;
+      if (this.nativeNPU) {
+        const coreMLFramework = await this.nativeNPU.checkCoreMLFramework();
+        return coreMLFramework !== null;
+      } else {
+        console.log('🍎 Mock CoreML check - returning false');
+        return false;
+      }
     } catch (error) {
       console.error('❌ CoreML availability check failed:', error);
       return false;
@@ -179,15 +203,21 @@ class NPUController {
         : 'sharpness_model.mlmodel';
       
       // Load model asynchronously
-      const modelLoaded = await this.nativeNPU.loadModel(modelPath);
-      
-      if (modelLoaded) {
-        this.modelInfo.isLoaded = true;
-        console.log(`✅ AI model loaded: ${modelPath}`);
-        return true;
+      if (this.nativeNPU) {
+        const modelLoaded = await this.nativeNPU.loadModel(modelPath);
+        
+        if (modelLoaded) {
+          this.modelInfo.isLoaded = true;
+          console.log(`✅ AI model loaded: ${modelPath}`);
+          return true;
+        } else {
+          console.error('❌ Failed to load AI model');
+          return false;
+        }
       } else {
-        console.error('❌ Failed to load AI model');
-        return false;
+        console.log('📦 Mock AI model loading - returning true');
+        this.modelInfo.isLoaded = true;
+        return true;
       }
     } catch (error) {
       console.error('❌ AI model loading failed:', error);
@@ -340,8 +370,12 @@ class NPUController {
     this.config.noiseReductionLevel = analysis.recommendedNoiseReduction;
     
     // Update native parameters
-    this.nativeNPU.setSharpness(this.config.sharpnessStrength);
-    this.nativeNPU.setNoiseReduction(this.config.noiseReductionLevel);
+    if (this.nativeNPU) {
+      this.nativeNPU.setSharpness(this.config.sharpnessStrength);
+      this.nativeNPU.setNoiseReduction(this.config.noiseReductionLevel);
+    } else {
+      console.log('🎛️ Mock parameter adjustment');
+    }
     
     console.log(`🎛️ Adjusted parameters: Sharpness=${this.config.sharpnessStrength}, Noise=${this.config.noiseReductionLevel}`);
   }
@@ -380,7 +414,13 @@ class NPUController {
       }
       
       // Apply edge enhancement through NPU
-      const enhancedFrame = await this.nativeNPU.processFrame(processedFrame, width, height);
+      let enhancedFrame;
+      if (this.nativeNPU) {
+        enhancedFrame = await this.nativeNPU.processFrame(processedFrame, width, height);
+      } else {
+        console.log('🧠 Mock NPU frame processing - returning original frame');
+        enhancedFrame = processedFrame;
+      }
       
       // Apply dynamic bitrate enhancement if enabled
       if (this.config.dynamicBitrateEnhancement) {

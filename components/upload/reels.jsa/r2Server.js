@@ -17,7 +17,7 @@ const getFileNameWithoutExtension = (fileName) => {
 };
 
 // AWS Signature v4 helper functions
-const getCanonicalRequest = (method, path, headers, payload) => {
+const getCanonicalRequest = (method, path, headers, payloadHash) => {
   const canonicalHeaders = Object.keys(headers)
     .sort()
     .map(key => `${key.toLowerCase()}:${headers[key]}\n`)
@@ -27,8 +27,6 @@ const getCanonicalRequest = (method, path, headers, payload) => {
     .sort()
     .map(key => key.toLowerCase())
     .join(';');
-
-  const payloadHash = CryptoJS.SHA256(payload).toString(CryptoJS.enc.Hex);
 
   return `${method}\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 };
@@ -40,6 +38,15 @@ const getStringToSign = (timestamp, credentialScope, canonicalRequest) => {
 
 const getSignature = (key, stringToSign) => {
   return CryptoJS.HmacSHA256(stringToSign, key).toString(CryptoJS.enc.Hex);
+};
+
+// Function to derive signing key for AWS Signature v4
+const getSigningKey = (secretKey, dateStamp, region, service) => {
+  const kDate = CryptoJS.HmacSHA256(dateStamp, `AWS4${secretKey}`);
+  const kRegion = CryptoJS.HmacSHA256(region, kDate);
+  const kService = CryptoJS.HmacSHA256(service, kRegion);
+  const kSigning = CryptoJS.HmacSHA256('aws4_request', kService);
+  return kSigning;
 };
 
 // R2 Upload Handler using Fetch API with proper auth
@@ -60,10 +67,21 @@ const r2UploadHandler = {
         throw new Error('File does not exist');
       }
 
-      // Read file as base64
+      // Read file as base64 first
       const fileContent = await FileSystem.readAsStringAsync(fileUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
+
+      // Convert to binary for proper hashing and upload
+      const binaryContent = CryptoJS.enc.Base64.parse(fileContent);
+      const payloadHash = CryptoJS.SHA256(binaryContent).toString(CryptoJS.enc.Hex);
+      
+      // Convert to Uint8Array for fetch
+      const wordArray = binaryContent;
+      const byteArray = new Uint8Array(wordArray.sigBytes);
+      for (let i = 0; i < wordArray.sigBytes; i++) {
+        byteArray[i] = (wordArray.words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
+      }
 
       // Extract file information
       const fileExtension = getFileExtension(fileName);
@@ -82,11 +100,14 @@ const r2UploadHandler = {
 
       // Create R2 upload URL
       const bucketName = process.env.EXPO_PUBLIC_BUCKET_REELS;
-      const objectKey = `Reels/${uniqueFileName}`;
+      const safeFileName = uniqueFileName.replace(/[^\w\-_.]/g, '_'); // Sanitize filename
+      const objectKey = `Reels/${safeFileName}`;
       const endpoint = process.env.EXPO_PUBLIC_R2_ENDPOINT.replace(/\/$/, '');
       const uploadUrl = `${endpoint}/${bucketName}/${objectKey}`;
       
       console.log('🚀 Starting R2 upload...');
+      console.log('🔍 Debug - Endpoint:', endpoint);
+      console.log('🔍 Debug - Upload URL:', uploadUrl);
       
       // Create AWS Signature v4
       const now = new Date();
@@ -99,20 +120,23 @@ const r2UploadHandler = {
         'Host': new URL(endpoint).host,
         'Content-Type': contentType,
         'x-amz-date': amzDate,
-        'x-amz-content-sha256': CryptoJS.SHA256(fileContent).toString(CryptoJS.enc.Hex),
+        'x-amz-content-sha256': payloadHash, // Use actual payload hash
       };
 
       const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
-      const canonicalRequest = getCanonicalRequest('PUT', `/${bucketName}/${objectKey}`, headers, fileContent);
+      const canonicalRequest = getCanonicalRequest('PUT', `/${bucketName}/${objectKey}`, headers, payloadHash);
       const stringToSign = getStringToSign(amzDate, credentialScope, canonicalRequest);
       
-      // Derive signing key
-      const kDate = getSignature(`AWS4${process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY}`, dateStamp);
-      const kRegion = getSignature(kDate, region);
-      const kService = getSignature(kRegion, service);
-      const kSigning = getSignature(kService, 'aws4_request');
+      // Debug logging for signature
+      console.log('🔍 Debug - Object Key:', objectKey);
+      console.log('🔍 Debug - Canonical Request:', canonicalRequest);
+      console.log('🔍 Debug - String to Sign:', stringToSign);
       
-      const signature = getSignature(kSigning, stringToSign);
+      // Derive signing key using the correct method
+      const signingKey = getSigningKey(process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY, dateStamp, region, service);
+      const signature = getSignature(signingKey, stringToSign);
+      
+      console.log('🔍 Debug - Generated Signature:', signature);
       
       const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID}/${credentialScope}, SignedHeaders=${Object.keys(headers).sort().map(k => k.toLowerCase()).join(';')}, Signature=${signature}`;
       
@@ -123,7 +147,7 @@ const r2UploadHandler = {
           ...headers,
           'Authorization': authorizationHeader,
         },
-        body: fileContent,
+        body: byteArray,
       });
 
       if (!response.ok) {
