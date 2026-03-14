@@ -108,7 +108,7 @@ export default function SongUpload({
 
     // Direct connection to song.js folder
     try {
-      const songHandler = require('../song.js');
+      const songHandler = require('./song.js');
       const result = await songHandler.receiveFile(selectedFiles, {
         ...songData,
         totalFiles: selectedFiles.length,
