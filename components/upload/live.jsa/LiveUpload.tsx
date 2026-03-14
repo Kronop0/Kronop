@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as liveHandler from './live';
 
 interface LiveData {
   title: string;
@@ -59,6 +60,7 @@ export default function LiveUpload({
   });
   const [isSetup, setIsSetup] = useState(true);
   const [isLive, setIsLive] = useState(false);
+  const [showBroadcaster, setShowBroadcaster] = useState(false);
 
   const categories = [
     'Gaming', 'Music', 'Talk Show', 'Education', 'Entertainment',
@@ -81,31 +83,16 @@ export default function LiveUpload({
       return;
     }
 
-    // Direct connection to live.js folder
-    try {
-      const liveHandler = require('../live.js');
-      const result = await liveHandler.receiveFile(null, {
-        ...liveData,
-        streamType: 'live',
-        startTime: Date.now()
-      });
-      
-      if (result.success) {
-        Alert.alert('Success', result.message);
-        setIsLive(true);
-        setIsSetup(false);
-      } else {
-        Alert.alert('Error', result.message);
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      Alert.alert('Error', 'Upload failed for Live');
-    }
+    // Navigate to BroadcasterView screen with data
+    setIsSetup(false);
+    setShowBroadcaster(true);
   };
 
   const endLiveStream = async () => {
     try {
       setIsLive(false);
+      setShowBroadcaster(false);
+      setIsSetup(true);
       
       // End live stream and save recording
       await endLiveStreamWithSocket();
@@ -114,7 +101,6 @@ export default function LiveUpload({
       
       // Reset form
       setLiveData({ title: '', category: '', audienceType: '' });
-      setIsSetup(true);
       
       onClose();
       router.replace('/');
@@ -232,7 +218,20 @@ export default function LiveUpload({
     }
   };
 
-    if (isSetup) {
+    if (showBroadcaster) {
+    // Import and render BroadcasterView directly
+    const BroadcasterViewComponent = require('./BroadcasterView').default;
+    return (
+      <BroadcasterViewComponent 
+        streamTitle={liveData.title}
+        streamCategory={liveData.category}
+        streamAudience={liveData.audienceType}
+        onEndStream={endLiveStream}
+      />
+    );
+  }
+
+  if (isSetup) {
     return (
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.uploadArea}>

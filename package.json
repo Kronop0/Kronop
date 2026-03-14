@@ -226,6 +226,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/plugin-syntax-import-meta": "^7.10.4",
+    "@react-native-community/cli": "^20.1.2",
     "@types/react": "~19.1.10",
     "ajv": "^8.17.1",
     "ajv-keywords": "^5.1.0",
