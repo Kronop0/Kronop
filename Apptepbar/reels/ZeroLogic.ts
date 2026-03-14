@@ -1,10 +1,12 @@
 import { API_KEYS } from '@/constants/Config';
-import { getVideoUrl } from './CloudConfig';
+import { getVideoUrl, getReelUrl } from './cloudin';
 
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
 
 // Like/Unlike API
 export const toggleLike = async (videoId: string, isCurrentlyLiked: boolean): Promise<boolean> => {
+  console.log('❤️ Toggling like:', videoId, isCurrentlyLiked);
+  
   try {
     const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/like`, {
       method: isCurrentlyLiked ? 'DELETE' : 'POST',
@@ -13,8 +15,11 @@ export const toggleLike = async (videoId: string, isCurrentlyLiked: boolean): Pr
         'Content-Type': 'application/json'
       }
     });
+    
+    console.log('📡 Like toggle response:', response.status);
     return response.ok;
   } catch (error) {
+    console.error('💥 Like toggle error:', error);
     return false;
   }
 };
@@ -90,10 +95,14 @@ export const toggleSupport = async (channelName: string, isCurrentlySupported: b
 
 // Share reel
 export const shareReel = async (videoId: string, title: string, videoUrl: string): Promise<boolean> => {
+  console.log('🔗 Sharing reel:', videoId);
+  
   try {
     const shareUrl = `kronop://reels/${videoId}`;
     const webUrl = `https://kronop.app/reels/${videoId}`;
-    const r2StreamingUrl = getVideoUrl(videoUrl);
+    const r2StreamingUrl = getReelUrl(videoUrl); // Use getReelUrl for proper R2 integration
+    
+    console.log('🎬 R2 Streaming URL:', r2StreamingUrl);
     
     // Try native share first
     if (navigator.share) {
@@ -101,13 +110,16 @@ export const shareReel = async (videoId: string, title: string, videoUrl: string
         title: title,
         url: r2StreamingUrl,
       });
+      console.log('✅ Shared via native share');
       return true;
     }
     
     // Fallback: copy to clipboard
     await navigator.clipboard.writeText(r2StreamingUrl);
+    console.log('✅ Copied to clipboard');
     return true;
   } catch (error) {
+    console.error('💥 Share error:', error);
     return false;
   }
 };

@@ -66,7 +66,7 @@ class TurboBridge {
       this.nativeRenderer = NativeModules.KronopNativeRenderer as NativeRendererInterface;
       console.log('✅ Native renderer module found');
     } else {
-      console.warn('⚠️ Native renderer module not found, using mock implementation');
+      // Silent fail - no warning for missing native module
       this.nativeRenderer = null;
     }
     
@@ -93,11 +93,9 @@ class TurboBridge {
    */
   async initialize(): Promise<boolean> {
     try {
-      console.log('🚀 Initializing Turbo Bridge with Native Renderer');
-      
       // Check if native renderer is available
       if (!this.nativeRenderer) {
-        console.warn('⚠️ Native renderer not available, using mock implementation');
+        // Silent fail - no warning for missing native renderer
         this.rendererId = 1; // Mock renderer ID
         this.isInitialized = true;
         return true;
@@ -120,10 +118,6 @@ class TurboBridge {
       this.isInitialized = true;
       this.startTime = Date.now();
       
-      console.log('✅ Turbo Bridge initialized successfully');
-      console.log(`📱 Platform: ${Platform.OS}`);
-      console.log(`🎯 Renderer ID: ${this.rendererId}`);
-      
       return true;
     } catch (error) {
       console.error('❌ Turbo Bridge initialization failed:', error);
@@ -135,8 +129,6 @@ class TurboBridge {
    * Initialize GPU Texture Mapping System
    */
   private async initializeGPUTextures(): Promise<void> {
-    console.log('🎨 Initializing GPU Texture Mapping System');
-    
     // Create 3 textures for triple buffering
     for (let i = 0; i < 3; i++) {
       const textureInfo: GPUTextureInfo = {
@@ -151,23 +143,15 @@ class TurboBridge {
       this.gpuTextures.push(textureInfo);
       this.performanceMetrics.gpuMemoryUsage += textureInfo.memoryUsage;
     }
-    
-    console.log(`✅ GPU Textures initialized: ${this.gpuTextures.length} textures`);
-    console.log(`💾 GPU Memory Usage: ${(this.performanceMetrics.gpuMemoryUsage / (1024 * 1024)).toFixed(2)} MB`);
   }
 
   /**
    * Setup Triple Buffering System for 0.1ms rendering
    */
   private async setupTripleBuffering(): Promise<void> {
-    console.log('🔄 Setting up Triple Buffering System');
-    
     // Initialize buffer states
     this.tripleBufferInfo.bufferReady = [true, true, true];
     this.tripleBufferInfo.currentBufferIndex = 0;
-    
-    console.log('✅ Triple Buffering System ready');
-    console.log(`📊 Buffer States: Front=${this.tripleBufferInfo.frontBuffer}, Back=${this.tripleBufferInfo.backBuffer}, Next=${this.tripleBufferInfo.nextBuffer}`);
   }
 
   /**

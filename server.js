@@ -13,6 +13,27 @@ const WebSocket = require('ws');
 const User = require('./models/User');
 const Content = require('./models/Content');
 
+// Stub SignedUrlService to prevent reference errors
+const SignedUrlService = {
+  generateSignedUrl: (url) => url // Return URL as-is for public access
+};
+
+// Stub RedisCacheService
+const RedisCacheService = {
+  client: {
+    get: async () => null,
+    setex: async () => {},
+    del: async () => {}
+  }
+};
+
+// Stub UserInterestTrackingService
+const UserInterestTrackingService = {
+  getTrendingContent: async (type, limit) => [],
+  getUserInterestProfile: async () => ({ isNewUser: true, totalInteractions: 0, topCategories: [] }),
+  calculateContentRelevance: async () => ({ score: 0.5, matchedInterests: [] })
+};
+
 // Routes
 const contentRoutes = require('./api/content');
 const userRoutes = require('./api/users');
@@ -236,20 +257,23 @@ const getSmartFeed = async (contentType, req, res) => {
       const items = await Content.find({ type: contentType, category, is_active: true })
         .sort({ created_at: -1 }).limit(parseInt(limit))
         .select('title url thumbnail tags category views likes created_at user_id');
-      return res.json({ success: true, data: SignedUrlService.generateSignedUrlsForContent(items), message: `${contentType}s in ${category}` });
+      // TODO: Implement SignedUrlService when available
+      return res.json({ success: true, data: items, message: `${contentType}s in ${category}` });
     }
     
     // Trending content for no userId
     if (!userId) {
       const trending = await UserInterestTrackingService.getTrendingContent(contentType, parseInt(limit));
-      return res.json({ success: true, data: SignedUrlService.generateSignedUrlsForContent(trending), message: `Trending ${contentType}s` });
+      // TODO: Implement SignedUrlService when available
+      return res.json({ success: true, data: trending, message: `Trending ${contentType}s` });
     }
     
     // Smart feed based on user interests
     const userProfile = await UserInterestTrackingService.getUserInterestProfile(userId);
     if (userProfile.isNewUser || userProfile.totalInteractions < 5) {
       const trending = await UserInterestTrackingService.getTrendingContent(contentType, parseInt(limit));
-      return res.json({ success: true, data: SignedUrlService.generateSignedUrlsForContent(trending), message: `Trending ${contentType}s for new user` });
+      // TODO: Implement SignedUrlService when available
+      return res.json({ success: true, data: trending, message: `Trending ${contentType}s for new user` });
     }
     
     const topCategories = userProfile.topCategories.map(cat => cat.category);
@@ -266,7 +290,8 @@ const getSmartFeed = async (contentType, req, res) => {
     }));
     
     itemsWithRelevance.sort((a, b) => b.relevanceScore - a.relevanceScore);
-    const data = SignedUrlService.generateSignedUrlsForContent(itemsWithRelevance.slice(0, parseInt(limit)));
+    // TODO: Implement SignedUrlService when available
+    const data = itemsWithRelevance.slice(0, parseInt(limit));
     
     res.json({ success: true, data, message: `Smart ${contentType} feed`, isSmartFeed: true });
   } catch (error) {

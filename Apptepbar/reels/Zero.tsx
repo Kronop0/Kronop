@@ -18,8 +18,9 @@ import VideoPlayer from './Player/VideoPlayer';
 import GhostFeedManager from './GhostFeedManager';
 import { API_KEYS } from '@/constants/Config';
 import { initializeTurboBridge } from './Native/TurboBridge';
+import { getVideoUrl, getReelUrl } from './cloudin';
 
-// API URL for Reels
+// API URL from constants
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -36,46 +37,10 @@ interface VideoItem {
   shares?: number;
 }
 
-// Fallback mock data for development - 3 working demo videos
-const mockVideos: VideoItem[] = [
-  {
-    id: '1',
-    uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    title: 'Big Buck Bunny - Animated Short Film',
-    channelName: 'NatureChannel',
-    channelLogo: 'https://picsum.photos/seed/nature/200/200.jpg',
-    isVerified: true,
-    likes: 15420,
-    comments: 892,
-    shares: 4521,
-  },
-  {
-    id: '2',
-    uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    title: 'Elephants Dream - Sci-Fi Animation',
-    channelName: 'SciFiMovies',
-    channelLogo: 'https://picsum.photos/seed/scifi/200/200.jpg',
-    isVerified: true,
-    likes: 8934,
-    comments: 567,
-    shares: 2341,
-  },
-  {
-    id: '3',
-    uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-    title: 'Tears of Steel - Action Short Film',
-    channelName: 'ActionFilms',
-    channelLogo: 'https://picsum.photos/seed/action/200/200.jpg',
-    isVerified: false,
-    likes: 6789,
-    comments: 423,
-    shares: 1876,
-  },
-];
-
 const Zero: React.FC = () => {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentVisibleIndex, setCurrentVisibleIndex] = useState<number>(0);
   const [pausedVideos, setPausedVideos] = useState<Set<string>>(new Set());
   const [showPlayPauseMap, setShowPlayPauseMap] = useState<Map<string, boolean>>(new Map());
@@ -100,34 +65,61 @@ const Zero: React.FC = () => {
 
   // Fetch videos from Kronop API
   const fetchVideosFromAPI = async () => {
+    console.log('🎬 Starting API fetch from:', `${KRONOP_API_URL}/api/content/reels`);
+    
     try {
-      const response = await fetch(`${KRONOP_API_URL}/api/reels`, {
+      const response = await fetch(`${KRONOP_API_URL}/api/content/reels`, {
         headers: {
           'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
           'Content-Type': 'application/json'
         }
       });
       
+      console.log('📡 API Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        const formattedVideos = data.map((video: any) => ({
-          id: video._id || video.id,
-          uri: video.videoUrl || video.url,
-          title: video.title || video.description,
-          channelName: video.username || video.channelName,
-          channelLogo: video.channelLogo || `https://picsum.photos/seed/${video.id}/200/200.jpg`,
-          isVerified: video.isVerified || false,
-          likes: video.likes || 0,
-          comments: video.comments || 0,
-          shares: video.shares || 0,
-        }));
+        console.log('📊 API Response data:', data);
         
-        setVideos(formattedVideos);
+        // Handle both success and error responses
+        if (data.success && data.data) {
+          const videos = data.data;
+          console.log('📊 API Response videos:', videos.length, 'videos received');
+          
+          const formattedVideos = videos.map((video: any) => {
+            console.log('🎥 Processing video:', video._id || video.id);
+            
+            // Use getReelUrl for proper R2 integration
+            const videoUrl = getReelUrl(video.videoUrl || video.url || video.filename);
+            
+            return {
+              id: video._id || video.id,
+              uri: videoUrl,
+              title: video.title || video.description,
+              channelName: video.username || video.channelName,
+              channelLogo: video.channelLogo || `https://picsum.photos/seed/${video.id}/200/200.jpg`,
+              isVerified: video.isVerified || false,
+              likes: video.likes || 0,
+              comments: video.comments || 0,
+              shares: video.shares || 0,
+            };
+          });
+          
+          console.log('✅ Formatted videos ready:', formattedVideos.length);
+          setVideos(formattedVideos);
+        } else {
+          console.warn('⚠️ API returned error or no data:', data.error || 'Unknown error');
+          console.error('❌ Backend Error: No data available from server');
+          setVideos([]);
+          setError(data.error || 'No data available from server');
+        }
       } else {
-        setVideos(mockVideos);
+        console.error('❌ API Error:', response.status, response.statusText);
+        setVideos([]);
       }
     } catch (error) {
-      setVideos(mockVideos);
+      console.error('💥 API Fetch Error:', error);
+      setVideos([]);
     } finally {
       setLoading(false);
     }
@@ -286,8 +278,26 @@ const Zero: React.FC = () => {
       <GhostFeedManager
         maxReels={2}
         preloadCount={1}
-        onReelChange={() => {}}
-        onMemoryWarning={() => {}}
+        onReelChange={(reel) => {
+          console.log('👻 GhostFeed reel changed:', reel?.id || 'No reel');
+          if (reel && !videos.length) {
+            // If Zero.tsx has no videos but GhostFeed has a reel, use it
+            const videoUrl = getReelUrl(reel.videoUrl);
+            const mockVideo = {
+              id: reel.id,
+              uri: videoUrl,
+              title: reel.description,
+              channelName: reel.username,
+              channelLogo: `https://picsum.photos/seed/${reel.id}/200/200.jpg`,
+              isVerified: false,
+              likes: reel.likes,
+              comments: reel.comments,
+              shares: reel.shares,
+            };
+            setVideos([mockVideo]);
+          }
+        }}
+        onMemoryWarning={(usage) => console.log('⚠️ Memory warning:', usage)}
       />
     </View>
   );

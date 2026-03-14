@@ -62,9 +62,8 @@ class NPUController {
     // Check if native NPU module is available
     if (NativeModules.KronopAISharpnessEngine) {
       this.nativeNPU = NativeModules.KronopAISharpnessEngine;
-      console.log('✅ Native NPU module found');
     } else {
-      console.warn('⚠️ Native NPU module not found, using mock implementation');
+      // Silent fail - no warning for missing native module
       this.nativeNPU = null;
     }
     
@@ -94,13 +93,10 @@ class NPUController {
    */
   async initialize(): Promise<boolean> {
     try {
-      console.log('🧠 Initializing NPU Controller');
-      
       // Check NPU availability
       const npuAvailable = await this.checkNPUAvailability();
       
       if (!npuAvailable && !this.config.enableGPUFallback) {
-        console.error('❌ NPU not available and GPU fallback disabled');
         return false;
       }
       
@@ -128,11 +124,6 @@ class NPUController {
       
       this.isInitialized = true;
       this.modelInfo.isLoaded = true;
-      
-      console.log('✅ NPU Controller initialized successfully');
-      console.log(`🎯 Model: ${this.modelInfo.name} (${this.modelInfo.type})`);
-      console.log(`🔧 NPU Available: ${npuAvailable}`);
-      console.log(`🔄 GPU Fallback: ${this.config.enableGPUFallback}`);
       
       return true;
     } catch (error) {

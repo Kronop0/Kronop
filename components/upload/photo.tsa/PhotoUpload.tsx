@@ -179,7 +179,7 @@ export default function PhotoUpload({
 
     // Direct connection to photo.js folder
     try {
-      const photoHandler = require('../photo.js');
+      const photoHandler = require('./photo.js');
       const result = await photoHandler.receiveFile(selectedFiles[0]?.uri || '', {
         ...photoData,
         size: selectedFiles[0].size,

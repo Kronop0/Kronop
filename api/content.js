@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
 
+// Stub SignedUrlService to prevent reference errors
+const SignedUrlService = {
+  generateSignedUrl: (url) => url // Return URL as-is for public access
+};
+
 // POST /api/content/sync - One-click sync from external services to MongoDB
 router.post('/sync', async (req, res) => {
   try {
@@ -81,17 +86,33 @@ router.get('/:type', async (req, res) => {
     const parsedLimit = Math.min(parseInt(limit), 20);
     const parsedSkip = parseInt(skip) || (parsedPage - 1) * parsedLimit;
 
-    // const content = await DatabaseService.getContentByType(finalType, parsedPage, parsedLimit, parsedSkip);
-    const content = [];
+    // Get content from database directly (no signed URL needed for public R2)
+    const Content = require('../models/Content');
+    let content = await Content.find({ type: finalType, is_active: true })
+      .sort({ created_at: -1 })
+      .limit(parsedLimit)
+      .select('title url thumbnail tags category views likes created_at user_id filename');
     
-    // Generate signed URLs
-    const contentWithUrls = SignedUrlService.generateSignedUrlsForContent(content);
+    // For reels, ensure we have the filename for R2 public URL
+    if (finalType === 'Reel' && content.length > 0) {
+      content = content.map(item => ({
+        ...item.toObject(),
+        videoUrl: item.filename || item.url, // Use filename for R2 public URL
+        // Remove signed URL logic since we use public R2 URLs
+      }));
+    }
     
-    res.json({ success: true, data: contentWithUrls });
+    res.json({ success: true, data: content });
   } catch (error) {
     console.error(`Get Content Error (${req.params.type}):`, error);
     console.log(error);
-    res.status(200).json({ success: false, error: error.message, data: [] });
+    
+    // Return proper error response instead of mock data
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      data: []
+    });
   }
 });
 

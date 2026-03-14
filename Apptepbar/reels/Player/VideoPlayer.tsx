@@ -19,12 +19,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const turboBridgeRef = useRef(getTurboBridge());
   const npuControllerRef = useRef(getNPUController());
 
+  console.log('🎬 VideoPlayer initializing with source:', source);
+
   const player = useVideoPlayer({
     uri: source,
     headers: {
       'User-Agent': 'KronopApp'
     }
   }, (player) => {
+    console.log('🎥 Video player configured successfully');
     player.loop = true;
     player.muted = false;
   });
@@ -75,8 +78,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   useEffect(() => {
     if (isPlaying) {
+      console.log('▶️ Playing video:', source);
       player.play();
     } else {
+      console.log('⏸️ Pausing video:', source);
       player.pause();
     }
   }, [isPlaying, player]);

@@ -180,51 +180,64 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
   // Initialize with first reel from API
   useEffect(() => {
     const initializeFeed = async () => {
+      // Reduce log frequency - only log if debug mode
+      if (__DEV__) {
+        console.log('👻 GhostFeed initializing...');
+      }
+      
       try {
-        // Try to fetch from API first
-        const response = await fetch(`${KRONOP_API_URL}/api/reels`, {
+        // Fetch from API only
+        const response = await fetch(`${KRONOP_API_URL}/api/content/reels`, {
           headers: {
             'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
             'Content-Type': 'application/json'
           }
         });
         
+        console.log('👻 GhostFeed API response:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
-          if (data.length > 0) {
+          console.log('👻 GhostFeed received data:', data);
+          
+          // Handle both success and error responses
+          if (data.success && data.data && data.data.length > 0) {
+            console.log('👻 GhostFeed received:', data.data.length, 'reels');
+            
             const firstReel = {
-              id: data[0]._id || data[0].id,
-              videoUrl: data[0].videoUrl || data[0].url,
-              username: data[0].username || data[0].channelName,
-              description: data[0].title || data[0].description,
-              likes: data[0].likes || 0,
-              comments: data[0].comments || 0,
-              shares: data[0].shares || 0,
+              id: data.data[0]._id || data.data[0].id,
+              videoUrl: data.data[0].videoUrl || data.data[0].url,
+              username: data.data[0].username || data.data[0].channelName,
+              description: data.data[0].title || data.data[0].description,
+              likes: data.data[0].likes || 0,
+              comments: data.data[0].comments || 0,
+              shares: data.data[0].shares || 0,
               isLiked: false,
               timestamp: Date.now(),
             };
+            
+            console.log('👻 GhostFeed first reel:', firstReel.id);
             
             // Save to vault and set as active
             await saveReelToVault(firstReel);
             setActiveReel(firstReel);
             onReelChange?.(firstReel);
             return;
+          } else {
+            console.error('👻 GhostFeed: No data received from backend');
+            // No mock data - show error instead
+            setActiveReel(null);
+            return;
           }
         }
         
-        // Fallback to vault or default
-        const initialReel = await loadReelFromVault('default');
-        if (initialReel) {
-          setActiveReel(initialReel);
-          onReelChange?.(initialReel);
-        }
+        // No fallback - keep empty if API fails
+        console.log('👻 GhostFeed: No data received');
+        setActiveReel(null);
       } catch (error) {
-        // Fallback to local vault
-        const initialReel = await loadReelFromVault('default');
-        if (initialReel) {
-          setActiveReel(initialReel);
-          onReelChange?.(initialReel);
-        }
+        console.error('👻 GhostFeed initialization error:', error);
+        // No fallback - keep empty if API fails
+        setActiveReel(null);
       }
     };
     
