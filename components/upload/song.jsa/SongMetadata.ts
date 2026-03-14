@@ -1,5 +1,6 @@
 // SongMetadata.ts - Advanced metadata extraction using FFmpeg
-import { FFmpegKit, FFmpegKitConfig } from 'ffmpeg-kit-react-native';
+import { FFmpegKit } from 'ffmpeg-kit-react-native';
+import { FFprobeKit } from 'ffmpeg-kit-react-native';
 import * as FileSystem from 'expo-file-system';
 
 export interface SongMetadata {
@@ -28,16 +29,14 @@ export async function extractSongMetadata(fileUri: string, userMetadata: Partial
   try {
     console.log('📊 Extracting metadata from:', fileUri);
 
-    // Use FFmpeg to probe the file for technical metadata
-    const probeCommand = `-i "${fileUri}" -f ffmetadata -`;
+    // Check if FFprobeKit is available
+    if (!FFprobeKit) {
+      console.warn('⚠️ FFprobeKit not available, using fallback metadata');
+      return getFallbackMetadata(fileUri, userMetadata);
+    }
 
-    console.log('🔍 Running FFmpeg probe command:', probeCommand);
-
-    // Execute probe command to get file information
-    const session = await FFmpegKit.execute(`-i "${fileUri}" -f null -`);
-
-    // Get detailed information using ffprobe-like approach
-    const infoSession = await FFmpegKit.execute(`-i "${fileUri}" 2>&1 | grep -E "(Duration|bitrate|Hz|size)" || echo "probe_failed"`);
+    // Use FFprobeKit to get comprehensive media information
+    console.log('🔍 Using FFprobeKit to get media information...');
 
     // Parse the output for metadata
     let duration = 0;
@@ -46,29 +45,35 @@ export async function extractSongMetadata(fileUri: string, userMetadata: Partial
     let fileSize = 0;
 
     try {
-      const output = await infoSession.getOutput();
-      console.log('🔍 FFmpeg probe output:', output);
+      // Get media information using FFprobeKit
+      const mediaInfoSession = await FFprobeKit.getMediaInformation(fileUri);
+      const mediaInfoJson = await mediaInfoSession.getMediaInformation();
 
-      // Parse duration (format: Duration: 00:03:24.56)
-      const durationMatch = output.match(/Duration:\s*(\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
-      if (durationMatch) {
-        const hours = parseInt(durationMatch[1]);
-        const minutes = parseInt(durationMatch[2]);
-        const seconds = parseInt(durationMatch[3]);
-        const centiseconds = parseInt(durationMatch[4]);
-        duration = hours * 3600 + minutes * 60 + seconds + centiseconds / 100;
-      }
+      console.log('🔍 FFprobeKit media info:', mediaInfoJson);
 
-      // Parse bitrate (format: bitrate: 128 kb/s)
-      const bitrateMatch = output.match(/bitrate:\s*(\d+)\s*kb\/s/);
-      if (bitrateMatch) {
-        bitrate = parseInt(bitrateMatch[1]);
-      }
+      if (mediaInfoJson && typeof mediaInfoJson === 'object') {
+        const info = mediaInfoJson as any; // Type assertion for FFprobeKit API
 
-      // Parse sample rate (format: 44100 Hz)
-      const sampleRateMatch = output.match(/(\d+)\s*Hz/);
-      if (sampleRateMatch) {
-        sampleRate = parseInt(sampleRateMatch[1]);
+        // Extract duration
+        if (info.duration) {
+          duration = parseFloat(info.duration);
+        }
+
+        // Extract bitrate
+        if (info.bitrate) {
+          bitrate = Math.round(parseInt(info.bitrate) / 1000); // Convert to kbps
+        }
+
+        // Extract streams information
+        if (info.streams && Array.isArray(info.streams)) {
+          const audioStream = info.streams.find((stream: any) => stream.codec_type === 'audio');
+          if (audioStream) {
+            // Extract sample rate
+            if (audioStream.sample_rate) {
+              sampleRate = parseInt(audioStream.sample_rate);
+            }
+          }
+        }
       }
 
       // Get file size from FileSystem
@@ -76,13 +81,8 @@ export async function extractSongMetadata(fileUri: string, userMetadata: Partial
       fileSize = (fileInfo.exists && 'size' in fileInfo) ? (fileInfo as any).size : 0;
 
     } catch (probeError) {
-      console.warn('⚠️ FFmpeg probe failed, using fallback values:', probeError);
-      // Fallback values if probe fails
-      duration = 0;
-      bitrate = 128; // default
-      sampleRate = 44100; // default
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      fileSize = (fileInfo.exists && 'size' in fileInfo) ? (fileInfo as any).size : 0;
+      console.warn('⚠️ FFprobeKit failed, using fallback values:', probeError);
+      return getFallbackMetadata(fileUri, userMetadata);
     }
 
     // Extract filename information
@@ -137,6 +137,41 @@ export async function extractSongMetadata(fileUri: string, userMetadata: Partial
       processedFileName: userMetadata.wasProcessed ? 'converted_audio.mp3' : undefined
     };
   }
+}
+
+/**
+ * Helper function to get fallback metadata when FFmpeg/FFprobe fails
+ */
+async function getFallbackMetadata(fileUri: string, userMetadata: Partial<SongMetadata>): Promise<SongMetadata> {
+  console.log('🔄 Using fallback metadata extraction...');
+
+  // Get basic file info
+  const fileName = fileUri.split('/').pop() || 'unknown.mp3';
+  const isProcessed = userMetadata.wasProcessed || false;
+
+  let fileSize = 0;
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
+    fileSize = (fileInfo.exists && 'size' in fileInfo) ? (fileInfo as any).size : 0;
+  } catch (error) {
+    console.warn('⚠️ Could not get file size:', error);
+  }
+
+  return {
+    title: userMetadata.title || (isProcessed ? 'Converted Audio' : 'Unknown Title'),
+    artist: userMetadata.artist || 'Unknown Artist',
+    album: userMetadata.album || '',
+    genre: userMetadata.genre || 'Other',
+    tags: Array.isArray(userMetadata.tags) ? userMetadata.tags : [],
+    duration: 0, // Unknown without FFprobe
+    bitrate: 128, // Default
+    sampleRate: 44100, // Default
+    fileSize,
+    fileType: 'audio',
+    wasProcessed: isProcessed,
+    originalFileName: userMetadata.originalFileName || (isProcessed ? '' : fileName),
+    processedFileName: isProcessed ? fileName : undefined
+  };
 }
 
 /**
