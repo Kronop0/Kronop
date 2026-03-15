@@ -126,6 +126,11 @@ export default function CameraComponent({
           />
         </TouchableOpacity>
 
+        {/* BRIGHTNESS button - right side, at bottom */}
+        <TouchableOpacity onPress={() => setShowBrightness(true)} style={styles.brightnessButton}>
+          <MaterialIcons name="brightness-6" size={20} color="#FFF" />
+        </TouchableOpacity>
+
         {/* END button - bilkul upar right me */}
         <TouchableOpacity onPress={onEndStream} style={styles.endButton}>
           <MaterialIcons name="stop" size={16} color="#FFF" />
@@ -193,6 +198,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 10,
     bottom: 130, // More spacing
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  // BRIGHTNESS button - right side, at bottom
+  brightnessButton: {
+    position: 'absolute',
+    right: 10,
+    bottom: 40, // More spacing
     backgroundColor: 'rgba(0,0,0,0.4)',
     width: 44,
     height: 44,

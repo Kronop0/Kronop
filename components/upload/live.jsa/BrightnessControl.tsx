@@ -149,7 +149,7 @@ export default function BrightnessControl({
 const styles = StyleSheet.create({
   inlineControl: {
     position: 'absolute',
-    right: 80, // Next to brightness button
+    right: 70, // Right next to brightness button
     bottom: 40, // Same level as brightness button
     zIndex: 1001,
   },
