@@ -149,9 +149,9 @@ export default function BrightnessControl({
 const styles = StyleSheet.create({
   inlineControl: {
     position: 'absolute',
-    right: 70, // Right next to brightness button
-    bottom: 40, // Same level as brightness button
-    zIndex: 1001,
+    right: 70, // Close to brightness button
+    bottom: 50, // Same level as buttons
+    zIndex: 100000000001,
   },
   sliderContainer: {
     alignItems: 'center',

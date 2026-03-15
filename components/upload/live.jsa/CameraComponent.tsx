@@ -180,11 +180,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  // FLIP button - right side, adjusted spacing
+  // FLIP button - right side, closer spacing
   flipButton: {
     position: 'absolute',
     right: 10,
-    bottom: 185, // More spacing
+    bottom: 155, // Reduced spacing
     backgroundColor: 'rgba(0,0,0,0.4)',
     width: 44,
     height: 44,
@@ -193,11 +193,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  // MICROPHONE button - right side, adjusted spacing
+  // MICROPHONE button - right side, closer spacing
   micButton: {
     position: 'absolute',
     right: 10,
-    bottom: 130, // More spacing
+    bottom: 105, // Reduced spacing
     backgroundColor: 'rgba(0,0,0,0.4)',
     width: 44,
     height: 44,
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   brightnessButton: {
     position: 'absolute',
     right: 10,
-    bottom: 40, // More spacing
+    bottom: 60, // Reduced spacing
     backgroundColor: 'rgba(0,0,0,0.4)',
     width: 44,
     height: 44,
