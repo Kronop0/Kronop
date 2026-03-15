@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
+import { CameraType } from 'expo-camera';
+import CameraComponent from './CameraComponent';
 
 const { width, height } = Dimensions.get('window');
 
@@ -23,7 +24,6 @@ interface Comment {
 
 export default function BroadcasterView() {
   const router = useRouter();
-  const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('front');
   const [isLive, setIsLive] = useState(true);
   const [timer, setTimer] = useState(0);
@@ -44,14 +44,6 @@ export default function BroadcasterView() {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      if (!permission?.granted) {
-        await requestPermission();
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
     if (flatListRef.current && comments.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
@@ -66,7 +58,7 @@ export default function BroadcasterView() {
   };
 
   const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back') as CameraType);
+    setFacing((current: CameraType) => (current === 'back' ? 'front' : 'back') as CameraType);
   };
 
   const handleSendMessage = () => {
@@ -104,91 +96,52 @@ export default function BroadcasterView() {
     </View>
   );
 
-  if (!permission?.granted) {
-    return (
-      <View style={styles.permissionContainer}>
-        <MaterialIcons name="videocam-off" size={50} color="#FF4444" />
-        <Text style={styles.permissionText}>Camera permission needed</Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Allow Camera</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <StatusBar hidden />
-      
-      <CameraView 
-        ref={null}
-        style={styles.camera}
-        facing={facing}
-        mode="video"
-        autofocus="on"
-        active={isLive}
-      >
-        {/* SIRF YAHI HAI - KOI EXTRA NAHI */}
-        
-        {/* LIVE indicator - bilkul upar left me, black bar ke bina */}
-        <View style={styles.liveContainer}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>LIVE {formatTime(timer)}</Text>
-        </View>
+    <CameraComponent
+      facing={facing}
+      isLive={isLive}
+      onToggleCamera={toggleCameraFacing}
+      onEndStream={handleEndStream}
+    >
+      {/* LIVE indicator - bilkul upar left me, black bar ke bina */}
+      <View style={styles.liveContainer}>
+        <View style={styles.liveDot} />
+        <Text style={styles.liveText}>LIVE {formatTime(timer)}</Text>
+      </View>
 
-        {/* END button - bilkul upar right me */}
-        <TouchableOpacity onPress={handleEndStream} style={styles.endButton}>
-          <MaterialIcons name="stop" size={16} color="#FFF" />
-        </TouchableOpacity>
+      {/* COMMENTS - left side me, bilkul simple */}
+      <View style={styles.commentsArea}>
+        <FlatList
+          ref={flatListRef}
+          data={comments}
+          keyExtractor={(item) => item.id}
+          renderItem={renderComment}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
 
-        {/* FLIP camera button - right side me */}
-        <TouchableOpacity onPress={toggleCameraFacing} style={styles.flipButton}>
-          <MaterialIcons name="flip-camera-android" size={24} color="#FFF" />
-        </TouchableOpacity>
-
-        {/* COMMENTS - left side me, bilkul simple */}
-        <View style={styles.commentsArea}>
-          <FlatList
-            ref={flatListRef}
-            data={comments}
-            keyExtractor={(item) => item.id}
-            renderItem={renderComment}
-            showsVerticalScrollIndicator={false}
+      {/* INPUT - bottom me */}
+      <View style={styles.inputArea}>
+        <View style={styles.inputBox}>
+          <TextInput
+            style={styles.input}
+            value={newMessage}
+            onChangeText={setNewMessage}
+            placeholder="Comment..."
+            placeholderTextColor="#999"
+            onSubmitEditing={handleSendMessage}
           />
+          <TouchableOpacity onPress={handleSendMessage} style={styles.sendBox}>
+            <MaterialIcons name="send" size={18} color="#6A5ACD" />
+          </TouchableOpacity>
         </View>
+      </View>
 
-        {/* INPUT - bottom me */}
-        <View style={styles.inputArea}>
-          <View style={styles.inputBox}>
-            <TextInput
-              style={styles.input}
-              value={newMessage}
-              onChangeText={setNewMessage}
-              placeholder="Comment..."
-              placeholderTextColor="#999"
-              onSubmitEditing={handleSendMessage}
-            />
-            <TouchableOpacity onPress={handleSendMessage} style={styles.sendBox}>
-              <MaterialIcons name="send" size={18} color="#6A5ACD" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-      </CameraView>
-    </View>
+    </CameraComponent>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  camera: {
-    flex: 1,
-    width: width,
-    height: height,
-  },
   // LIVE indicator - bilkul upar, koi background nahi
   liveContainer: {
     position: 'absolute',
@@ -213,32 +166,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 11,
     fontWeight: 'bold',
-  },
-  // END button - bilkul simple
-  endButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: '#FF0000',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  // FLIP button - right side
-  flipButton: {
-    position: 'absolute',
-    right: 10,
-    top: height / 2,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
   },
   // COMMENTS area - left side
   commentsArea: {
@@ -291,29 +218,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  permissionContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  permissionText: {
-    color: '#FFF',
-    fontSize: 16,
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  permissionButton: {
-    backgroundColor: '#6A5ACD',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 25,
-  },
-  permissionButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
