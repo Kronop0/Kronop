@@ -16,7 +16,9 @@ const { width, height } = Dimensions.get('window');
 interface CameraComponentProps {
   facing: CameraType;
   isLive: boolean;
+  isMicOn: boolean;
   onToggleCamera: () => void;
+  onToggleMic: () => void;
   onEndStream: () => void;
   children?: React.ReactNode;
 }
@@ -24,7 +26,9 @@ interface CameraComponentProps {
 export default function CameraComponent({ 
   facing, 
   isLive, 
+  isMicOn,
   onToggleCamera, 
+  onToggleMic,
   onEndStream, 
   children 
 }: CameraComponentProps) {
@@ -68,6 +72,15 @@ export default function CameraComponent({
           <MaterialIcons name="flip-camera-android" size={24} color="#FFF" />
         </TouchableOpacity>
 
+        {/* MICROPHONE button - right side, below flip button */}
+        <TouchableOpacity onPress={onToggleMic} style={styles.micButton}>
+          <MaterialIcons 
+            name={isMicOn ? "mic" : "mic-off"} 
+            size={20} 
+            color={isMicOn ? "#FFF" : "#FF4444"} 
+          />
+        </TouchableOpacity>
+
         {/* END button - bilkul upar right me */}
         <TouchableOpacity onPress={onEndStream} style={styles.endButton}>
           <MaterialIcons name="stop" size={16} color="#FFF" />
@@ -109,11 +122,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  // FLIP button - right side
+  // FLIP button - right side, bottom
   flipButton: {
     position: 'absolute',
     right: 10,
-    top: height / 2,
+    bottom: 100,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  // MICROPHONE button - right side, below flip button
+  micButton: {
+    position: 'absolute',
+    right: 10,
+    bottom: 45,
     backgroundColor: 'rgba(0,0,0,0.4)',
     width: 44,
     height: 44,

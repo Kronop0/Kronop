@@ -2,18 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Dimensions,
   FlatList,
-  TextInput,
-  StatusBar,
   Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { CameraType } from 'expo-camera';
 import CameraComponent from './CameraComponent';
+import UserAccount from './UserAccount';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,14 +24,15 @@ export default function BroadcasterView() {
   const router = useRouter();
   const [facing, setFacing] = useState<CameraType>('front');
   const [isLive, setIsLive] = useState(true);
+  const [isMicOn, setIsMicOn] = useState(true);
   const [timer, setTimer] = useState(0);
+  const [viewerCount, setViewerCount] = useState(1247);
   const [comments, setComments] = useState<Comment[]>([
     { id: '1', message: '🔥🔥 OP gameplay!' },
     { id: '2', message: 'Maza aa gaya!' },
     { id: '3', message: 'First time here!' },
   ]);
   
-  const [newMessage, setNewMessage] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -41,6 +40,18 @@ export default function BroadcasterView() {
       setTimer(prev => prev + 1);
     }, 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Simulate viewer count changes
+  useEffect(() => {
+    const viewerInterval = setInterval(() => {
+      setViewerCount(prev => {
+        const change = Math.floor(Math.random() * 21) - 10; // Random change between -10 and +10
+        const newCount = prev + change;
+        return Math.max(1, newCount); // Minimum 1 viewer
+      });
+    }, 3000); // Update every 3 seconds
+    return () => clearInterval(viewerInterval);
   }, []);
 
   useEffect(() => {
@@ -61,15 +72,8 @@ export default function BroadcasterView() {
     setFacing((current: CameraType) => (current === 'back' ? 'front' : 'back') as CameraType);
   };
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      const newComment: Comment = {
-        id: Date.now().toString(),
-        message: newMessage.trim(),
-      };
-      setComments(prev => [...prev, newComment]);
-      setNewMessage('');
-    }
+  const toggleMic = () => {
+    setIsMicOn(prev => !prev);
   };
 
   const handleEndStream = () => {
@@ -100,14 +104,16 @@ export default function BroadcasterView() {
     <CameraComponent
       facing={facing}
       isLive={isLive}
+      isMicOn={isMicOn}
       onToggleCamera={toggleCameraFacing}
+      onToggleMic={toggleMic}
       onEndStream={handleEndStream}
     >
-      {/* LIVE indicator - bilkul upar left me, black bar ke bina */}
-      <View style={styles.liveContainer}>
-        <View style={styles.liveDot} />
-        <Text style={styles.liveText}>LIVE {formatTime(timer)}</Text>
-      </View>
+      {/* User Account Component - LIVE indicator with viewer count */}
+      <UserAccount 
+        viewerCount={viewerCount} 
+        liveDuration={timer} 
+      />
 
       {/* COMMENTS - left side me, bilkul simple */}
       <View style={styles.commentsArea}>
@@ -120,60 +126,18 @@ export default function BroadcasterView() {
         />
       </View>
 
-      {/* INPUT - bottom me */}
-      <View style={styles.inputArea}>
-        <View style={styles.inputBox}>
-          <TextInput
-            style={styles.input}
-            value={newMessage}
-            onChangeText={setNewMessage}
-            placeholder="Comment..."
-            placeholderTextColor="#999"
-            onSubmitEditing={handleSendMessage}
-          />
-          <TouchableOpacity onPress={handleSendMessage} style={styles.sendBox}>
-            <MaterialIcons name="send" size={18} color="#6A5ACD" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
     </CameraComponent>
   );
 }
 
 const styles = StyleSheet.create({
-  // LIVE indicator - bilkul upar, koi background nahi
-  liveContainer: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF0000',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    zIndex: 10,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#FFF',
-    marginRight: 4,
-  },
-  liveText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
   // COMMENTS area - left side
   commentsArea: {
     position: 'absolute',
-    bottom: 70,
+    bottom: 20,
     left: 10,
     right: 60,
-    maxHeight: height * 0.3,
+    maxHeight: height * 0.4,
     zIndex: 10,
   },
   commentItem: {
@@ -187,36 +151,5 @@ const styles = StyleSheet.create({
   commentMessage: {
     color: '#FFF',
     fontSize: 12,
-  },
-  // INPUT area - bottom
-  inputArea: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    right: 10,
-    zIndex: 10,
-  },
-  inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 20,
-    paddingLeft: 12,
-    paddingRight: 4,
-    paddingVertical: 4,
-  },
-  input: {
-    flex: 1,
-    color: '#FFF',
-    fontSize: 13,
-    paddingVertical: 6,
-  },
-  sendBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#FFF',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
