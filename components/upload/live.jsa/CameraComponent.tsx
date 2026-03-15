@@ -10,6 +10,8 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BrightnessControl from './BrightnessControl';
+import * as Brightness from 'expo-brightness';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,6 +36,9 @@ export default function CameraComponent({
 }: CameraComponentProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const insets = useSafeAreaInsets();
+  const [showBrightness, setShowBrightness] = useState(false);
+  const [brightness, setBrightness] = useState(0.7);
+  const [originalBrightness, setOriginalBrightness] = useState(0.7);
 
   useEffect(() => {
     (async () => {
@@ -42,6 +47,46 @@ export default function CameraComponent({
       }
     })();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      // Request brightness permission and get current brightness
+      try {
+        const { status } = await Brightness.requestPermissionsAsync();
+        if (status === 'granted') {
+          const currentBrightness = await Brightness.getBrightnessAsync();
+          setBrightness(currentBrightness);
+          setOriginalBrightness(currentBrightness); // Store original brightness
+        }
+      } catch (error) {
+        console.log('Brightness permission not available:', error);
+      }
+    })();
+
+    // Cleanup function to restore original brightness
+    return () => {
+      (async () => {
+        try {
+          const currentBrightness = await Brightness.getBrightnessAsync();
+          if (currentBrightness > 0) {
+            await Brightness.setBrightnessAsync(currentBrightness);
+          }
+        } catch (error) {
+          console.log('Could not restore brightness:', error);
+        }
+      })();
+    };
+  }, []);
+
+  const handleBrightnessChange = async (value: number) => {
+    setBrightness(value);
+    try {
+      // Set system brightness
+      await Brightness.setBrightnessAsync(value);
+    } catch (error) {
+      console.log('Could not set device brightness:', error);
+    }
+  };
 
   if (!permission?.granted) {
     return (
@@ -72,7 +117,7 @@ export default function CameraComponent({
           <MaterialIcons name="flip-camera-android" size={24} color="#FFF" />
         </TouchableOpacity>
 
-        {/* MICROPHONE button - right side, below flip button */}
+        {/* MICROPHONE button - right side, adjusted spacing */}
         <TouchableOpacity onPress={onToggleMic} style={styles.micButton}>
           <MaterialIcons 
             name={isMicOn ? "mic" : "mic-off"} 
@@ -90,6 +135,14 @@ export default function CameraComponent({
         {children}
 
       </CameraView>
+      
+      {/* Brightness Control Overlay */}
+      <BrightnessControl
+        visible={showBrightness}
+        onClose={() => setShowBrightness(false)}
+        onBrightnessChange={handleBrightnessChange}
+        currentBrightness={brightness}
+      />
     </View>
   );
 }
@@ -109,12 +162,12 @@ const styles = StyleSheet.create({
     width: width,
     height: height + 100, // More extra height to push video further up
   },
-  // END button - bilkul simple
+  // END button - bilkul upar right me
   endButton: {
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: '#FF0000',
+    backgroundColor: '#ff3c3c',
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -122,11 +175,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  // FLIP button - right side, bottom
+  // FLIP button - right side, adjusted spacing
   flipButton: {
     position: 'absolute',
     right: 10,
-    bottom: 100,
+    bottom: 185, // More spacing
     backgroundColor: 'rgba(0,0,0,0.4)',
     width: 44,
     height: 44,
@@ -135,11 +188,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  // MICROPHONE button - right side, below flip button
+  // MICROPHONE button - right side, adjusted spacing
   micButton: {
     position: 'absolute',
     right: 10,
-    bottom: 45,
+    bottom: 130, // More spacing
     backgroundColor: 'rgba(0,0,0,0.4)',
     width: 44,
     height: 44,
