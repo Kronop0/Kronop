@@ -4,14 +4,13 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  StatusBar,
   TouchableOpacity,
+  Animated,
+  StatusBar,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BrightnessControl from './BrightnessControl';
-import * as Brightness from 'expo-brightness';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,57 +35,6 @@ export default function CameraComponent({
 }: CameraComponentProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const insets = useSafeAreaInsets();
-  const [showBrightness, setShowBrightness] = useState(false);
-  const [brightness, setBrightness] = useState(0.7);
-  const [originalBrightness, setOriginalBrightness] = useState(0.7);
-
-  useEffect(() => {
-    (async () => {
-      if (!permission?.granted) {
-        await requestPermission();
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      // Request brightness permission and get current brightness
-      try {
-        const { status } = await Brightness.requestPermissionsAsync();
-        if (status === 'granted') {
-          const currentBrightness = await Brightness.getBrightnessAsync();
-          setBrightness(currentBrightness);
-          setOriginalBrightness(currentBrightness); // Store original brightness
-        }
-      } catch (error) {
-        console.log('Brightness permission not available:', error);
-      }
-    })();
-
-    // Cleanup function to restore original brightness
-    return () => {
-      (async () => {
-        try {
-          const currentBrightness = await Brightness.getBrightnessAsync();
-          if (currentBrightness > 0) {
-            await Brightness.setBrightnessAsync(currentBrightness);
-          }
-        } catch (error) {
-          console.log('Could not restore brightness:', error);
-        }
-      })();
-    };
-  }, []);
-
-  const handleBrightnessChange = async (value: number) => {
-    setBrightness(value);
-    try {
-      // Set system brightness
-      await Brightness.setBrightnessAsync(value);
-    } catch (error) {
-      console.log('Could not set device brightness:', error);
-    }
-  };
 
   if (!permission?.granted) {
     return (
@@ -126,11 +74,6 @@ export default function CameraComponent({
           />
         </TouchableOpacity>
 
-        {/* BRIGHTNESS button - right side, at bottom */}
-        <TouchableOpacity onPress={() => setShowBrightness(true)} style={styles.brightnessButton}>
-          <MaterialIcons name="brightness-6" size={20} color="#FFF" />
-        </TouchableOpacity>
-
         {/* END button - bilkul upar right me */}
         <TouchableOpacity onPress={onEndStream} style={styles.endButton}>
           <MaterialIcons name="stop" size={16} color="#FFF" />
@@ -138,16 +81,7 @@ export default function CameraComponent({
 
         {/* Children components (comments, input, etc.) */}
         {children}
-
       </CameraView>
-      
-      {/* Brightness Control Overlay */}
-      <BrightnessControl
-        visible={showBrightness}
-        onClose={() => setShowBrightness(false)}
-        onBrightnessChange={handleBrightnessChange}
-        currentBrightness={brightness}
-      />
     </View>
   );
 }
@@ -198,19 +132,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 10,
     bottom: 105, // Reduced spacing
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  // BRIGHTNESS button - right side, at bottom
-  brightnessButton: {
-    position: 'absolute',
-    right: 10,
-    bottom: 60, // Reduced spacing
     backgroundColor: 'rgba(0,0,0,0.4)',
     width: 44,
     height: 44,
