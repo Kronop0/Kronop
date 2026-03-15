@@ -34,6 +34,7 @@ export default function BrightnessControl({
   const touchAreaAnim = useRef(new Animated.Value(0)).current;
   const sliderHeight = 200;
   const brightnessTimeoutRef = useRef<any>(null);
+  const autoHideTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
     if (visible) {
@@ -44,14 +45,10 @@ export default function BrightnessControl({
         useNativeDriver: true,
       }).start();
       
-      // Show touch area after a delay
-      setTimeout(() => {
-        Animated.timing(touchAreaAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
-      }, 100);
+      // Auto-hide after 5 seconds
+      autoHideTimeoutRef.current = setTimeout(() => {
+        onClose();
+      }, 5000);
     } else {
       setShowTouchArea(false);
       Animated.timing(slideAnim, {
@@ -72,6 +69,9 @@ export default function BrightnessControl({
     return () => {
       if (brightnessTimeoutRef.current) {
         clearTimeout(brightnessTimeoutRef.current);
+      }
+      if (autoHideTimeoutRef.current) {
+        clearTimeout(autoHideTimeoutRef.current);
       }
     };
   }, []);
