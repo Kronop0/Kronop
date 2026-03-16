@@ -253,27 +253,14 @@ router.get('/:id', async (req, res) => {
     
     console.log(`✅ Valid ObjectId: "${id}"`);
     
-    // const data = await ProfileService.getProfile({ userId: id }); // Removed - using mock
-    const data = { // Mock response
-      displayName: 'John Doe',
-      username: 'johndoe',
-      avatar: 'https://picsum.photos/80/80?random=profile',
-      bio: 'Content Creator | Photography Enthusiast',
-      supporters: 15420,
-      supporting: 892,
-      posts: 234
-    };
-    
-    if (data) {
-      console.log(`✅ Profile found for user: "${id}"`);
-    } else {
-      console.log(`❌ Profile not found for user: "${id}"`);
-    }
-    
-    res.json({ success: true, data });
+    // Return error instead of mock data
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Profile service temporarily unavailable',
+      message: 'Please try again later'
+    });
   } catch (error) {
-    console.error('💥 Get Profile Error:', error);
-    console.error('🔍 Error stack:', error.stack);
+    console.error('Get Profile Error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -296,8 +283,11 @@ router.put('/:id', upload.any(), async (req, res) => {
     }
 
     // const user = await ProfileService.updateProfile(payload); // Removed - using mock
-    const user = { ...payload, updatedAt: new Date() }; // Mock response
-    res.json({ success: true, message: 'Profile updated successfully', data: user });
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Profile service temporarily unavailable',
+      message: 'Please try again later'
+    });
   } catch (error) {
     console.error('Update Profile Error:', error);
     res.status(500).json({ error: error.message, stack: process.env.NODE_ENV === 'development' ? error.stack : undefined });
@@ -328,19 +318,14 @@ router.get('/profile', async (req, res) => {
     }
     
     // const data = await ProfileService.getProfile({ userId, phone }); // Removed - using mock
-    const data = { // Mock response
-      displayName: 'John Doe',
-      username: 'johndoe',
-      avatar: 'https://picsum.photos/80/80?random=profile',
-      bio: 'Content Creator | Photography Enthusiast',
-      supporters: 15420,
-      supporting: 892,
-      posts: 234
-    };
-    res.json({ success: true, data });
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Profile service temporarily unavailable',
+      message: 'Please try again later'
+    });
   } catch (error) {
     console.error('Get Profile Error:', error);
-    res.status(200).json({ success: false, error: error.message, data: null });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -376,8 +361,11 @@ router.put('/profile', upload.any(), async (req, res) => {
     }
 
     // const user = await ProfileService.updateProfile(payload); // Removed - using mock
-    const user = { ...payload, updatedAt: new Date() }; // Mock response
-    res.json({ success: true, message: 'Profile updated successfully', data: user });
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Profile service temporarily unavailable',
+      message: 'Please try again later'
+    });
   } catch (error) {
     console.error('Update Profile Error:', error);
     res.status(500).json({ error: error.message, stack: process.env.NODE_ENV === 'development' ? error.stack : undefined });
@@ -407,8 +395,11 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
     }
 
     // const url = await ProfileService.uploadProfileImage(userId, imageUrl); // Removed - using mock
-    const url = imageUrl; // Mock response
-    res.json({ success: true, data: url });
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Profile service temporarily unavailable',
+      message: 'Please try again later'
+    });
   } catch (error) {
     console.error('Upload Image Error:', error);
     res.status(500).json({ error: error.message });

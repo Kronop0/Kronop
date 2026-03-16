@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 import { API_KEYS } from '@/constants/Config';
+// @ts-ignore
 import { fetchReelsFromR2 } from './ZeroLogic';
 
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
@@ -34,6 +35,7 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
   const [activeReel, setActiveReel] = useState<ReelData | null>(null);
   const [nextReel, setNextReel] = useState<ReelData | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [reels, setReels] = useState<ReelData[]>([]);
   
   // Refs for performance optimization
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -83,7 +85,7 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
     try {
       // Direct fetch without LocalVault
       const reels = await fetchReelsFromR2();
-      const reel = reels.find(r => r.id === reelId || r._id === reelId);
+      const reel = reels.find((r: any) => r.id === reelId || r._id === reelId);
       
       if (reel) {
         return {
@@ -150,14 +152,15 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
 
   // Get next reel ID for preloading
   const getNextReelId = useCallback((currentId: string): string | null => {
-    // Simple sequential logic for demo
-    const mockIds = ['sunset_timelapse', 'mumbai_street_food', 'bollywood_dance'];
-    const currentIndex = mockIds.indexOf(currentId);
-    if (currentIndex !== -1 && currentIndex < mockIds.length - 1) {
-      return mockIds[currentIndex + 1];
+    // Get next reel from actual R2 data
+    if (reels.length > 1) {
+      const currentIndex = reels.findIndex(reel => reel.id === currentId);
+      if (currentIndex !== -1 && currentIndex < reels.length - 1) {
+        return reels[currentIndex + 1].id;
+      }
     }
     return null;
-  }, []);
+  }, [reels]);
 
   // Initialize with first reel from R2
   useEffect(() => {
@@ -175,6 +178,9 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
         
         if (reels && reels.length > 0) {
           console.log('👻 GhostFeed received:', reels.length, 'reels');
+          
+          // Set reels state for getNextReelId function
+          setReels(reels);
           
           const firstReel = {
             id: reels[0]._id || reels[0].id,

@@ -15,51 +15,43 @@ router.post('/login', async (req, res) => {
   
   try {
     // const user = await DatabaseService.findUserByEmail(email); // Removed - using mock
-    // Mock user for development
-    const user = {
-      _id: 'mock_user_id',
-      username: 'mockuser',
-      email: email,
-      password: 'password', // In production, use bcrypt
-      displayName: 'Mock User'
-    };
-    
     // User must exist - no auto registration for security
-    if (!user) {
-      return res.status(401).json({ 
-        success: false,
-        error: 'गलत पासवर्ड या ईमेल!' 
-      });
-    }
+    // if (!user) {
+    //   return res.status(401).json({ 
+    //     success: false,
+    //     error: 'गलत पासवर्ड या ईमेल!' 
+    //   });
+    // }
 
     // Verify password (for development, comparing plain text)
     // In production, use bcrypt.compare()
-    if (user.password !== password) {
-      return res.status(401).json({ 
-        success: false,
-        error: 'गलत पासवर्ड या ईमेल!' 
-      });
-    }
+    // if (user.password !== password) {
+    //   return res.status(401).json({ 
+    //     success: false,
+    //     error: 'गलत पासवर्ड या ईमेल!' 
+    //   });
+    // }
 
-    const sessionToken = `kronop_session_${user._id}_${Date.now()}`;
+    // const sessionToken = `kronop_session_${user._id}_${Date.now()}`;
 
-    res.json({
-      success: true,
-      token: sessionToken,
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar || null
-      }
+    // res.json({
+    //   success: true,
+    //   token: sessionToken,
+    //   user: {
+    //     _id: user._id,
+    //     username: user.username,
+    //     email: user.email,
+    //     avatar: user.avatar || null
+    //   }
+    // });
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Authentication service temporarily unavailable',
+      message: 'Please try again later'
     });
   } catch (error) {
     console.error('Login Error:', error);
-    console.log(error);
-    res.status(500).json({ 
-      success: false,
-      error: 'गलत पासवर्ड या ईमेल!' 
-    });
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 

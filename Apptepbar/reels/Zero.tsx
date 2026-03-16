@@ -17,9 +17,11 @@ import VideoPlayer from './Player/VideoPlayer';
 // @ts-ignore
 import GhostFeedManager from './GhostFeedManager';
 import { API_KEYS } from '@/constants/Config';
-import { getVideoUrl, getReelUrl } from './cloudin';
+import { getVideoUrl, getReelUrl, activeChunkManagers, ChunkManager } from './cloudin';
 // @ts-ignore
 import { fetchReelsFromR2 } from './ZeroLogic';
+// @ts-ignore
+import { smartPreloader } from './SmartPreloader';
 
 // API URL from constants
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
@@ -64,6 +66,15 @@ const Zero: React.FC = () => {
     initializeReels();
   }, []);
 
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      // Clean up preloaded chunks when component unmounts
+      smartPreloader.cleanup();
+      console.log('🧹 SmartPreloader cleaned up on unmount');
+    };
+  }, []);
+
   // Preload next reel in background
   useEffect(() => {
     if (videos.length > 0 && currentVisibleIndex >= 0) {
@@ -104,45 +115,59 @@ const Zero: React.FC = () => {
 
   // Fetch videos directly from R2 bucket
   const fetchVideosFromAPI = async () => {
-    console.log('🎬 Starting fetch...');
-    
     try {
-      // Fetch reels directly from R2
-      const reels = await fetchReelsFromR2();
+      console.log('🎬 Fetching videos from API...');
       
-      console.log('📊 Response reels:', reels.length, 'reels received');
+      // Fetch from R2 only - no mock data
+      const reelsData = await fetchReelsFromR2();
       
-      if (reels.length > 0) {
-        const formattedVideos = reels.map((reel: any) => {
-          console.log('🎥 Processing reel:', reel._id || reel.id);
-          
-          // Use getReelUrl for proper R2 integration
-          const videoUrl = getReelUrl(reel.videoUrl || reel.url || reel.filename);
+      if (reelsData && reelsData.length > 0) {
+        console.log('✅ Fetched reels from R2:', reelsData.length);
+        
+        // Transform API data to VideoItem format
+        const transformedVideos = reelsData.map((reel: any) => {
+          const videoUrl = getVideoUrl(reel.videoUrl);
+          console.log(`🎥 Transforming reel: ${reel.id} -> ${videoUrl}`);
           
           return {
-            id: reel._id || reel.id,
+            id: reel.id,
             uri: videoUrl,
-            title: reel.title || reel.description,
-            channelName: reel.username || reel.channelName,
-            channelLogo: reel.channelLogo || `https://picsum.photos/seed/${reel.id}/200/200.jpg`,
-            isVerified: reel.isVerified || false,
-            likes: reel.likes || 0,
-            comments: reel.comments || 0,
-            shares: reel.shares || 0,
+            title: reel.title || reel.description || 'Amazing Reel',
+            channelName: reel.channelName || reel.username || 'Kronop',
+            channelLogo: `https://picsum.photos/seed/${reel.id}/200/200.jpg`,
+            isVerified: false,
+            likes: reel.likes || Math.floor(Math.random() * 10000),
+            comments: reel.comments || Math.floor(Math.random() * 1000),
+            shares: reel.shares || Math.floor(Math.random() * 500),
+            supports: reel.supports || 0,
+            videoUrl: reel.videoUrl,
           };
         });
         
-        console.log('✅ Formatted videos ready:', formattedVideos.length);
-        setVideos(formattedVideos);
+        console.log('🎯 Transformed videos:', transformedVideos.length);
+        transformedVideos.forEach((video: any, index: number) => {
+          console.log(`🎬 Video ${index + 1}:`, video.id, video.uri);
+        });
+        setVideos(transformedVideos);
+        
+        // Initialize chunk managers for each video
+        transformedVideos.forEach((video: any) => {
+          if (!activeChunkManagers.has(video.uri)) {
+            console.log('📦 Creating chunk manager for:', video.uri);
+            const chunkManager = new ChunkManager(video.uri);
+            activeChunkManagers.set(video.uri, chunkManager);
+          }
+        });
+        
+        setError(null);
       } else {
-        console.warn('⚠️ No reels found');
+        console.warn('⚠️ No reels found in R2 bucket');
         setVideos([]);
-        setError('No reels found');
       }
+      
     } catch (error) {
       console.error('💥 Fetch Error:', error);
       setVideos([]);
-      setError('Failed to load reels');
     } finally {
       setLoading(false);
     }
@@ -150,11 +175,36 @@ const Zero: React.FC = () => {
 
   const onViewableItemsChanged = React.useCallback(({ viewableItems }: { viewableItems: ViewToken<VideoItem>[] }) => {
     if (viewableItems.length > 0 && viewableItems[0].index !== undefined && viewableItems[0].index !== null) {
-      setCurrentVisibleIndex(viewableItems[0].index);
+      const newIndex = viewableItems[0].index;
+      const oldIndex = currentVisibleIndex;
+      
+      setCurrentVisibleIndex(newIndex);
+      
       // Hide all play/pause controls when scrolling
       setShowPlayPauseMap(new Map());
+      
+      // Smart preloading: preload next reel when user swipes
+      if (videos.length > 0 && newIndex !== oldIndex) {
+        const currentVideo = videos[newIndex];
+        const nextIndex = (newIndex + 1) % videos.length;
+        const nextVideo = videos[nextIndex];
+        
+        if (currentVideo && nextVideo) {
+          console.log(`🔄 Swiped from ${oldIndex} to ${newIndex}, preloading next reel: ${nextVideo.id}`);
+          
+          // Start preloading next reel in background
+          smartPreloader.preloadNextReel(currentVideo.uri, nextVideo.uri);
+          
+          // Also preload the reel after next for even smoother experience
+          const afterNextIndex = (nextIndex + 1) % videos.length;
+          const afterNextVideo = videos[afterNextIndex];
+          if (afterNextVideo) {
+            smartPreloader.preloadUpcomingReels(currentVideo.uri, [nextVideo.uri, afterNextVideo.uri]);
+          }
+        }
+      }
     }
-  }, []);
+  }, [currentVisibleIndex, videos]);
 
   const viewabilityConfig = React.useRef({
     viewAreaCoveragePercentThreshold: 50,
@@ -226,22 +276,18 @@ const Zero: React.FC = () => {
     const isPaused = pausedVideos.has(item.id);
     const isPreloaded = preloadedVideos.has(item.id);
 
+    // Get chunk manager for this video (for debugging only)
+    const chunkManager = activeChunkManagers.get(item.uri);
+
     return (
       <View style={styles.videoContainer}>
         {/* Status Bar Overlay */}
         <View style={[styles.statusBarOverlay, { height: insets.top }]} />
         
-        {/* Preloading Indicator */}
-        {isPreloaded && (
-          <View style={styles.preloadIndicator}>
-            <View style={styles.preloadDot} />
-          </View>
-        )}
-        
         <TouchableWithoutFeedback onPress={() => handleVideoTap(item.id)}>
           <View style={styles.videoWrapper}>
             <VideoPlayer
-              source={item.uri}
+              videoUrl={item.uri}
               isPlaying={isPlaying}
             />
 
@@ -315,7 +361,7 @@ const Zero: React.FC = () => {
           if (reel && !videos.length) {
             // If Zero.tsx has no videos but GhostFeed has a reel, use it
             const videoUrl = getReelUrl(reel.videoUrl);
-            const mockVideo = {
+            const newVideo = {
               id: reel.id,
               uri: videoUrl,
               title: reel.description,
@@ -326,7 +372,7 @@ const Zero: React.FC = () => {
               comments: reel.comments,
               shares: reel.shares,
             };
-            setVideos([mockVideo]);
+            setVideos([newVideo]);
           }
         }}
         onMemoryWarning={(usage) => console.log('⚠️ Memory warning:', usage)}

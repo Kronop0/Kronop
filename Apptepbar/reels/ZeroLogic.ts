@@ -34,6 +34,11 @@ export const fetchReelsFromR2 = async () => {
         obj.Key && (obj.Key.endsWith('.mp4') || obj.Key.endsWith('.mov') || obj.Key.endsWith('.mp4'))
       );
 
+      console.log('🎬 Found video files:', videoFiles.length);
+      videoFiles.forEach((file, index) => {
+        console.log(`📹 Video ${index + 1}:`, file.Key);
+      });
+
       const reels = videoFiles.map((file, index) => {
         const fileName = file.Key!.split('/').pop() || `reel_${index}`;
         const fileWithoutExt = fileName.replace(/\.[^/.]+$/, '');
@@ -63,81 +68,13 @@ export const fetchReelsFromR2 = async () => {
       console.log('✅ Reels fetched from R2:', reels.length);
       return reels;
     } else {
-      console.log('⚠️ No reels found in R2 bucket, using fallback data');
-      // Fallback mock data when R2 is empty
-      return getMockReels();
+      console.log('⚠️ No reels found in R2 bucket');
+      return [];
     }
   } catch (error) {
     console.error('❌ Error fetching reels from R2:', error);
-    // Fallback mock data on error
-    return getMockReels();
+    return [];
   }
-};
-
-// Mock reels data for fallback
-const getMockReels = () => {
-  return [
-    {
-      id: 'sunset_timelapse',
-      _id: 'sunset_timelapse',
-      videoUrl: 'sunset_timelapse.mp4',
-      url: 'sunset_timelapse.mp4',
-      filename: 'sunset_timelapse.mp4',
-      title: 'Sunset Timelapse',
-      description: 'Beautiful sunset timelapse captured at the beach',
-      username: 'Kronop',
-      channelName: 'Kronop',
-      channelLogo: 'https://picsum.photos/seed/sunset/200/200.jpg',
-      likes: 1542,
-      comments: 89,
-      shares: 45,
-      views: 15420,
-      isLiked: false,
-      isVerified: true,
-      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
-      created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: 'mumbai_street_food',
-      _id: 'mumbai_street_food',
-      videoUrl: 'mumbai_street_food.mp4',
-      url: 'mumbai_street_food.mp4',
-      filename: 'mumbai_street_food.mp4',
-      title: 'Mumbai Street Food',
-      description: 'Exploring the best street food in Mumbai',
-      username: 'Kronop',
-      channelName: 'Kronop',
-      channelLogo: 'https://picsum.photos/seed/mumbai/200/200.jpg',
-      likes: 2341,
-      comments: 120,
-      shares: 67,
-      views: 28930,
-      isLiked: false,
-      isVerified: true,
-      timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000,
-      created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: 'bollywood_dance',
-      _id: 'bollywood_dance',
-      videoUrl: 'bollywood_dance.mp4',
-      url: 'bollywood_dance.mp4',
-      filename: 'bollywood_dance.mp4',
-      title: 'Bollywood Dance',
-      description: 'Energetic dance performance on latest Bollywood hit',
-      username: 'Kronop',
-      channelName: 'Kronop',
-      channelLogo: 'https://picsum.photos/seed/dance/200/200.jpg',
-      likes: 3456,
-      comments: 234,
-      shares: 123,
-      views: 45670,
-      isLiked: false,
-      isVerified: true,
-      timestamp: Date.now() - 6 * 60 * 60 * 1000,
-      created_at: new Date(Date.now() - 6 * 60 * 60 * 1000),
-    }
-  ];
 };
 
 // Like/Unlike API

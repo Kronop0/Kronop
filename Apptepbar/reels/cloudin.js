@@ -1,5 +1,5 @@
 // Cloudflare R2 Configuration for Kronop Reels
-// Only R2 variables from .env file - NO API URLs, NO API Variables
+// Advanced Chunk-based Streaming System with Range Requests
 
 // Get R2 configuration from environment variables
 const R2_ACCOUNT_ID = process.env.EXPO_PUBLIC_R2_ACCOUNT_ID;
@@ -8,7 +8,7 @@ const R2_SECRET_ACCESS_KEY = process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY;
 const R2_ENDPOINT = process.env.EXPO_PUBLIC_R2_ENDPOINT;
 const BUCKET_REELS = process.env.EXPO_PUBLIC_BUCKET_REELS;
 
-// R2 Configuration Object - Only R2, No API
+// R2 Configuration Object
 const CLOUD_CONFIG = {
   // Public R2 URL for video streaming
   publicR2Url: 'https://pub-600cd3134366496fadf941970cac2df6.r2.dev',
@@ -30,17 +30,146 @@ const CLOUD_CONFIG = {
     ultra: '4k'
   },
   
-  // Streaming configuration
+  // Advanced streaming configuration
   streaming: {
     enableRangeRequests: true,
-    bufferSize: 1024 * 1024, // 1MB chunks
+    chunkSize: 1024 * 1024, // 1MB chunks
+    bufferSize: 10 * 1024 * 1024, // 10MB buffer
     maxRetries: 3,
-    timeout: 10000, // 10 seconds
+    timeout: 15000, // 15 seconds
+    prefetchChunks: 2, // Prefetch next 2 chunks
+    adaptiveBitrate: true,
   }
 };
 
+// Chunk management system
+class ChunkManager {
+  constructor(videoUrl) {
+    this.videoUrl = videoUrl;
+    this.chunks = new Map();
+    this.totalSize = 0;
+    this.chunkSize = CLOUD_CONFIG.streaming.chunkSize;
+    this.loadedChunks = new Set();
+    this.currentChunk = 0;
+  }
+
+  // Initialize chunk manager with video metadata
+  async initialize() {
+    try {
+      console.log('🔧 Initializing Chunk Manager for:', this.videoUrl);
+      
+      // Get video file size
+      const headResponse = await fetch(this.videoUrl, { method: 'HEAD' });
+      this.totalSize = parseInt(headResponse.headers.get('content-length') || '0');
+      
+      // Calculate total chunks
+      this.totalChunks = Math.ceil(this.totalSize / this.chunkSize);
+      
+      console.log(`📊 Video size: ${this.totalSize} bytes, Chunks: ${this.totalChunks}`);
+      
+      // Preload first 3 chunks immediately
+      await this.preloadChunks([0, 1, 2]);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Chunk Manager initialization failed:', error);
+      return false;
+    }
+  }
+
+  // Preload specific chunks
+  async preloadChunks(chunkIndices) {
+    const promises = chunkIndices.map(async (chunkIndex) => {
+      // Validate chunk index is within bounds
+      if (chunkIndex < 0 || chunkIndex >= this.totalChunks) {
+        console.warn(`⚠️ Invalid chunk index ${chunkIndex}, total chunks: ${this.totalChunks}`);
+        return null;
+      }
+      
+      if (this.loadedChunks.has(chunkIndex)) return null;
+      
+      const start = chunkIndex * this.chunkSize;
+      const end = Math.min(start + this.chunkSize - 1, this.totalSize - 1);
+      
+      try {
+        console.log(`📥 Preloading chunk ${chunkIndex}: ${start}-${end}`);
+        
+        const response = await fetch(this.videoUrl, {
+          headers: {
+            'Range': `bytes=${start}-${end}`,
+            'User-Agent': 'KronopApp-Streamer/1.0'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const chunkData = await response.arrayBuffer();
+        
+        // Store chunk
+        this.chunks.set(chunkIndex, {
+          data: chunkData,
+          start,
+          end,
+          size: chunkData.byteLength,
+          timestamp: Date.now()
+        });
+        
+        this.loadedChunks.add(chunkIndex);
+        
+        console.log(`✅ Chunk ${chunkIndex} loaded: ${chunkData.byteLength} bytes`);
+        return chunkData;
+        
+      } catch (error) {
+        console.error(`❌ Chunk ${chunkIndex} failed:`, error);
+        return null;
+      }
+    });
+
+    const results = await Promise.all(promises);
+    return results.filter(r => r !== null);
+  }
+
+  // Get specific chunk for playback
+  getChunk(chunkIndex) {
+    return this.chunks.get(chunkIndex);
+  }
+
+  // Get next chunks for prefetching
+  getNextChunks(currentIndex, count = 2) {
+    const nextChunks = [];
+    for (let i = 1; i <= count; i++) {
+      const nextIndex = currentIndex + i;
+      if (nextIndex < this.totalChunks && !this.loadedChunks.has(nextIndex)) {
+        nextChunks.push(nextIndex);
+      }
+    }
+    return nextChunks;
+  }
+
+  // Check if chunk is loaded
+  isChunkLoaded(chunkIndex) {
+    return this.loadedChunks.has(chunkIndex);
+  }
+
+  // Get loading progress
+  getProgress() {
+    return {
+      loaded: this.loadedChunks.size,
+      total: this.totalChunks,
+      percentage: Math.round((this.loadedChunks.size / this.totalChunks) * 100),
+      bytesLoaded: Array.from(this.chunks.values()).reduce((sum, chunk) => sum + chunk.size, 0),
+      totalBytes: this.totalSize
+    };
+  }
+}
+
+// Active chunk managers for videos
+const activeChunkManagers = new Map();
+
 /**
- * Get R2 URL specifically for reels
+ * Get R2 URL specifically for reels with chunk-based streaming
  * @param {string} videoKey - Video file key or filename
  * @returns {string} Complete R2 streaming URL for reels
  */
@@ -60,7 +189,84 @@ function getReelUrl(videoKey) {
   const fullUrl = `${CLOUD_CONFIG.publicR2Url}/${reelKey}`;
   
   console.log(`🎬 Reel URL: ${fullUrl}`);
+  
+  // Initialize chunk manager for this video
+  if (!activeChunkManagers.has(fullUrl)) {
+    const chunkManager = new ChunkManager(fullUrl);
+    activeChunkManagers.set(fullUrl, chunkManager);
+    
+    // Initialize chunk manager asynchronously
+    chunkManager.initialize().then(success => {
+      if (success) {
+        console.log('🚀 Chunk Manager ready for:', fullUrl);
+      }
+    });
+  }
+  
   return fullUrl;
+}
+
+/**
+ * Get chunk data for specific video
+ * @param {string} videoUrl - Complete video URL
+ * @param {number} chunkIndex - Chunk index to fetch
+ * @returns {Promise<ArrayBuffer|null>} Chunk data
+ */
+async function getVideoChunk(videoUrl, chunkIndex) {
+  const chunkManager = activeChunkManagers.get(videoUrl);
+  
+  if (!chunkManager) {
+    console.warn('⚠️ No chunk manager found for:', videoUrl);
+    return null;
+  }
+  
+  // If chunk already loaded, return immediately
+  if (chunkManager.isChunkLoaded(chunkIndex)) {
+    return chunkManager.getChunk(chunkIndex)?.data || null;
+  }
+  
+  // Load chunk on demand
+  const chunks = await chunkManager.preloadChunks([chunkIndex]);
+  return chunks[0] || null;
+}
+
+/**
+ * Get streaming progress for video
+ * @param {string} videoUrl - Complete video URL
+ * @returns {Object} Progress information
+ */
+function getStreamingProgress(videoUrl) {
+  const chunkManager = activeChunkManagers.get(videoUrl);
+  return chunkManager ? chunkManager.getProgress() : null;
+}
+
+/**
+ * Prefetch next chunks for smooth playback
+ * @param {string} videoUrl - Complete video URL
+ * @param {number} currentChunkIndex - Current playing chunk
+ */
+async function prefetchNextChunks(videoUrl, currentChunkIndex) {
+  const chunkManager = activeChunkManagers.get(videoUrl);
+  
+  if (!chunkManager) return;
+  
+  const nextChunks = chunkManager.getNextChunks(currentChunkIndex);
+  if (nextChunks.length > 0) {
+    console.log(`🔄 Prefetching chunks: ${nextChunks.join(', ')}`);
+    await chunkManager.preloadChunks(nextChunks);
+  }
+}
+
+/**
+ * Cleanup chunk manager for video
+ * @param {string} videoUrl - Complete video URL
+ */
+function cleanupChunkManager(videoUrl) {
+  const chunkManager = activeChunkManagers.get(videoUrl);
+  if (chunkManager) {
+    console.log('🧹 Cleaning up chunk manager for:', videoUrl);
+    activeChunkManagers.delete(videoUrl);
+  }
 }
 
 /**
@@ -155,47 +361,16 @@ function getOptimizedUrl(videoKey, networkInfo = {}) {
 // Export configuration and functions
 module.exports = {
   CLOUD_CONFIG,
-  getVideoUrl,
   getReelUrl,
-  getQualityStreamUrl,
+  getVideoUrl,
   getRangeUrl,
-  isValidR2Url,
-  extractVideoKey,
-  getOptimizedUrl,
-  // R2 Configuration for reels
+  getVideoChunk,
+  getStreamingProgress,
+  prefetchNextChunks,
+  cleanupChunkManager,
   r2Config: CLOUD_CONFIG.r2Config,
   r2PublicUrl: CLOUD_CONFIG.publicR2Url,
   r2Bucket: BUCKET_REELS,
-};
-
-// For ES6 modules compatibility
-export {
-  CLOUD_CONFIG,
-  getVideoUrl,
-  getReelUrl,
-  getQualityStreamUrl,
-  getRangeUrl,
-  isValidR2Url,
-  extractVideoKey,
-  getOptimizedUrl,
-};
-
-// Export R2 configuration separately
-export const r2Config = CLOUD_CONFIG.r2Config;
-export const r2PublicUrl = CLOUD_CONFIG.publicR2Url;
-export const r2Bucket = BUCKET_REELS;
-
-// Default export for easy importing
-export default {
-  CLOUD_CONFIG,
-  getVideoUrl,
-  getReelUrl,
-  getQualityStreamUrl,
-  getRangeUrl,
-  isValidR2Url,
-  extractVideoKey,
-  getOptimizedUrl,
-  r2Config: CLOUD_CONFIG.r2Config,
-  r2PublicUrl: CLOUD_CONFIG.publicR2Url,
-  r2Bucket: BUCKET_REELS,
+  ChunkManager,
+  activeChunkManagers
 };

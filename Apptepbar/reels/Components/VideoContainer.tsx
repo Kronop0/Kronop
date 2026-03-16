@@ -23,6 +23,11 @@ const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onV
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom + 80, 100); // Reduced to 80px minimum + safe area
   
+  console.log('📱 VideoContainer received videos:', videos.length);
+  videos.forEach((video: VideoItem, index: number) => {
+    console.log(`🎬 Container Video ${index + 1}:`, video.id);
+  });
+  
   return (
     <View style={styles.container}>
       <FlatList
