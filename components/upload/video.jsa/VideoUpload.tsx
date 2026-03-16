@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { theme } from '../../../constants/theme';
+import videoHandler from './video.js';
 
 interface VideoData {
   title: string;
@@ -399,7 +400,6 @@ export default function VideoUpload({
 
     // Direct connection to video.js folder
     try {
-      const videoHandler = require('../video.js');
       const result = await videoHandler.receiveFile(selectedFile.uri, {
         ...videoData,
         size: selectedFile.size,
