@@ -19,6 +19,7 @@ import GhostFeedManager from './GhostFeedManager';
 import { API_KEYS } from '@/constants/Config';
 import { initializeTurboBridge } from './Native/TurboBridge';
 import { getVideoUrl, getReelUrl } from './cloudin';
+import { fetchReelsFromR2 } from './ZeroLogic';
 
 // API URL from constants
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
@@ -63,63 +64,47 @@ const Zero: React.FC = () => {
     initializeReels();
   }, []);
 
-  // Fetch videos from Kronop API
+  // Fetch videos directly from R2 bucket
   const fetchVideosFromAPI = async () => {
-    console.log('🎬 Starting API fetch from:', `${KRONOP_API_URL}/api/content/reels`);
+    console.log('🎬 Starting R2 fetch from bucket:', process.env.EXPO_PUBLIC_BUCKET_REELS);
     
     try {
-      const response = await fetch(`${KRONOP_API_URL}/api/content/reels`, {
-        headers: {
-          'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Fetch reels directly from R2
+      const reels = await fetchReelsFromR2();
       
-      console.log('📡 API Response status:', response.status);
+      console.log('📊 R2 Response reels:', reels.length, 'reels received');
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📊 API Response data:', data);
+      if (reels.length > 0) {
+        const formattedVideos = reels.map((reel: any) => {
+          console.log('🎥 Processing reel:', reel._id || reel.id);
+          
+          // Use getReelUrl for proper R2 integration
+          const videoUrl = getReelUrl(reel.videoUrl || reel.url || reel.filename);
+          
+          return {
+            id: reel._id || reel.id,
+            uri: videoUrl,
+            title: reel.title || reel.description,
+            channelName: reel.username || reel.channelName,
+            channelLogo: reel.channelLogo || `https://picsum.photos/seed/${reel.id}/200/200.jpg`,
+            isVerified: reel.isVerified || false,
+            likes: reel.likes || 0,
+            comments: reel.comments || 0,
+            shares: reel.shares || 0,
+          };
+        });
         
-        // Handle both success and error responses
-        if (data.success && data.data) {
-          const videos = data.data;
-          console.log('📊 API Response videos:', videos.length, 'videos received');
-          
-          const formattedVideos = videos.map((video: any) => {
-            console.log('🎥 Processing video:', video._id || video.id);
-            
-            // Use getReelUrl for proper R2 integration
-            const videoUrl = getReelUrl(video.videoUrl || video.url || video.filename);
-            
-            return {
-              id: video._id || video.id,
-              uri: videoUrl,
-              title: video.title || video.description,
-              channelName: video.username || video.channelName,
-              channelLogo: video.channelLogo || `https://picsum.photos/seed/${video.id}/200/200.jpg`,
-              isVerified: video.isVerified || false,
-              likes: video.likes || 0,
-              comments: video.comments || 0,
-              shares: video.shares || 0,
-            };
-          });
-          
-          console.log('✅ Formatted videos ready:', formattedVideos.length);
-          setVideos(formattedVideos);
-        } else {
-          console.warn('⚠️ API returned error or no data:', data.error || 'Unknown error');
-          console.error('❌ Backend Error: No data available from server');
-          setVideos([]);
-          setError(data.error || 'No data available from server');
-        }
+        console.log('✅ Formatted videos ready:', formattedVideos.length);
+        setVideos(formattedVideos);
       } else {
-        console.error('❌ API Error:', response.status, response.statusText);
+        console.warn('⚠️ No reels found in R2 bucket');
         setVideos([]);
+        setError('No reels found in storage');
       }
     } catch (error) {
-      console.error('💥 API Fetch Error:', error);
+      console.error('💥 R2 Fetch Error:', error);
       setVideos([]);
+      setError('Failed to load reels from storage');
     } finally {
       setLoading(false);
     }

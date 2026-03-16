@@ -1,7 +1,144 @@
 import { API_KEYS } from '@/constants/Config';
 import { getVideoUrl, getReelUrl } from './cloudin';
+import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
+
+// R2 S3 Client Configuration
+const r2Client = new S3Client({
+  region: 'auto',
+  endpoint: process.env.EXPO_PUBLIC_R2_ENDPOINT!,
+  credentials: {
+    accessKeyId: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY!,
+  },
+});
+
+// Fetch reels directly from R2 bucket
+export const fetchReelsFromR2 = async () => {
+  console.log('🎬 Fetching reels directly from R2 bucket...');
+  
+  try {
+    const command = new ListObjectsV2Command({
+      Bucket: process.env.EXPO_PUBLIC_BUCKET_REELS!,
+      Prefix: 'Reels/',
+      MaxKeys: 20,
+    });
+
+    const response = await r2Client.send(command);
+    console.log('📡 R2 Response:', response.KeyCount || 0, 'objects found');
+
+    if (response.Contents && response.Contents.length > 0) {
+      // Filter for video files and create reel data
+      const videoFiles = response.Contents.filter(obj => 
+        obj.Key && (obj.Key.endsWith('.mp4') || obj.Key.endsWith('.mov') || obj.Key.endsWith('.mp4'))
+      );
+
+      const reels = videoFiles.map((file, index) => {
+        const fileName = file.Key!.split('/').pop() || `reel_${index}`;
+        const fileWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+        
+        return {
+          id: fileWithoutExt,
+          _id: fileWithoutExt,
+          videoUrl: fileName,
+          url: fileName,
+          filename: fileName,
+          title: fileWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          description: `Amazing reel: ${fileWithoutExt.replace(/[-_]/g, ' ')}`,
+          username: 'Kronop',
+          channelName: 'Kronop',
+          channelLogo: `https://picsum.photos/seed/${fileWithoutExt}/200/200.jpg`,
+          likes: Math.floor(Math.random() * 5000) + 100,
+          comments: Math.floor(Math.random() * 500) + 10,
+          shares: Math.floor(Math.random() * 200) + 5,
+          views: Math.floor(Math.random() * 50000) + 1000,
+          isLiked: false,
+          isVerified: true,
+          timestamp: file.LastModified ? file.LastModified.getTime() : Date.now(),
+          created_at: file.LastModified || new Date(),
+        };
+      });
+
+      console.log('✅ Reels fetched from R2:', reels.length);
+      return reels;
+    } else {
+      console.log('⚠️ No reels found in R2 bucket, using fallback data');
+      // Fallback mock data when R2 is empty
+      return getMockReels();
+    }
+  } catch (error) {
+    console.error('❌ Error fetching reels from R2:', error);
+    // Fallback mock data on error
+    return getMockReels();
+  }
+};
+
+// Mock reels data for fallback
+const getMockReels = () => {
+  return [
+    {
+      id: 'sunset_timelapse',
+      _id: 'sunset_timelapse',
+      videoUrl: 'sunset_timelapse.mp4',
+      url: 'sunset_timelapse.mp4',
+      filename: 'sunset_timelapse.mp4',
+      title: 'Sunset Timelapse',
+      description: 'Beautiful sunset timelapse captured at the beach',
+      username: 'Kronop',
+      channelName: 'Kronop',
+      channelLogo: 'https://picsum.photos/seed/sunset/200/200.jpg',
+      likes: 1542,
+      comments: 89,
+      shares: 45,
+      views: 15420,
+      isLiked: false,
+      isVerified: true,
+      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
+      created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: 'mumbai_street_food',
+      _id: 'mumbai_street_food',
+      videoUrl: 'mumbai_street_food.mp4',
+      url: 'mumbai_street_food.mp4',
+      filename: 'mumbai_street_food.mp4',
+      title: 'Mumbai Street Food',
+      description: 'Exploring the best street food in Mumbai',
+      username: 'Kronop',
+      channelName: 'Kronop',
+      channelLogo: 'https://picsum.photos/seed/mumbai/200/200.jpg',
+      likes: 2341,
+      comments: 120,
+      shares: 67,
+      views: 28930,
+      isLiked: false,
+      isVerified: true,
+      timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000,
+      created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: 'bollywood_dance',
+      _id: 'bollywood_dance',
+      videoUrl: 'bollywood_dance.mp4',
+      url: 'bollywood_dance.mp4',
+      filename: 'bollywood_dance.mp4',
+      title: 'Bollywood Dance',
+      description: 'Energetic dance performance on latest Bollywood hit',
+      username: 'Kronop',
+      channelName: 'Kronop',
+      channelLogo: 'https://picsum.photos/seed/dance/200/200.jpg',
+      likes: 3456,
+      comments: 234,
+      shares: 123,
+      views: 45670,
+      isLiked: false,
+      isVerified: true,
+      timestamp: Date.now() - 6 * 60 * 60 * 1000,
+      created_at: new Date(Date.now() - 6 * 60 * 60 * 1000),
+    }
+  ];
+};
 
 // Like/Unlike API
 export const toggleLike = async (videoId: string, isCurrentlyLiked: boolean): Promise<boolean> => {

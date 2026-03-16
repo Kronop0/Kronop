@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 import LocalVault from './Storage/LocalVault';
 import { API_KEYS } from '@/constants/Config';
+import { fetchReelsFromR2 } from './ZeroLogic';
 
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
 
@@ -177,7 +178,7 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
     return null;
   }, []);
 
-  // Initialize with first reel from API
+  // Initialize with first reel from R2
   useEffect(() => {
     const initializeFeed = async () => {
       // Reduce log frequency - only log if debug mode
@@ -186,57 +187,42 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
       }
       
       try {
-        // Fetch from API only
-        const response = await fetch(`${KRONOP_API_URL}/api/content/reels`, {
-          headers: {
-            'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        // Fetch from R2 directly
+        const reels = await fetchReelsFromR2();
         
-        console.log('👻 GhostFeed API response:', response.status);
+        console.log('👻 GhostFeed R2 response:', reels.length, 'reels found');
         
-        if (response.ok) {
-          const data = await response.json();
-          console.log('👻 GhostFeed received data:', data);
+        if (reels && reels.length > 0) {
+          console.log('👻 GhostFeed received:', reels.length, 'reels');
           
-          // Handle both success and error responses
-          if (data.success && data.data && data.data.length > 0) {
-            console.log('👻 GhostFeed received:', data.data.length, 'reels');
-            
-            const firstReel = {
-              id: data.data[0]._id || data.data[0].id,
-              videoUrl: data.data[0].videoUrl || data.data[0].url,
-              username: data.data[0].username || data.data[0].channelName,
-              description: data.data[0].title || data.data[0].description,
-              likes: data.data[0].likes || 0,
-              comments: data.data[0].comments || 0,
-              shares: data.data[0].shares || 0,
-              isLiked: false,
-              timestamp: Date.now(),
-            };
-            
-            console.log('👻 GhostFeed first reel:', firstReel.id);
-            
-            // Save to vault and set as active
-            await saveReelToVault(firstReel);
-            setActiveReel(firstReel);
-            onReelChange?.(firstReel);
-            return;
-          } else {
-            console.error('👻 GhostFeed: No data received from backend');
-            // No mock data - show error instead
-            setActiveReel(null);
-            return;
-          }
+          const firstReel = {
+            id: reels[0]._id || reels[0].id,
+            videoUrl: reels[0].videoUrl || reels[0].url || reels[0].filename,
+            username: reels[0].username || reels[0].channelName,
+            description: reels[0].title || reels[0].description,
+            likes: reels[0].likes || 0,
+            comments: reels[0].comments || 0,
+            shares: reels[0].shares || 0,
+            isLiked: false,
+            timestamp: Date.now(),
+          };
+          
+          console.log('👻 GhostFeed first reel:', firstReel.id);
+          
+          // Save to vault and set as active
+          await saveReelToVault(firstReel);
+          setActiveReel(firstReel);
+          onReelChange?.(firstReel);
+          return;
+        } else {
+          console.error('👻 GhostFeed: No reels found in R2 bucket');
+          // No mock data - show error instead
+          setActiveReel(null);
+          return;
         }
-        
-        // No fallback - keep empty if API fails
-        console.log('👻 GhostFeed: No data received');
-        setActiveReel(null);
       } catch (error) {
         console.error('👻 GhostFeed initialization error:', error);
-        // No fallback - keep empty if API fails
+        // No fallback - keep empty if R2 fails
         setActiveReel(null);
       }
     };

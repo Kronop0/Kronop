@@ -124,7 +124,7 @@ const storyLimitation = {
       const deletedCount = { photos: 0, videos: 0 };
       
       for (const story of stories) {
-        // Check if story is older than 24 hours (fallback check)
+        // Check if story is older than 24 hours (reliable fallback check)
         const uploadTime = new Date(story.lastModified);
         const currentTime = new Date();
         const ageInHours = (currentTime - uploadTime) / (1000 * 60 * 60);
@@ -140,7 +140,7 @@ const storyLimitation = {
             const deleteCommand = new DeleteObjectCommand(deleteParams);
             await s3Client.send(deleteCommand);
             
-            console.log(`🗑️ Deleted expired ${story.type}: ${story.key}`);
+            console.log(`🗑️ Deleted expired ${story.type}: ${story.key} (${ageInHours.toFixed(1)}h old)`);
             
             if (story.type === 'photo') {
               deletedCount.photos++;
@@ -151,6 +151,8 @@ const storyLimitation = {
           } catch (deleteError) {
             console.error(`❌ Failed to delete ${story.key}:`, deleteError);
           }
+        } else {
+          console.log(`⏰ Story still active: ${story.key} (${ageInHours.toFixed(1)}h old)`);
         }
       }
       

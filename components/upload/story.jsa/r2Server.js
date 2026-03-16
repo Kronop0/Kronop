@@ -18,6 +18,10 @@ const r2Config = {
 // Initialize S3 client for R2
 const s3Client = new S3Client(r2Config);
 
+// Start automatic cleanup scheduler
+const stopAutoCleanup = storyLimitation.startAutoCleanup();
+console.log('🚀 Auto-cleanup started for stories - 24 hour expiry enabled');
+
 const r2Server = {
   // Upload photo to STORY bucket
   uploadPhoto: async (fileData, fileName, metadata) => {
