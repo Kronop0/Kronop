@@ -44,18 +44,70 @@ const saveUserPhoto = async (req, res) => {
 };
 
 
-// Add missing getUserVideos - NOW PUBLIC!
+const { listVideosFromR2, checkR2Configuration } = require('../services/r2VideoService');
+
+console.log('🎬 Content Controller Loading - R2 Direct Cloud Version');
+
+// Add missing getUserVideos - NOW USING R2 DIRECT CLOUD!
 const getUserVideos = async (req, res) => {
     try {
+        console.log('🎬 getUserVideos called - Using R2 Direct Cloud');
+        console.log('📅 Timestamp:', new Date().toISOString());
+        console.log('🌐 Request from:', req.ip || 'unknown');
         
-        const videos = await Content.find({ 
-            type: 'Video'
-        }).sort({ created_at: -1 }).limit(100);
+        // Check R2 configuration
+        console.log('🔧 Checking R2 configuration...');
+        const isConfigValid = checkR2Configuration();
+        
+        if (!isConfigValid) {
+            console.log('❌ R2 configuration check failed');
+            return res.status(500).json({ 
+                success: false, 
+                error: 'R2 storage not properly configured' 
+            });
+        }
 
-        res.json({ success: true, data: videos });
+        console.log('✅ R2 configuration valid, fetching videos...');
+        
+        // Get videos directly from R2 bucket
+        const videos = await listVideosFromR2();
+        
+        console.log(`📊 Returning ${videos.length} videos from R2 cloud storage`);
+        console.log('📋 Video titles:', videos.map(v => v.title));
+        
+        const response = {
+            success: true, 
+            data: videos,
+            source: 'r2-cloud-direct',
+            total: videos.length,
+            timestamp: new Date().toISOString(),
+            message: `Successfully fetched ${videos.length} videos from R2 cloud storage`
+        };
+        
+        console.log('📤 Sending response to client');
+        console.log('📊 Response summary:', {
+            success: response.success,
+            source: response.source,
+            total: response.total,
+            hasData: response.data.length > 0
+        });
+        
+        res.json(response);
+        
     } catch (error) {
-        console.error('❌ Public getUserVideos error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('❌ R2 getUserVideos error:', error);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
+        
+        const errorResponse = { 
+            success: false, 
+            error: error.message,
+            timestamp: new Date().toISOString(),
+            source: 'r2-cloud-direct-error'
+        };
+        
+        console.log('📤 Sending error response to client');
+        res.status(500).json(errorResponse);
     }
 };
 

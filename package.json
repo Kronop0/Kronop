@@ -62,6 +62,7 @@
     "@wagmi/connectors": "^7.2.1",
     "@wagmi/core": "^3.4.0",
     "aws-cli": "^0.0.2",
+    "aws-sdk": "^2.1693.0",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
     "buffer": "^6.0.3",

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Image } from 'expo-image';
 import { colors, spacing, typography, borderRadius } from '@/Apptepbar/Video/ThemeConstants';
-import { getLongVideos, getReels, Video } from '@/Apptepbar/Video/services/videoService';
+import { getLongVideos, Video } from '@/Apptepbar/Video/services/videoService';
 import { AdsBanner, HorizontalVideoList, VideoQualitySelector, VideoStatsOverlay, FullscreenVideoPlayer, CommentsModal, ReportModal, VideoControlsOverlay } from '@/Apptepbar/Video/components';
 
 type VideoQuality = '360p' | '480p' | '720p' | '1080p' | 'Auto';
@@ -16,12 +16,42 @@ export default function VideoPlayerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
-  const videos = type === 'reel' ? getReels() : getLongVideos();
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const loadVideos = async () => {
+      try {
+        // Only handle long videos for now - reels not implemented
+        const videoList = await getLongVideos();
+        setVideos(videoList);
+      } catch (error) {
+        console.error('Error loading videos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadVideos();
+  }, [type]);
+  
   const video = videos.find((v: Video) => v.id === id);
   const currentIndex = videos.findIndex((v: Video) => v.id === id);
   
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading video...</Text>
+      </View>
+    );
+  }
+  
   if (!video) {
-    return null;
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Video not found</Text>
+      </View>
+    );
   }
 
   const [isLiked, setIsLiked] = useState(video?.isLiked || false);
@@ -38,7 +68,7 @@ export default function VideoPlayerScreen() {
   const [isSaved, setIsSaved] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showControls, setShowControls] = useState(false);
-  const controlsTimeoutRef = useRef<number | null>(null);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const player = useVideoPlayer(video?.videoUrl || '', player => {
     player.loop = false;
@@ -539,5 +569,15 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textSubtle,
     lineHeight: 22,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.text,
   },
 });

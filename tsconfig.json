@@ -1,5 +1,5 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "./node_modules/expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
@@ -37,7 +37,9 @@
     "lib": [
       "dom",
       "esnext"
-    ]
+    ],
+    "types": ["node"],
+    "noResolve": false
   },
   "include": [
     "**/*.ts",
@@ -50,4 +52,8 @@
     "config/**/*.js",
     "app/Player/song.js"
   ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules/*"
+  ]
 }
