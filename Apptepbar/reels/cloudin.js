@@ -390,9 +390,8 @@ function getQualityStreamUrl(videoKey, quality = 'medium') {
  */
 function getRangeUrl(videoKey, start = 0, end = null) {
   const baseUrl = getVideoUrl(videoKey);
-  const range = end ? `bytes=${start}-${end}` : `bytes=${start}-`;
-  
-  return `${baseUrl}?range=${range}`;
+  // For R2, we need to use the base URL and let the fetch function handle Range headers
+  return baseUrl;
 }
 
 /**
