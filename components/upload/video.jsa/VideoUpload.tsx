@@ -301,13 +301,6 @@ export default function VideoUpload({
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const categories = [
-  'Film & Animation', 'Autos & Vehicles', 'Music', 'Pets & Animals',
-    'Sports', 'Travel & Events', 'Gaming', 'People & Blogs', 'Comedy',
-    'Entertainment', 'News & Politics', 'How-to & Style', 'Education', 
-    'Science & Technology', 'Nonprofits & Activism'
-  ];
-
   const pickVideo = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -510,23 +503,7 @@ export default function VideoUpload({
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Category *</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category}
-                style={[
-                  styles.categoryChip,
-                  videoData.category === category && styles.categoryChipSelected
-                ]}
-                onPress={() => setVideoData(prev => ({ ...prev, category }))}
-              >
-                <Text style={[
-                  styles.categoryChipText,
-                  videoData.category === category && styles.categoryChipTextSelected
-                ]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {/* Categories will be imported from centralized source */}
           </ScrollView>
         </View>
 
