@@ -302,9 +302,10 @@ export default function VideoUpload({
   };
 
   const categories = [
-    'Entertainment', 'Music', 'Gaming', 'Education', 'Technology', 
-    'News', 'Sports', 'Business', 'Health', 'Travel', 'Comedy', 
-    'Lifestyle', 'Food', 'Science', 'Documentary'
+  'Film & Animation', 'Autos & Vehicles', 'Music', 'Pets & Animals',
+    'Sports', 'Travel & Events', 'Gaming', 'People & Blogs', 'Comedy',
+    'Entertainment', 'News & Politics', 'How-to & Style', 'Education', 
+    'Science & Technology', 'Nonprofits & Activism'
   ];
 
   const pickVideo = async () => {
