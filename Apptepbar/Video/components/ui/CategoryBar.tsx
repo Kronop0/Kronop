@@ -18,6 +18,8 @@ export function CategoryBar({ categories, selectedCategory, onSelectCategory }: 
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled={true}
+        scrollEventThrottle={16}
       >
         {categories.map((category) => {
           const isSelected = category.id === selectedCategory;
@@ -30,6 +32,9 @@ export function CategoryBar({ categories, selectedCategory, onSelectCategory }: 
                 isSelected && styles.chipSelected,
                 pressed && styles.chipPressed,
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${category.name} category`}
+              accessibilityState={{ selected: isSelected }}
             >
               <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                 {category.name}
@@ -46,6 +51,8 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
     paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceLight,
   },
   scrollContent: {
     paddingHorizontal: spacing.md,
@@ -54,29 +61,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
     backgroundColor: colors.surfaceLight,
-    minHeight: 28,
+    minHeight: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   chipSelected: {
-    backgroundColor: colors.surfaceLight,
-    borderWidth: 1,
-    borderColor: colors.text,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+    elevation: 4,
   },
   chipPressed: {
-    opacity: 0.7,
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
   },
   chipText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
+    textAlign: 'center',
   },
   chipTextSelected: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
 });
