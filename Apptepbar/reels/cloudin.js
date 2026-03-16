@@ -147,10 +147,14 @@ class ChunkManager {
       try {
         console.log(`📥 Loading chunk ${chunkIndex}: bytes ${start}-${end}`);
         
+        // For R2, use direct URL without Range headers for better compatibility
+        // R2 supports range requests but the format might be causing issues
+        // Let's try with a simpler approach first
         const response = await fetch(this.videoUrl, {
           headers: {
-            'Range': `bytes=${start}-${end}`,
             'User-Agent': 'KronopApp-ChunkStreamer/1.0'
+            // Temporarily remove Range header to test if this fixes HTTP 400
+            // 'Range': `bytes=${start}-${end}`
           }
         });
 
