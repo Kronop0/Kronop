@@ -2,6 +2,7 @@
 // Handles upload to Cloudflare R2 for stories
 
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const storyLimitation = require('./storyLimitation');
 
 // R2 Configuration from environment
 const r2Config = {
@@ -30,6 +31,9 @@ const r2Server = {
         size: fileData.length
       });
 
+      // Add expiry timestamp to metadata
+      const metadataWithExpiry = storyLimitation.addExpiryTimestamp(metadata);
+      
       // Create upload parameters
       const uploadParams = {
         Bucket: bucketName,
@@ -38,7 +42,8 @@ const r2Server = {
         ContentType: metadata?.type || 'image/jpeg',
         Metadata: {
           originalName: metadata?.name || fileName,
-          uploadTime: new Date().toISOString(),
+          uploadTime: metadataWithExpiry.uploadTime,
+          expiresAt: metadataWithExpiry.expiresAt,
           category: metadata?.category || 'general',
           title: metadata?.title || 'Story Photo',
           tags: metadata?.tags ? metadata.tags.join(',') : '',
@@ -88,6 +93,9 @@ const r2Server = {
         size: fileData.length
       });
 
+      // Add expiry timestamp to metadata
+      const metadataWithExpiry = storyLimitation.addExpiryTimestamp(metadata);
+      
       // Create upload parameters
       const uploadParams = {
         Bucket: bucketName,
@@ -96,7 +104,8 @@ const r2Server = {
         ContentType: metadata?.type || 'video/mp4',
         Metadata: {
           originalName: metadata?.name || fileName,
-          uploadTime: new Date().toISOString(),
+          uploadTime: metadataWithExpiry.uploadTime,
+          expiresAt: metadataWithExpiry.expiresAt,
           category: metadata?.category || 'general',
           title: metadata?.title || 'Story Video',
           tags: metadata?.tags ? metadata.tags.join(',') : '',

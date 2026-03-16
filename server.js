@@ -27,12 +27,8 @@ const RedisCacheService = {
   }
 };
 
-// Stub UserInterestTrackingService
-const UserInterestTrackingService = {
-  getTrendingContent: async (type, limit) => [],
-  getUserInterestProfile: async () => ({ isNewUser: true, totalInteractions: 0, topCategories: [] }),
-  calculateContentRelevance: async () => ({ score: 0.5, matchedInterests: [] })
-};
+// Story Limitation System for 24-hour auto-delete
+const storyLimitation = require('./components/upload/story.jsa/storyLimitation');
 
 // Routes
 const contentRoutes = require('./api/content');
@@ -540,6 +536,25 @@ app.post('/upload/photo', (req, res) => createUploadEndpoint('photo', { category
 //   }
 // };
 
+// Story management endpoints
+apiRouter.get('/stories/stats', async (req, res) => {
+  try {
+    const stats = await storyLimitation.getStoryStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+apiRouter.post('/stories/cleanup', async (req, res) => {
+  try {
+    const result = await storyLimitation.deleteExpiredStories();
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Additional endpoints
 apiRouter.get('/shayari/random', async (req, res) => {
   try {
@@ -658,7 +673,11 @@ const broadcast = (message) => {
   });
 };
 
-// MongoDB Change Streams
+// Start story auto-cleanup scheduler
+  console.log('⏰ Starting story auto-cleanup scheduler...');
+  const stopStoryCleanup = storyLimitation.startAutoCleanup();
+  
+  // MongoDB Change Streams
 mongoose.connection.once('open', () => {
   console.log('[WEBSOCKET]: Setting up MongoDB Change Streams...');
   
