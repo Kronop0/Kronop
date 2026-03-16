@@ -222,6 +222,22 @@ class ChunkManager {
       totalBytes: this.totalSize
     };
   }
+
+  // Clean up all chunks and reset state
+  cleanup() {
+    console.log(`🧹 Cleaning up chunk manager for: ${this.videoUrl}`);
+    
+    // Clear all loaded chunks
+    this.chunks.clear();
+    this.loadedChunks.clear();
+    
+    // Reset state
+    this.totalSize = 0;
+    this.totalChunks = 0;
+    this.isInitialized = false;
+    
+    console.log(`✅ Chunk manager cleanup complete`);
+  }
 }
 
 // Active chunk managers for videos
