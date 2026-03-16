@@ -81,7 +81,15 @@ export async function fetchLongVideos(): Promise<Video[]> {
  * Get long videos with caching
  */
 export async function getLongVideos(): Promise<Video[]> {
-  return await fetchLongVideos();
+  try {
+    const videos = await fetchLongVideos();
+    console.log('getLongVideos: Returning', videos.length, 'videos');
+    console.log('getLongVideos: Video IDs:', videos.map(v => v.id));
+    return videos;
+  } catch (error) {
+    console.error('getLongVideos: Error fetching videos:', error);
+    return [];
+  }
 }
 
 /**

@@ -22,11 +22,14 @@ export default function VideoPlayerScreen() {
   useEffect(() => {
     const loadVideos = async () => {
       try {
+        console.log('VideoPlayer: Starting to load videos...');
         // Only handle long videos for now - reels not implemented
         const videoList = await getLongVideos();
+        console.log('VideoPlayer: Received', videoList.length, 'videos');
         setVideos(videoList);
       } catch (error) {
-        console.error('Error loading videos:', error);
+        console.error('VideoPlayer: Error loading videos:', error);
+        setVideos([]);
       } finally {
         setLoading(false);
       }
@@ -34,9 +37,6 @@ export default function VideoPlayerScreen() {
     
     loadVideos();
   }, [type]);
-  
-  const video = videos.find((v: Video) => v.id === id);
-  const currentIndex = videos.findIndex((v: Video) => v.id === id);
   
   if (loading) {
     return (
@@ -46,10 +46,20 @@ export default function VideoPlayerScreen() {
     );
   }
   
+  const video = videos?.find((v: Video) => v.id === id);
+  const currentIndex = videos?.findIndex((v: Video) => v.id === id);
+  
+  console.log('VideoPlayer: Looking for ID:', id);
+  console.log('VideoPlayer: Available videos:', videos?.length || 0);
+  console.log('VideoPlayer: Video IDs:', videos?.map(v => v.id) || []);
+  console.log('VideoPlayer: Found video:', video?.id || 'null');
+  
   if (!video) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Video not found</Text>
+        <Text style={styles.loadingText}>Looking for ID: {id}</Text>
+        <Text style={styles.loadingText}>Available: {videos?.length || 0} videos</Text>
       </View>
     );
   }

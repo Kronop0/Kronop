@@ -51,7 +51,7 @@ class CloudVideoManager {
   constructor() {
     this.config = {
       apiBaseUrl: process.env.EXPO_PUBLIC_BASE_URL || 'https://kronop-76zy.onrender.com',
-      r2Endpoint: process.env.EXPO_PUBLIC_R2_ENDPOINT || 'https://f9bb6756691d33713172b3bf9afdd0f4.r2.cloudflarestorage.com',
+      r2Endpoint: 'https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev',
       r2AccountId: process.env.EXPO_PUBLIC_R2_ACCOUNT_ID || '',
       r2AccessKeyId: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID || '',
       r2SecretAccessKey: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY || '',
@@ -140,21 +140,21 @@ class CloudVideoManager {
    * Get streaming URL for video
    */
   getVideoUrl(videoKey: string): string {
-    return `${this.config.r2Endpoint}/${this.config.videoBucket}/${videoKey}`;
+    return `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${videoKey}`;
   }
 
   /**
    * Get thumbnail URL
    */
   getThumbnailUrl(thumbnailKey: string): string {
-    return `${this.config.r2Endpoint}/${this.config.videoBucket}/${thumbnailKey}`;
+    return `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${thumbnailKey}`;
   }
 
   /**
    * Get avatar URL
    */
   getAvatarUrl(avatarKey: string): string {
-    return `${this.config.r2Endpoint}/${this.config.videoBucket}/${avatarKey}`;
+    return `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${avatarKey}`;
   }
 
   /**
@@ -284,7 +284,7 @@ class ChunkManager {
       const start = index * this.chunkSize;
       const end = this.totalSize ? Math.min(start + this.chunkSize - 1, this.totalSize - 1) : start + this.chunkSize - 1;
       
-      const url = `${this.config.r2Endpoint}/${this.config.videoBucket}/${this.videoKey}`;
+      const url = `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${this.videoKey}`;
       const response = await fetch(url, {
         headers: {
           'Range': `bytes=${start}-${end}`,
@@ -342,7 +342,7 @@ class ChunkManager {
    * Get streaming URL (fallback)
    */
   getStreamingUrl(): string {
-    return `${this.config.r2Endpoint}/${this.config.videoBucket}/${this.videoKey}`;
+    return `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${this.videoKey}`;
   }
 }
 

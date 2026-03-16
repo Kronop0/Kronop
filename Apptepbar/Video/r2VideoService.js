@@ -89,8 +89,8 @@ async function listVideosFromR2() {
         category: 'entertainment',
         videoKey: file.Key,
         thumbnailKey: thumbnailKey,
-        url: `${r2Config.endpoint}/${videoBucket}/${file.Key}`,
-        thumbnailUrl: `${r2Config.endpoint}/${videoBucket}/${thumbnailKey}`,
+        url: `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${file.Key}`,
+        thumbnailUrl: `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${thumbnailKey}`,
         user: {
           name: 'Cloud Upload',
           avatarKey: 'avatars/default.jpg',
@@ -133,14 +133,14 @@ async function listVideosFromR2() {
  * Get direct streaming URL for a video
  */
 function getVideoStreamUrl(videoKey) {
-  return `${r2Config.endpoint}/${videoBucket}/${videoKey}`;
+  return `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${videoKey}`;
 }
 
 /**
  * Get thumbnail URL for a video
  */
 function getThumbnailUrl(thumbnailKey) {
-  return `${r2Config.endpoint}/${videoBucket}/${thumbnailKey}`;
+  return `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${thumbnailKey}`;
 }
 
 /**
