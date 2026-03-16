@@ -23,6 +23,7 @@ import { getVideoUrl, getReelUrl, activeChunkManagers, ChunkManager } from './cl
 import { fetchReelsFromR2 } from './ZeroLogic';
 // @ts-ignore
 import { smartPreloader } from './SmartPreloader';
+import ReelsIndexManager from './index';
 
 // API URL from constants
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
@@ -51,31 +52,53 @@ const Zero: React.FC = () => {
   const [preloadedVideos, setPreloadedVideos] = useState<Set<string>>(new Set());
   const [swipeDirection, setSwipeDirection] = useState<'up' | 'down' | null>(null);
   const [memoryOptimizedMode, setMemoryOptimizedMode] = useState(true);
+  const [instantMode, setInstantMode] = useState(true); // New instant mode
   const flatListRef = useRef<FlatList<VideoItem>>(null);
   const fadeAnimMap = useRef<Map<string, Animated.Value>>(new Map()).current;
   const hideTimeoutMap = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map()).current;
   const loadedChunksRef = useRef<Map<string, Set<string>>>(new Map()).current;
+  const reelsIndexManager = useRef(ReelsIndexManager.getInstance());
 
   // Manual swipe function for debugging and fallback
-  const swipeToNextVideo = useCallback(() => {
+  const swipeToNextVideo = useCallback(async () => {
     if (videos.length === 0) return;
     
-    const nextIndex = (currentVisibleIndex + 1) % videos.length;
-    console.log(`👆 Manually swiping to next video: ${nextIndex}`);
+    console.log(`👆 Manually swiping to next video (Instant Mode)`);
     
-    setCurrentVisibleIndex(nextIndex);
-    flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-  }, [currentVisibleIndex, videos.length]);
+    if (instantMode) {
+      // Use instant loading system
+      const nextReelUrl = await reelsIndexManager.current.moveToNextReel();
+      const nextIndex = (currentVisibleIndex + 1) % videos.length;
+      setCurrentVisibleIndex(nextIndex);
+      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+      console.log(`⚡ Next reel loaded instantly: ${nextReelUrl}`);
+    } else {
+      // Fallback to original method
+      const nextIndex = (currentVisibleIndex + 1) % videos.length;
+      setCurrentVisibleIndex(nextIndex);
+      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+    }
+  }, [currentVisibleIndex, videos.length, instantMode]);
 
-  const swipeToPrevVideo = useCallback(() => {
+  const swipeToPrevVideo = useCallback(async () => {
     if (videos.length === 0) return;
     
-    const prevIndex = currentVisibleIndex === 0 ? videos.length - 1 : currentVisibleIndex - 1;
-    console.log(`👇 Manually swiping to previous video: ${prevIndex}`);
+    console.log(`👇 Manually swiping to previous video (Instant Mode)`);
     
-    setCurrentVisibleIndex(prevIndex);
-    flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
-  }, [currentVisibleIndex, videos.length]);
+    if (instantMode) {
+      // Use instant loading system
+      const prevReelUrl = await reelsIndexManager.current.moveToPreviousReel();
+      const prevIndex = currentVisibleIndex === 0 ? videos.length - 1 : currentVisibleIndex - 1;
+      setCurrentVisibleIndex(prevIndex);
+      flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
+      console.log(`⚡ Previous reel loaded instantly: ${prevReelUrl}`);
+    } else {
+      // Fallback to original method
+      const prevIndex = currentVisibleIndex === 0 ? videos.length - 1 : currentVisibleIndex - 1;
+      setCurrentVisibleIndex(prevIndex);
+      flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
+    }
+  }, [currentVisibleIndex, videos.length, instantMode]);
 
   const insets = useSafeAreaInsets();
 
@@ -198,7 +221,13 @@ const Zero: React.FC = () => {
         });
         setVideos(transformedVideos);
         
-        // Initialize chunk managers for each video
+        // Initialize instant loading system
+        if (instantMode) {
+          console.log('⚡ Initializing instant loading system');
+          await reelsIndexManager.current.initialize(transformedVideos);
+        }
+        
+        // Initialize chunk managers for each video (fallback)
         transformedVideos.forEach((video: any) => {
           if (!activeChunkManagers.has(video.uri)) {
             console.log('📦 Creating chunk manager for:', video.uri);
@@ -221,7 +250,7 @@ const Zero: React.FC = () => {
     }
   };
 
-  const onViewableItemsChanged = React.useCallback(({ viewableItems, changed }: { viewableItems: ViewToken<VideoItem>[]; changed: ViewToken<VideoItem>[] }) => {
+  const onViewableItemsChanged = React.useCallback(async ({ viewableItems, changed }: { viewableItems: ViewToken<VideoItem>[]; changed: ViewToken<VideoItem>[] }) => {
     console.log('👀 Viewable items changed:', viewableItems.length, 'Changed:', changed.length);
     
     if (viewableItems.length > 0 && viewableItems[0].index !== undefined && viewableItems[0].index !== null) {
@@ -234,44 +263,60 @@ const Zero: React.FC = () => {
       // Hide all play/pause controls when scrolling
       setShowPlayPauseMap(new Map());
       
-      // Memory-optimized: Only preload next reel, clean up others
-      if (videos.length > 0 && newIndex !== oldIndex && memoryOptimizedMode) {
-        const currentVideo = videos[newIndex];
-        const nextIndex = (newIndex + 1) % videos.length;
-        const nextVideo = videos[nextIndex];
+      // Use instant loading system for immediate next reel playback
+      if (videos.length > 0 && newIndex !== oldIndex && instantMode) {
+        console.log(`⚡ Instant mode swipe: ${oldIndex} → ${newIndex}`);
         
-        if (currentVideo && nextVideo) {
-          console.log(`🎯 Memory swipe: ${oldIndex} → ${newIndex}, keeping current + next only`);
+        // Trigger instant loading for next reel
+        try {
+          if (newIndex > oldIndex) {
+            // Swiped forward - load next reel instantly
+            await reelsIndexManager.current.moveToNextReel();
+          } else {
+            // Swiped backward - load previous reel instantly  
+            await reelsIndexManager.current.moveToPreviousReel();
+          }
+          console.log(`⚡ Instant reel switch complete`);
+        } catch (error) {
+          console.error('❌ Instant reel switch failed:', error);
+          // Fallback to memory-optimized mode
+          const currentVideo = videos[newIndex];
+          const nextIndex = (newIndex + 1) % videos.length;
+          const nextVideo = videos[nextIndex];
           
-          // Clean up previous video chunks
-          if (oldIndex >= 0 && oldIndex < videos.length) {
-            const prevVideo = videos[oldIndex];
-            if (prevVideo && prevVideo.id !== currentVideo.id) {
-              const prevManager = activeChunkManagers.get(prevVideo.uri);
-              if (prevManager) {
-                console.log(`🗑️ Cleaning previous reel chunks: ${prevVideo.id}`);
-                prevManager.cleanup();
+          if (currentVideo && nextVideo) {
+            console.log(`🎯 Fallback memory swipe: ${oldIndex} → ${newIndex}`);
+            
+            // Clean up previous video chunks
+            if (oldIndex >= 0 && oldIndex < videos.length) {
+              const prevVideo = videos[oldIndex];
+              if (prevVideo && prevVideo.id !== currentVideo.id) {
+                const prevManager = activeChunkManagers.get(prevVideo.uri);
+                if (prevManager) {
+                  console.log(`🗑️ Cleaning previous reel chunks: ${prevVideo.id}`);
+                  prevManager.cleanup();
+                }
               }
             }
-          }
-          
-          // Preload next video chunks (first 2 chunks only)
-          if (!activeChunkManagers.has(nextVideo.uri)) {
-            const chunkManager = new ChunkManager(nextVideo.uri);
-            activeChunkManagers.set(nextVideo.uri, chunkManager);
-          }
-          
-          const nextManager = activeChunkManagers.get(nextVideo.uri);
-          if (nextManager) {
-            nextManager.preloadChunks([0, 1]).then(() => {
-              setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
-              console.log(`⏭️ Next reel ready: ${nextVideo.id}`);
-            });
+            
+            // Preload next video chunks (first 2 chunks only)
+            if (!activeChunkManagers.has(nextVideo.uri)) {
+              const chunkManager = new ChunkManager(nextVideo.uri);
+              activeChunkManagers.set(nextVideo.uri, chunkManager);
+            }
+            
+            const nextManager = activeChunkManagers.get(nextVideo.uri);
+            if (nextManager) {
+              nextManager.preloadChunks([0, 1]).then(() => {
+                setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
+                console.log(`⏭️ Next reel ready: ${nextVideo.id}`);
+              });
+            }
           }
         }
       }
     }
-  }, [currentVisibleIndex, videos, memoryOptimizedMode]);
+  }, [currentVisibleIndex, videos, instantMode, memoryOptimizedMode]);
 
   const viewabilityConfig = React.useRef({
     viewAreaCoveragePercentThreshold: 80,
@@ -356,6 +401,7 @@ const Zero: React.FC = () => {
         <TouchableWithoutFeedback onPress={() => handleVideoTap(item.id)}>
           <View style={styles.videoWrapper}>
             <VideoPlayer
+              key={`${item.uri}-${index}`}
               videoUrl={item.uri}
               isPlaying={isPlaying}
             />
