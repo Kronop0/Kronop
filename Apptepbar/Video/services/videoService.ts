@@ -28,11 +28,15 @@ export interface Video {
 function transformVideoData(videoData: VideoData): Video {
   const config = cloudVideoManager.getConfig();
   
+  const videoUrl = cloudVideoManager.getVideoUrl(videoData.videoKey);
+  const thumbnailUrl = cloudVideoManager.getThumbnailUrl(videoData.thumbnailKey);
+  const avatarUrl = cloudVideoManager.getAvatarUrl(videoData.user.avatarKey);
+  
   return {
     id: videoData.id,
     title: videoData.title,
-    thumbnail: cloudVideoManager.getThumbnailUrl(videoData.thumbnailKey),
-    videoUrl: cloudVideoManager.getVideoUrl(videoData.videoKey),
+    thumbnail: thumbnailUrl,
+    videoUrl: videoUrl,
     duration: videoData.duration,
     views: formatViews(videoData.views),
     likes: videoData.likes,
@@ -40,7 +44,7 @@ function transformVideoData(videoData: VideoData): Video {
     category: videoData.category,
     user: {
       name: videoData.user.name,
-      avatar: cloudVideoManager.getAvatarUrl(videoData.user.avatarKey),
+      avatar: avatarUrl,
       isSupported: videoData.user.isSupported,
       supporters: videoData.user.supporters,
     },
@@ -83,8 +87,6 @@ export async function fetchLongVideos(): Promise<Video[]> {
 export async function getLongVideos(): Promise<Video[]> {
   try {
     const videos = await fetchLongVideos();
-    console.log('getLongVideos: Returning', videos.length, 'videos');
-    console.log('getLongVideos: Video IDs:', videos.map(v => v.id));
     return videos;
   } catch (error) {
     console.error('getLongVideos: Error fetching videos:', error);

@@ -17,6 +17,8 @@ export default function VideoPlayerScreen() {
   const insets = useSafeAreaInsets();
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Initialize all hooks at the top level (before any conditional returns)
   const [isLiked, setIsLiked] = useState(false);
@@ -46,10 +48,13 @@ export default function VideoPlayerScreen() {
   useEffect(() => {
     const loadVideos = async () => {
       try {
+        setIsLoading(true);
+        setHasError(false);
         const videoList = await getLongVideos(); // For now, only long videos are supported
         setVideos(videoList);
       } catch (error) {
         console.error('Error loading videos:', error);
+        setHasError(true);
         setVideos([]);
       } finally {
         setIsLoading(false);
@@ -57,7 +62,11 @@ export default function VideoPlayerScreen() {
     };
     
     loadVideos();
-  }, [type]);
+  }, [type, retryCount]);
+  
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+  };
   
   const currentIndex = videos.findIndex((v: Video) => v.id === id);
   
@@ -166,6 +175,17 @@ export default function VideoPlayerScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+  
+  if (hasError) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Failed to load videos</Text>
+        <Pressable style={styles.retryButton} onPress={handleRetry}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
       </View>
     );
   }
@@ -436,6 +456,19 @@ const styles = StyleSheet.create({
     color: colors.error || '#ff6b6b',
     textAlign: 'center',
     marginTop: 50,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  retryButtonText: {
+    color: colors.background,
+    fontSize: 16,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
