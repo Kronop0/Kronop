@@ -58,27 +58,71 @@ class ChunkManager {
     try {
       console.log('🔧 Initializing Chunk Manager for:', this.videoUrl);
       
-      // Get video file size
-      const headResponse = await fetch(this.videoUrl, { method: 'HEAD' });
+      // Get video file size with retry logic
+      let headResponse;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          headResponse = await fetch(this.videoUrl, { 
+            method: 'HEAD',
+            headers: {
+              'User-Agent': 'KronopApp-ChunkStreamer/1.0'
+            }
+          });
+          
+          if (headResponse.ok) break;
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        } catch (error) {
+          console.warn(`Retry ${retryCount + 1} failed:`, error);
+          retryCount++;
+          if (retryCount >= maxRetries) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+      
+      if (!headResponse || !headResponse.ok) {
+        throw new Error(`HTTP ${headResponse?.status || 'Unknown'}: Failed to get video metadata`);
+      }
+      
       this.totalSize = parseInt(headResponse.headers.get('content-length') || '0');
+      
+      if (this.totalSize === 0) {
+        throw new Error('Video file size is 0 - file may not exist or be accessible');
+      }
       
       // Calculate total chunks
       this.totalChunks = Math.ceil(this.totalSize / this.chunkSize);
       
-      console.log(`📊 Video size: ${this.totalSize} bytes, Chunks: ${this.totalChunks}`);
+      console.log(`📊 Chunk Manager Ready - Size: ${this.totalSize} bytes, Chunks: ${this.totalChunks}`);
       
-      // Preload first 3 chunks immediately
-      await this.preloadChunks([0, 1, 2]);
+      // Only preload if we have valid chunks
+      if (this.totalChunks > 0) {
+        // Preload first 3 chunks immediately
+        const preloadResults = await this.preloadChunks([0, 1, 2]);
+        console.log(`🚀 Initial preload complete: ${preloadResults.length} chunks loaded`);
+      }
       
       return true;
     } catch (error) {
       console.error('❌ Chunk Manager initialization failed:', error);
+      // Set default values to prevent complete failure
+      this.totalSize = 0;
+      this.totalChunks = 0;
       return false;
     }
   }
 
   // Preload specific chunks
   async preloadChunks(chunkIndices) {
+    // Skip if chunks are already being loaded or totalChunks is 0
+    if (this.totalChunks === 0) {
+      console.warn('⚠️ Cannot preload chunks: totalChunks is 0');
+      return [];
+    }
+
     const promises = chunkIndices.map(async (chunkIndex) => {
       // Validate chunk index is within bounds
       if (chunkIndex < 0 || chunkIndex >= this.totalChunks) {
@@ -86,18 +130,21 @@ class ChunkManager {
         return null;
       }
       
-      if (this.loadedChunks.has(chunkIndex)) return null;
+      if (this.loadedChunks.has(chunkIndex)) {
+        console.log(`✅ Chunk ${chunkIndex} already loaded: ${this.chunks.get(chunkIndex)?.size} bytes`);
+        return this.chunks.get(chunkIndex)?.data || null;
+      }
       
       const start = chunkIndex * this.chunkSize;
       const end = Math.min(start + this.chunkSize - 1, this.totalSize - 1);
       
       try {
-        console.log(`📥 Preloading chunk ${chunkIndex}: ${start}-${end}`);
+        console.log(`📥 Loading chunk ${chunkIndex}: bytes ${start}-${end}`);
         
         const response = await fetch(this.videoUrl, {
           headers: {
             'Range': `bytes=${start}-${end}`,
-            'User-Agent': 'KronopApp-Streamer/1.0'
+            'User-Agent': 'KronopApp-ChunkStreamer/1.0'
           }
         });
 
@@ -118,7 +165,7 @@ class ChunkManager {
         
         this.loadedChunks.add(chunkIndex);
         
-        console.log(`✅ Chunk ${chunkIndex} loaded: ${chunkData.byteLength} bytes`);
+        console.log(`✅ Chunk ${chunkIndex} loaded successfully: ${chunkData.byteLength} bytes`);
         return chunkData;
         
       } catch (error) {
@@ -128,6 +175,12 @@ class ChunkManager {
     });
 
     const results = await Promise.all(promises);
+    const successCount = results.filter(r => r !== null).length;
+    
+    if (successCount > 0) {
+      console.log(`🎯 Preload complete: ${successCount}/${chunkIndices.length} chunks loaded`);
+    }
+    
     return results.filter(r => r !== null);
   }
 
@@ -283,8 +336,11 @@ function getVideoUrl(videoKey) {
   // Remove leading slash if present
   const cleanKey = videoKey.startsWith('/') ? videoKey.slice(1) : videoKey;
   
+  // IMPORTANT: If key doesn't start with 'Reels/', add it
+  const finalKey = cleanKey.startsWith('Reels/') ? cleanKey : `Reels/${cleanKey}`;
+  
   // Construct full URL
-  const fullUrl = `${CLOUD_CONFIG.publicR2Url}/${cleanKey}`;
+  const fullUrl = `${CLOUD_CONFIG.publicR2Url}/${finalKey}`;
   
   console.log(`🎬 Video URL: ${fullUrl}`);
   return fullUrl;

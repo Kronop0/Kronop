@@ -59,26 +59,99 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
   // Check memory usage and warn if needed
   const checkMemoryUsage = useCallback(async () => {
     try {
-      // Simple memory check without LocalVault
-      const totalMemory = Platform.OS === 'ios' ? 50 : 30; // MB
+      // Get actual memory metrics from chunk managers
+      const { activeChunkManagers } = await import('./cloudin');
+      const { smartPreloader } = await import('./SmartPreloader');
       
-      // Log memory status (simplified)
-      console.log('🧠 Memory check completed');
+      const totalChunkManagers = activeChunkManagers.size;
+      const preloaderStatus = smartPreloader.getStatus();
+      
+      // Only log if there's actual memory data
+      if (totalChunkManagers > 0 || preloaderStatus.preloadedVideos > 0) {
+        console.log(`🧠 Memory Status: ${totalChunkManagers} managers, ${preloaderStatus.preloadedVideos} preloaded videos`);
+        
+        // Warn if memory usage is high
+        if (totalChunkManagers > 5) {
+          onMemoryWarning?.(totalChunkManagers);
+        }
+      }
       
     } catch (error) {
       console.warn('Memory check failed:', error);
     }
-  }, []);
+  }, [onMemoryWarning]);
 
   // Purge old reels to free memory
   const purgeOldReels = useCallback(async () => {
     try {
-      // Simplified purge without LocalVault
-      console.log('🧹 Old reels purged');
+      console.log('🧹 Starting memory purge for old reels...');
+      
+      // Get current active reel and next reel IDs to keep
+      const keepIds = new Set<string>();
+      if (activeReel) keepIds.add(activeReel.id);
+      if (nextReel) keepIds.add(nextReel.id);
+      
+      // Cleanup chunk managers for old videos
+      const { activeChunkManagers } = await import('./cloudin');
+      const chunkManagersToCleanup = [];
+      
+      for (const [videoUrl, chunkManager] of activeChunkManagers.entries()) {
+        // Extract video ID from URL for comparison
+        const videoId = videoUrl.split('/').pop()?.split('?')[0] || '';
+        
+        // Check if this chunk manager belongs to an old reel
+        const shouldCleanup = !keepIds.has(videoId) && 
+                              !videoUrl.includes(activeReel?.videoUrl || '') &&
+                              !videoUrl.includes(nextReel?.videoUrl || '');
+        
+        if (shouldCleanup) {
+          chunkManagersToCleanup.push(videoUrl);
+          console.log(`🗑️ Marking chunk manager for cleanup: ${videoUrl}`);
+        }
+      }
+      
+      // Cleanup old chunk managers
+      chunkManagersToCleanup.forEach(videoUrl => {
+        activeChunkManagers.delete(videoUrl);
+      });
+      
+      // Cleanup smart preloader
+      const { smartPreloader } = await import('./SmartPreloader');
+      const keepVideos = Array.from(keepIds).map(id => {
+        if (activeReel?.id === id) return activeReel.videoUrl;
+        if (nextReel?.id === id) return nextReel.videoUrl;
+        return '';
+      }).filter(Boolean);
+      
+      smartPreloader.cleanup(keepVideos);
+      
+      // Force garbage collection if available
+      if (global.gc) {
+        global.gc();
+        console.log('🗑️ Forced garbage collection');
+      }
+      
+      // Memory metrics
+      const totalChunkManagers = activeChunkManagers.size;
+      const preloaderStatus = smartPreloader.getStatus();
+      
+      console.log(`✅ Memory purge completed:`);
+      console.log(`   - Chunk managers cleaned: ${chunkManagersToCleanup.length}`);
+      console.log(`   - Active chunk managers: ${totalChunkManagers}`);
+      console.log(`   - Preloaded videos: ${preloaderStatus.preloadedVideos}`);
+      console.log(`   - Total preloaded chunks: ${preloaderStatus.totalChunks}`);
+      
+      // Warn if memory usage is still high
+      if (totalChunkManagers > 5) {
+        const warning = `⚠️ High memory usage: ${totalChunkManagers} active chunk managers`;
+        console.warn(warning);
+        onMemoryWarning?.(totalChunkManagers);
+      }
+      
     } catch (error) {
-      // Silent fail
+      console.error('❌ Memory purge failed:', error);
     }
-  }, []);
+  }, [activeReel, nextReel, onMemoryWarning]);
 
   // Load reel data (simplified)
   const loadReelFromVault = useCallback(async (reelId: string): Promise<ReelData | null> => {
@@ -165,6 +238,12 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
   // Initialize with first reel from R2
   useEffect(() => {
     const initializeFeed = async () => {
+      // Prevent multiple initializations
+      if (activeReel) {
+        console.log('👻 GhostFeed already initialized, skipping...');
+        return;
+      }
+      
       // Reduce log frequency - only log if debug mode
       if (__DEV__) {
         console.log('👻 GhostFeed initializing...');
@@ -215,7 +294,7 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
     };
     
     initializeFeed();
-  }, [loadReelFromVault, saveReelToVault, onReelChange]);
+  }, [activeReel, loadReelFromVault, saveReelToVault, onReelChange]);
 
   // Expose methods for parent components
   React.useImperativeHandle(React.createRef<any>(), () => ({

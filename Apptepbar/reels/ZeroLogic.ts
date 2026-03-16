@@ -46,8 +46,8 @@ export const fetchReelsFromR2 = async () => {
         return {
           id: fileWithoutExt,
           _id: fileWithoutExt,
-          videoUrl: fileName,
-          url: fileName,
+          videoUrl: file.Key!, // IMPORTANT: Use full Key with Reels/ prefix
+          url: file.Key!,     // Keep full path
           filename: fileName,
           title: fileWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
           description: `Amazing reel: ${fileWithoutExt.replace(/[-_]/g, ' ')}`,

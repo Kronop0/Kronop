@@ -59,12 +59,16 @@ const Zero: React.FC = () => {
       try {
         await fetchVideosFromAPI();
       } catch (error) {
+        console.error('❌ Reels initialization failed:', error);
         setLoading(false);
       }
     };
     
-    initializeReels();
-  }, []);
+    // Only initialize if videos array is empty
+    if (videos.length === 0) {
+      initializeReels();
+    }
+  }, [videos.length]);
 
   // Cleanup on unmount
   React.useEffect(() => {
@@ -75,40 +79,32 @@ const Zero: React.FC = () => {
     };
   }, []);
 
-  // Preload next reel in background
+  // Smart preloading with real chunk integration
   useEffect(() => {
     if (videos.length > 0 && currentVisibleIndex >= 0) {
       const nextIndex = (currentVisibleIndex + 1) % videos.length;
       const nextVideo = videos[nextIndex];
       
       if (nextVideo && !preloadedVideos.has(nextVideo.id)) {
-        console.log(`🔄 Preloading next reel: ${nextVideo.id}`);
+        console.log(`🔄 Preloading next reel with chunks: ${nextVideo.id}`);
         
-        // Create hidden video element to preload
-        const preloadVideo = () => {
-          const video = document.createElement('video');
-          video.src = nextVideo.uri;
-          video.preload = 'auto';
-          video.muted = true;
+        // Use SmartPreloader for real chunk-based preloading
+        const currentVideo = videos[currentVisibleIndex];
+        if (currentVideo && nextVideo) {
+          smartPreloader.preloadNextReel(currentVideo.uri, nextVideo.uri);
           
-          video.addEventListener('canplaythrough', () => {
-            console.log(`✅ Preloaded: ${nextVideo.id}`);
-            setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
-          });
+          // Mark as preloaded when SmartPreloader confirms
+          const checkPreloadStatus = setInterval(() => {
+            if (smartPreloader.hasPreloadedChunks(nextVideo.uri)) {
+              setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
+              console.log(`✅ Reel preloaded with chunks: ${nextVideo.id}`);
+              clearInterval(checkPreloadStatus);
+            }
+          }, 1000);
           
-          video.addEventListener('error', () => {
-            console.log(`❌ Preload failed: ${nextVideo.id}`);
-          });
-          
-          // Start loading
-          video.load();
-        };
-
-        // For React Native, we'll simulate preloading with a timeout
-        setTimeout(() => {
-          setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
-          console.log(`✅ Preloaded (simulated): ${nextVideo.id}`);
-        }, 2000);
+          // Cleanup check after 30 seconds
+          setTimeout(() => clearInterval(checkPreloadStatus), 30000);
+        }
       }
     }
   }, [currentVisibleIndex, videos, preloadedVideos]);
