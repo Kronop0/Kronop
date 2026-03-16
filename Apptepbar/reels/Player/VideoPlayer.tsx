@@ -1,8 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { getTurboBridge } from '../Native/TurboBridge';
-import { getNPUController } from '../Native/NPUController';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
@@ -15,11 +13,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   source, 
   isPlaying = true 
 }) => {
-  const [isEnhanced, setIsEnhanced] = useState(false);
-  const turboBridgeRef = useRef(getTurboBridge());
-  const npuControllerRef = useRef(getNPUController());
-
-  console.log('🎬 VideoPlayer initializing with source:', source);
+  console.log('🎬 Simple VideoPlayer:', source);
 
   const player = useVideoPlayer({
     uri: source,
@@ -27,61 +21,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       'User-Agent': 'KronopApp'
     }
   }, (player) => {
-    console.log('🎥 Video player configured successfully');
+    console.log('🎥 Video player ready');
     player.loop = true;
     player.muted = false;
   });
 
-  // Initialize Native Performance Enhancements
-  useEffect(() => {
-    const initializeNativeComponents = async () => {
-      try {
-        // Initialize Turbo Bridge for hardware acceleration
-        if (turboBridgeRef.current && !turboBridgeRef.current.isReady()) {
-          await turboBridgeRef.current.initialize();
-        }
-
-        // Initialize NPU Controller for AI enhancement
-        if (npuControllerRef.current) {
-          const npuReady = await npuControllerRef.current.initialize();
-          if (npuReady) {
-            setIsEnhanced(true);
-          }
-        }
-      } catch (error) {
-        // Silent fail
-      }
-    };
-
-    initializeNativeComponents();
-  }, []);
-
-  // Enhanced video processing with NPU
-  const processVideoWithNPU = async (videoData: ArrayBuffer, width: number, height: number) => {
-    if (!isEnhanced || !npuControllerRef.current) return;
-    try {
-      await npuControllerRef.current.processFrame(videoData, width, height);
-    } catch (error) {
-      // Silent fail
-    }
-  };
-
-  // Hardware-accelerated rendering
-  const renderWithTurboBridge = async (frameData: ArrayBuffer) => {
-    if (!turboBridgeRef.current?.isReady()) return;
-    try {
-      await turboBridgeRef.current.renderFrame(frameData, screenWidth, screenHeight);
-    } catch (error) {
-      // Silent fail
-    }
-  };
-
   useEffect(() => {
     if (isPlaying) {
-      console.log('▶️ Playing video:', source);
+      console.log('▶️ Playing:', source);
       player.play();
     } else {
-      console.log('⏸️ Pausing video:', source);
+      console.log('⏸️ Paused:', source);
       player.pause();
     }
   }, [isPlaying, player]);
@@ -103,7 +53,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: screenWidth,
-    height: screenHeight, // Full 9:16 vertical screen
+    height: screenHeight,
     backgroundColor: '#000',
   },
   video: {

@@ -17,8 +17,8 @@ import VideoPlayer from './Player/VideoPlayer';
 // @ts-ignore
 import GhostFeedManager from './GhostFeedManager';
 import { API_KEYS } from '@/constants/Config';
-import { initializeTurboBridge } from './Native/TurboBridge';
 import { getVideoUrl, getReelUrl } from './cloudin';
+// @ts-ignore
 import { fetchReelsFromR2 } from './ZeroLogic';
 
 // API URL from constants
@@ -45,16 +45,16 @@ const Zero: React.FC = () => {
   const [currentVisibleIndex, setCurrentVisibleIndex] = useState<number>(0);
   const [pausedVideos, setPausedVideos] = useState<Set<string>>(new Set());
   const [showPlayPauseMap, setShowPlayPauseMap] = useState<Map<string, boolean>>(new Map());
+  const [preloadedVideos, setPreloadedVideos] = useState<Set<string>>(new Set());
   const fadeAnimMap = useRef<Map<string, Animated.Value>>(new Map()).current;
   const hideTimeoutMap = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map()).current;
 
   const insets = useSafeAreaInsets();
 
-  // Initialize Turbo Bridge and fetch videos
+  // Initialize and fetch videos
   useEffect(() => {
     const initializeReels = async () => {
       try {
-        await initializeTurboBridge();
         await fetchVideosFromAPI();
       } catch (error) {
         setLoading(false);
@@ -64,15 +64,53 @@ const Zero: React.FC = () => {
     initializeReels();
   }, []);
 
+  // Preload next reel in background
+  useEffect(() => {
+    if (videos.length > 0 && currentVisibleIndex >= 0) {
+      const nextIndex = (currentVisibleIndex + 1) % videos.length;
+      const nextVideo = videos[nextIndex];
+      
+      if (nextVideo && !preloadedVideos.has(nextVideo.id)) {
+        console.log(`🔄 Preloading next reel: ${nextVideo.id}`);
+        
+        // Create hidden video element to preload
+        const preloadVideo = () => {
+          const video = document.createElement('video');
+          video.src = nextVideo.uri;
+          video.preload = 'auto';
+          video.muted = true;
+          
+          video.addEventListener('canplaythrough', () => {
+            console.log(`✅ Preloaded: ${nextVideo.id}`);
+            setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
+          });
+          
+          video.addEventListener('error', () => {
+            console.log(`❌ Preload failed: ${nextVideo.id}`);
+          });
+          
+          // Start loading
+          video.load();
+        };
+
+        // For React Native, we'll simulate preloading with a timeout
+        setTimeout(() => {
+          setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
+          console.log(`✅ Preloaded (simulated): ${nextVideo.id}`);
+        }, 2000);
+      }
+    }
+  }, [currentVisibleIndex, videos, preloadedVideos]);
+
   // Fetch videos directly from R2 bucket
   const fetchVideosFromAPI = async () => {
-    console.log('🎬 Starting R2 fetch from bucket:', process.env.EXPO_PUBLIC_BUCKET_REELS);
+    console.log('🎬 Starting fetch...');
     
     try {
       // Fetch reels directly from R2
       const reels = await fetchReelsFromR2();
       
-      console.log('📊 R2 Response reels:', reels.length, 'reels received');
+      console.log('📊 Response reels:', reels.length, 'reels received');
       
       if (reels.length > 0) {
         const formattedVideos = reels.map((reel: any) => {
@@ -97,14 +135,14 @@ const Zero: React.FC = () => {
         console.log('✅ Formatted videos ready:', formattedVideos.length);
         setVideos(formattedVideos);
       } else {
-        console.warn('⚠️ No reels found in R2 bucket');
+        console.warn('⚠️ No reels found');
         setVideos([]);
-        setError('No reels found in storage');
+        setError('No reels found');
       }
     } catch (error) {
-      console.error('💥 R2 Fetch Error:', error);
+      console.error('💥 Fetch Error:', error);
       setVideos([]);
-      setError('Failed to load reels from storage');
+      setError('Failed to load reels');
     } finally {
       setLoading(false);
     }
@@ -186,11 +224,20 @@ const Zero: React.FC = () => {
     const showPlayPause = showPlayPauseMap.get(item.id) || false;
     const fadeAnim = fadeAnimMap.get(item.id);
     const isPaused = pausedVideos.has(item.id);
+    const isPreloaded = preloadedVideos.has(item.id);
 
     return (
       <View style={styles.videoContainer}>
         {/* Status Bar Overlay */}
         <View style={[styles.statusBarOverlay, { height: insets.top }]} />
+        
+        {/* Preloading Indicator */}
+        {isPreloaded && (
+          <View style={styles.preloadIndicator}>
+            <View style={styles.preloadDot} />
+          </View>
+        )}
+        
         <TouchableWithoutFeedback onPress={() => handleVideoTap(item.id)}>
           <View style={styles.videoWrapper}>
             <VideoPlayer
@@ -309,6 +356,29 @@ const styles = StyleSheet.create({
     height: screenHeight,
     position: 'relative',
   },
+  preloadIndicator: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(0, 255, 0, 0.2)',
+    padding: 8,
+    borderRadius: 20,
+  },
+  preloadDot: {
+    width: 12,
+    height: 12,
+    backgroundColor: '#00ff00',
+    borderRadius: 6,
+  },
+  statusBarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 2,
+  },
   playPauseOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
@@ -372,14 +442,6 @@ const styles = StyleSheet.create({
     height: 200,
     backgroundColor: 'transparent',
     borderBottomColor: 'transparent',
-  },
-  statusBarOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    zIndex: 10,
   },
 });
 

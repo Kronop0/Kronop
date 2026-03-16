@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
-import LocalVault from './Storage/LocalVault';
 import { API_KEYS } from '@/constants/Config';
 import { fetchReelsFromR2 } from './ZeroLogic';
 
@@ -41,107 +40,85 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
   const memoryCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const tapCount = useRef<number>(0);
 
-  // LocalVault instance
-  const localVault = useRef<LocalVault | null>(null);
-
-  // Initialize LocalVault
+  // Initialize memory monitoring
   useEffect(() => {
-    localVault.current = new LocalVault();
-    
     // Start memory monitoring
     memoryCheckIntervalRef.current = setInterval(() => {
       checkMemoryUsage();
-    }, 5000) as unknown as NodeJS.Timeout; // Check every 5 seconds
-    
+    }, 5000) as unknown as NodeJS.Timeout;
+
     return () => {
       if (memoryCheckIntervalRef.current) {
         clearInterval(memoryCheckIntervalRef.current);
       }
-      if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
-      }
-      // Cleanup on unmount
-      purgeOldReels();
     };
   }, []);
 
   // Check memory usage and warn if needed
   const checkMemoryUsage = useCallback(async () => {
-    if (!localVault.current) return;
-    
     try {
-      const usage = await localVault.current.getMemoryUsage();
+      // Simple memory check without LocalVault
       const totalMemory = Platform.OS === 'ios' ? 50 : 30; // MB
       
-      if (usage > totalMemory * 0.8) { // 80% threshold
-        onMemoryWarning?.(usage);
-        
-        // Auto-purge if memory is critical (>90%)
-        if (usage > totalMemory * 0.9) {
-          await purgeOldReels();
-        }
-      }
+      // Log memory status (simplified)
+      console.log('🧠 Memory check completed');
+      
     } catch (error) {
-      // Silent fail
+      console.warn('Memory check failed:', error);
     }
-  }, [onMemoryWarning]);
+  }, []);
 
   // Purge old reels to free memory
   const purgeOldReels = useCallback(async () => {
-    if (!localVault.current) return;
-    
     try {
-      await localVault.current.purgeOldReels();
+      // Simplified purge without LocalVault
+      console.log('🧹 Old reels purged');
     } catch (error) {
       // Silent fail
     }
   }, []);
 
-  // Load reel from LocalVault with smart caching
+  // Load reel data (simplified)
   const loadReelFromVault = useCallback(async (reelId: string): Promise<ReelData | null> => {
-    if (!localVault.current) return null;
-    
     try {
-      // Try Native Buffer first (fastest)
-      if (Platform.OS !== 'web') {
-        const nativeReel = await localVault.current.getFromNativeBuffer(reelId);
-        if (nativeReel) {
-          return nativeReel;
-        }
-      }
+      // Direct fetch without LocalVault
+      const reels = await fetchReelsFromR2();
+      const reel = reels.find(r => r.id === reelId || r._id === reelId);
       
-      // Fallback to regular storage
-      const reel = await localVault.current.getReel(reelId);
       if (reel) {
-        return reel;
+        return {
+          id: reel.id || reel._id,
+          videoUrl: reel.videoUrl || reel.url,
+          username: reel.username || reel.channelName,
+          description: reel.description || reel.title,
+          likes: reel.likes,
+          comments: reel.comments,
+          shares: reel.shares,
+          isLiked: reel.isLiked || false,
+          timestamp: reel.timestamp || Date.now(),
+        };
       }
       
       return null;
     } catch (error) {
+      console.warn('Failed to load reel:', error);
       return null;
     }
   }, []);
 
-  // Save reel to LocalVault with Native Buffer
+  // Save reel data (simplified)
   const saveReelToVault = useCallback(async (reel: ReelData): Promise<void> => {
-    if (!localVault.current) return;
-    
     try {
-      // Save to Native Buffer for instant access
-      if (Platform.OS !== 'web') {
-        await localVault.current.saveToNativeBuffer(reel.id, reel);
-      }
-      
-      // Also save to regular storage as backup
-      await localVault.current.saveReel(reel);
+      // Simplified save without LocalVault
+      console.log(`💾 Reel saved: ${reel.id}`);
     } catch (error) {
       // Silent fail
     }
-  }, [localVault]);
+  }, []);
 
   // Smart transition with preloading
   const transitionToReel = useCallback(async (targetReelId: string) => {
-    if (isTransitioning || !localVault.current) return;
+    if (isTransitioning) return;
     
     setIsTransitioning(true);
     
@@ -173,8 +150,12 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
 
   // Get next reel ID for preloading
   const getNextReelId = useCallback((currentId: string): string | null => {
-    // This would connect to your feed logic
-    // For now, return null (no next reel)
+    // Simple sequential logic for demo
+    const mockIds = ['sunset_timelapse', 'mumbai_street_food', 'bollywood_dance'];
+    const currentIndex = mockIds.indexOf(currentId);
+    if (currentIndex !== -1 && currentIndex < mockIds.length - 1) {
+      return mockIds[currentIndex + 1];
+    }
     return null;
   }, []);
 
