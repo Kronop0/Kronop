@@ -117,6 +117,12 @@ class ChunkManager {
 
   // Preload specific chunks
   async preloadChunks(chunkIndices) {
+    // Validate chunkIndices parameter
+    if (!chunkIndices || !Array.isArray(chunkIndices)) {
+      console.warn('⚠️ Invalid chunkIndices parameter:', chunkIndices);
+      return [];
+    }
+    
     // Skip if chunks are already being loaded or totalChunks is 0
     if (this.totalChunks === 0) {
       console.warn('⚠️ Cannot preload chunks: totalChunks is 0');

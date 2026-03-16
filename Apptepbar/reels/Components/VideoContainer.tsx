@@ -49,9 +49,9 @@ const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onV
           index,
         })}
         initialNumToRender={1}
-        maxToRenderPerBatch={2}
-        windowSize={5}
-        removeClippedSubviews={false}
+        maxToRenderPerBatch={1}
+        windowSize={2}
+        removeClippedSubviews={true}
         contentContainerStyle={{ paddingBottom: bottomPadding }}
         onScroll={(event) => {
           const y = event.nativeEvent.contentOffset.y;

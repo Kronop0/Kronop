@@ -50,9 +50,11 @@ const Zero: React.FC = () => {
   const [showPlayPauseMap, setShowPlayPauseMap] = useState<Map<string, boolean>>(new Map());
   const [preloadedVideos, setPreloadedVideos] = useState<Set<string>>(new Set());
   const [swipeDirection, setSwipeDirection] = useState<'up' | 'down' | null>(null);
+  const [memoryOptimizedMode, setMemoryOptimizedMode] = useState(true);
   const flatListRef = useRef<FlatList<VideoItem>>(null);
   const fadeAnimMap = useRef<Map<string, Animated.Value>>(new Map()).current;
   const hideTimeoutMap = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map()).current;
+  const loadedChunksRef = useRef<Map<string, Set<string>>>(new Map()).current;
 
   // Manual swipe function for debugging and fallback
   const swipeToNextVideo = useCallback(() => {
@@ -103,35 +105,61 @@ const Zero: React.FC = () => {
     };
   }, []);
 
-  // Smart preloading with real chunk integration
+  // Memory-optimized preloading - only keep current and next reels
   useEffect(() => {
-    if (videos.length > 0 && currentVisibleIndex >= 0) {
-      const nextIndex = (currentVisibleIndex + 1) % videos.length;
-      const nextVideo = videos[nextIndex];
-      
-      if (nextVideo && !preloadedVideos.has(nextVideo.id)) {
-        console.log(`🔄 Preloading next reel with chunks: ${nextVideo.id}`);
-        
-        // Use SmartPreloader for real chunk-based preloading
-        const currentVideo = videos[currentVisibleIndex];
-        if (currentVideo && nextVideo) {
-          smartPreloader.preloadNextReel(currentVideo.uri, nextVideo.uri);
-          
-          // Mark as preloaded when SmartPreloader confirms
-          const checkPreloadStatus = setInterval(() => {
-            if (smartPreloader.hasPreloadedChunks(nextVideo.uri)) {
-              setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
-              console.log(`✅ Reel preloaded with chunks: ${nextVideo.id}`);
-              clearInterval(checkPreloadStatus);
-            }
-          }, 1000);
-          
-          // Cleanup check after 30 seconds
-          setTimeout(() => clearInterval(checkPreloadStatus), 30000);
+    if (!memoryOptimizedMode || videos.length === 0 || currentVisibleIndex < 0) return;
+    
+    const currentIndex = currentVisibleIndex;
+    const nextIndex = (currentIndex + 1) % videos.length;
+    const prevIndex = currentIndex === 0 ? videos.length - 1 : currentIndex - 1;
+    
+    const currentVideo = videos[currentIndex];
+    const nextVideo = videos[nextIndex];
+    const prevVideo = videos[prevIndex];
+    
+    console.log(`🧠 Memory mode: Loading only current + next reels`);
+    console.log(`📺 Current: ${currentVideo?.id}, Next: ${nextVideo?.id}, Previous: ${prevVideo?.id}`);
+    
+    // Clean up all other chunks except current and next
+    const videosToKeep = new Set([currentVideo?.id, nextVideo?.id].filter(Boolean));
+    
+    // Clean up chunk managers for videos we don't need
+    Object.keys(activeChunkManagers).forEach(uri => {
+      const videoId = videos.find(v => v.uri === uri)?.id;
+      if (videoId && !videosToKeep.has(videoId)) {
+        const manager = activeChunkManagers.get(uri);
+        if (manager) {
+          console.log(`🗑️ Cleaning up chunks for: ${uri}`);
+          manager.cleanup();
+          activeChunkManagers.delete(uri);
         }
       }
+    });
+    
+    // Preload next reel chunks only
+    if (nextVideo && !preloadedVideos.has(nextVideo.id)) {
+      console.log(`⏭️ Preloading next reel chunks: ${nextVideo.id}`);
+      
+      // Create chunk manager for next video if not exists
+      if (!activeChunkManagers.has(nextVideo.uri)) {
+        const chunkManager = new ChunkManager(nextVideo.uri);
+        activeChunkManagers.set(nextVideo.uri, chunkManager);
+      }
+      
+      // Preload first 2 chunks of next video
+      const nextManager = activeChunkManagers.get(nextVideo.uri);
+      if (nextManager) {
+        nextManager.preloadChunks([0, 1]).then(() => {
+          setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
+          console.log(`✅ Next reel preloaded: ${nextVideo.id}`);
+        });
+      }
     }
-  }, [currentVisibleIndex, videos, preloadedVideos]);
+    
+    // Update preloaded set to only keep current and next
+    setPreloadedVideos(videosToKeep);
+    
+  }, [currentVisibleIndex, videos, memoryOptimizedMode]);
 
   // Fetch videos directly from R2 bucket
   const fetchVideosFromAPI = async () => {
@@ -206,38 +234,54 @@ const Zero: React.FC = () => {
       // Hide all play/pause controls when scrolling
       setShowPlayPauseMap(new Map());
       
-      // Smart preloading: preload next reel when user swipes
-      if (videos.length > 0 && newIndex !== oldIndex) {
+      // Memory-optimized: Only preload next reel, clean up others
+      if (videos.length > 0 && newIndex !== oldIndex && memoryOptimizedMode) {
         const currentVideo = videos[newIndex];
         const nextIndex = (newIndex + 1) % videos.length;
         const nextVideo = videos[nextIndex];
         
         if (currentVideo && nextVideo) {
-          console.log(`🔄 Swiped from ${oldIndex} to ${newIndex}, preloading next reel: ${nextVideo.id}`);
+          console.log(`🎯 Memory swipe: ${oldIndex} → ${newIndex}, keeping current + next only`);
           
-          // Start preloading next reel in background
-          smartPreloader.preloadNextReel(currentVideo.uri, nextVideo.uri);
+          // Clean up previous video chunks
+          if (oldIndex >= 0 && oldIndex < videos.length) {
+            const prevVideo = videos[oldIndex];
+            if (prevVideo && prevVideo.id !== currentVideo.id) {
+              const prevManager = activeChunkManagers.get(prevVideo.uri);
+              if (prevManager) {
+                console.log(`🗑️ Cleaning previous reel chunks: ${prevVideo.id}`);
+                prevManager.cleanup();
+              }
+            }
+          }
           
-          // Also preload the reel after next for even smoother experience
-          const afterNextIndex = (nextIndex + 1) % videos.length;
-          const afterNextVideo = videos[afterNextIndex];
-          if (afterNextVideo) {
-            smartPreloader.preloadUpcomingReels(currentVideo.uri, [nextVideo.uri, afterNextVideo.uri]);
+          // Preload next video chunks (first 2 chunks only)
+          if (!activeChunkManagers.has(nextVideo.uri)) {
+            const chunkManager = new ChunkManager(nextVideo.uri);
+            activeChunkManagers.set(nextVideo.uri, chunkManager);
+          }
+          
+          const nextManager = activeChunkManagers.get(nextVideo.uri);
+          if (nextManager) {
+            nextManager.preloadChunks([0, 1]).then(() => {
+              setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
+              console.log(`⏭️ Next reel ready: ${nextVideo.id}`);
+            });
           }
         }
       }
     }
-  }, [currentVisibleIndex, videos]);
+  }, [currentVisibleIndex, videos, memoryOptimizedMode]);
 
   const viewabilityConfig = React.useRef({
     viewAreaCoveragePercentThreshold: 80,
     minimumViewTime: 100,
     itemVisibilityPercentThreshold: 80,
-}).current;
+  }).current;
 
   const handleVideoTap = useCallback((videoId: string) => {
     // Toggle play/pause state
-    setPausedVideos(prev => {
+    setPausedVideos((prev: Set<string>) => {
       const newSet = new Set(prev);
       if (newSet.has(videoId)) {
         newSet.delete(videoId);
@@ -248,7 +292,7 @@ const Zero: React.FC = () => {
     });
 
     // Show play/pause button temporarily
-    setShowPlayPauseMap(prev => {
+    setShowPlayPauseMap((prev: Map<string, boolean>) => {
       const newMap = new Map(prev);
       newMap.set(videoId, true);
       return newMap;
@@ -276,7 +320,7 @@ const Zero: React.FC = () => {
           duration: 300,
           useNativeDriver: true,
         }).start(() => {
-          setShowPlayPauseMap(prev => {
+          setShowPlayPauseMap((prev: Map<string, boolean>) => {
             const newMap = new Map(prev);
             newMap.delete(videoId);
             return newMap;

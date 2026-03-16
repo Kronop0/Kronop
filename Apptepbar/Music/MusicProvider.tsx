@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { View } from 'react-native';
 import MusicBar from './layout/MusicBar';
+import { setupPlayer, addTrack, play, pause } from './player/MusicEngine';
 
 interface CurrentSong {
   artist: string;
@@ -35,7 +36,6 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializePlayer = async () => {
       try {
-        const { setupPlayer } = await import('./player/MusicEngine');
         await setupPlayer();
       } catch (error) {
         console.error('Error setting up player:', error);
@@ -46,7 +46,6 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
 
   const playSong = async (url: string, artist: string, title: string) => {
     try {
-      const { addTrack, play } = await import('./player/MusicEngine');
       await addTrack(url, title, artist);
       await play();
       setCurrentSong({ artist, title, url });
@@ -58,7 +57,6 @@ export const MusicProvider: React.FC<MusicProviderProps> = ({ children }) => {
 
   const togglePlayPause = async () => {
     try {
-      const { pause, play } = await import('./player/MusicEngine');
       if (isPlaying) {
         await pause();
         setIsPlaying(false);
