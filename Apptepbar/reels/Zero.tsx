@@ -8,6 +8,7 @@ import {
   ViewToken,
   TouchableWithoutFeedback,
   Animated,
+  FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import VideoContainer from './Components/VideoContainer';
@@ -48,8 +49,31 @@ const Zero: React.FC = () => {
   const [pausedVideos, setPausedVideos] = useState<Set<string>>(new Set());
   const [showPlayPauseMap, setShowPlayPauseMap] = useState<Map<string, boolean>>(new Map());
   const [preloadedVideos, setPreloadedVideos] = useState<Set<string>>(new Set());
+  const [swipeDirection, setSwipeDirection] = useState<'up' | 'down' | null>(null);
+  const flatListRef = useRef<FlatList<VideoItem>>(null);
   const fadeAnimMap = useRef<Map<string, Animated.Value>>(new Map()).current;
   const hideTimeoutMap = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map()).current;
+
+  // Manual swipe function for debugging and fallback
+  const swipeToNextVideo = useCallback(() => {
+    if (videos.length === 0) return;
+    
+    const nextIndex = (currentVisibleIndex + 1) % videos.length;
+    console.log(`👆 Manually swiping to next video: ${nextIndex}`);
+    
+    setCurrentVisibleIndex(nextIndex);
+    flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+  }, [currentVisibleIndex, videos.length]);
+
+  const swipeToPrevVideo = useCallback(() => {
+    if (videos.length === 0) return;
+    
+    const prevIndex = currentVisibleIndex === 0 ? videos.length - 1 : currentVisibleIndex - 1;
+    console.log(`👇 Manually swiping to previous video: ${prevIndex}`);
+    
+    setCurrentVisibleIndex(prevIndex);
+    flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
+  }, [currentVisibleIndex, videos.length]);
 
   const insets = useSafeAreaInsets();
 
@@ -169,11 +193,14 @@ const Zero: React.FC = () => {
     }
   };
 
-  const onViewableItemsChanged = React.useCallback(({ viewableItems }: { viewableItems: ViewToken<VideoItem>[] }) => {
+  const onViewableItemsChanged = React.useCallback(({ viewableItems, changed }: { viewableItems: ViewToken<VideoItem>[]; changed: ViewToken<VideoItem>[] }) => {
+    console.log('👀 Viewable items changed:', viewableItems.length, 'Changed:', changed.length);
+    
     if (viewableItems.length > 0 && viewableItems[0].index !== undefined && viewableItems[0].index !== null) {
       const newIndex = viewableItems[0].index;
       const oldIndex = currentVisibleIndex;
       
+      console.log(`🔄 Video index changed from ${oldIndex} to ${newIndex}`);
       setCurrentVisibleIndex(newIndex);
       
       // Hide all play/pause controls when scrolling
@@ -203,8 +230,10 @@ const Zero: React.FC = () => {
   }, [currentVisibleIndex, videos]);
 
   const viewabilityConfig = React.useRef({
-    viewAreaCoveragePercentThreshold: 50,
-  }).current;
+    viewAreaCoveragePercentThreshold: 80,
+    minimumViewTime: 100,
+    itemVisibilityPercentThreshold: 80,
+}).current;
 
   const handleVideoTap = useCallback((videoId: string) => {
     // Toggle play/pause state
@@ -346,6 +375,7 @@ const Zero: React.FC = () => {
           renderItem={renderVideoItem}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
+          flatListRef={flatListRef}
         />
       )}
       {/* GhostFeedManager for smart caching and preloading */}

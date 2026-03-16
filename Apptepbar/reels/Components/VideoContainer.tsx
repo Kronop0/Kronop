@@ -17,9 +17,10 @@ interface VideoContainerProps {
   renderItem: ({ item, index }: { item: VideoItem; index: number }) => React.ReactElement;
   onViewableItemsChanged?: (info: { viewableItems: ViewToken<VideoItem>[]; changed: ViewToken<VideoItem>[] }) => void;
   viewabilityConfig?: any;
+  flatListRef?: React.RefObject<FlatList<VideoItem> | null>;
 }
 
-const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onViewableItemsChanged, viewabilityConfig }) => {
+const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onViewableItemsChanged, viewabilityConfig, flatListRef }) => {
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom + 80, 100); // Reduced to 80px minimum + safe area
   
@@ -31,6 +32,7 @@ const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onV
   return (
     <View style={styles.container}>
       <FlatList
+        ref={flatListRef}
         data={videos}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
@@ -47,10 +49,16 @@ const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onV
           index,
         })}
         initialNumToRender={1}
-        maxToRenderPerBatch={1}
-        windowSize={3}
-        removeClippedSubviews={true}
+        maxToRenderPerBatch={2}
+        windowSize={5}
+        removeClippedSubviews={false}
         contentContainerStyle={{ paddingBottom: bottomPadding }}
+        onScroll={(event) => {
+          const y = event.nativeEvent.contentOffset.y;
+          const index = Math.round(y / screenHeight);
+          console.log(`📱 Scrolled to index: ${index}, y: ${y}`);
+        }}
+        scrollEventThrottle={16}
       />
     </View>
   );
