@@ -1,169 +1,197 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  TextInput,
-  ScrollView,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, ScrollView, ActivityIndicator, FlatList, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
 
-interface StoryData {
+interface PhotoData {
   title: string;
-  type: 'video' | 'photo';
-  duration: number;
-  isPrivate: boolean;
+  description: string;
+  tags: string[];
+  category: string;
 }
 
-interface StoryUploadProps {
+interface PhotoUploadProps {
   onClose: () => void;
-  onUpload?: (file: any, metadata: any) => Promise<void>;
+  isShayari?: boolean;
+  onUpload?: (fileUri: string, metadata: any) => Promise<void>;
   uploading?: boolean;
   uploadProgress?: number;
 }
 
-export default function StoryUpload({ 
+export default function PhotoUpload({ 
   onClose, 
+  isShayari = false, 
   onUpload, 
-  uploading: bridgeUploading = false, 
-  uploadProgress: bridgeProgress = 0 
-}: StoryUploadProps) {
+  uploading = false, 
+  uploadProgress = 0 
+}: PhotoUploadProps) {
   const router = useRouter();
-  const [selectedFile, setSelectedFile] = useState<any>(null);
+  const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [internalUploading, setInternalUploading] = useState(false);
-  const [internalUploadProgress, setInternalUploadProgress] = useState(0);
-  const [storyData, setStoryData] = useState<StoryData>({
-    title: '',
-    type: 'photo',
-    duration: 15,
-    isPrivate: false
-  });
+  const [photoData, setPhotoData] = useState<PhotoData>({ title: '', description: '', tags: [], category: '' });
+  const [tagInput, setTagInput] = useState('');
 
-  const pickFile = async () => {
-    try {
-      // SILENT MODE: Auto-select photo type for simplicity
-      await pickPhoto();
-    } catch (error) {
-      console.error('[STORY_PICK_FAIL]:', error);
-    }
-  };
+  const categories = [
+    'Nature', 'Portrait', 'Street', 'Architecture', 'Food', 
+    'Travel', 'Fashion', 'Art', 'Animals', 'Sports', 'Other'
+  ];
 
-  const pickPhoto = async () => {
+  const pickPhotos = async () => {
     try {
+      // Request both media library and camera permissions
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (!permissionResult.granted) {
-        console.error('[STORY_PERMISSION_FAIL]: Camera permission denied');
+        Alert.alert('Permission Required', 'Please allow access to your photos.');
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.All, // All media types
-        allowsEditing: true,
-        aspect: [9, 16],
+        allowsMultipleSelection: true,
+        allowsEditing: false,
+        quality: 0.8,
+        selectionLimit: 0, // No limit - user can select unlimited
+      });
+
+      if (!result.canceled && result.assets) {
+        const validFiles: any[] = [];
+        
+        for (const asset of result.assets) {
+          // Allow both photos and videos for stories
+          const fileName = asset.fileName || '';
+          const extension = fileName.split('.').pop()?.toLowerCase();
+          const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'mkv'];
+          
+          if (!extension || !allowedExtensions.includes(extension)) {
+            Alert.alert('Invalid File', `${asset.fileName} - Please select a valid media file. Allowed: ${allowedExtensions.join(', ')}`);
+            continue;
+          }
+
+          // Increase file size limit for videos (50MB), photos remain 10MB
+          const isVideoFile = ['mp4', 'mov', 'avi', 'mkv'].includes(extension);
+          const MAX_SIZE = isVideoFile ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB for videos, 10MB for photos
+          if (asset.fileSize && asset.fileSize > MAX_SIZE) {
+            Alert.alert('File Too Large', `${asset.fileName} - ${isVideoFile ? 'Video' : 'Image'} files must be less than ${isVideoFile ? '50MB' : '10MB'}`);
+            continue;
+          }
+
+          validFiles.push(asset);
+        }
+
+        if (validFiles.length > 0) {
+          setSelectedFiles(prev => [...prev, ...validFiles]);
+          if (validFiles.length === 1 && !photoData.title) {
+            setPhotoData(prev => ({
+              ...prev,
+              title: prev.title || validFiles[0].fileName.split('.')[0]
+            }));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error picking photos:', error);
+      Alert.alert('Error', 'Failed to pick photos');
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow access to your camera.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All, // Allow both photos and videos
+        allowsEditing: false, // Don't edit videos
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets[0]) {
         const file = result.assets[0];
         
-        // Basic file type validation
+        // Allow both photos and videos for stories
         const fileName = file.fileName || '';
         const extension = fileName.split('.').pop()?.toLowerCase();
-        const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi'];
+        const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'mkv'];
         
         if (!extension || !allowedExtensions.includes(extension)) {
-          console.error('[STORY_PICK_FAIL]: Invalid file extension -', extension);
+          Alert.alert('Invalid File', `Please select a valid media file. Allowed: ${allowedExtensions.join(', ')}`);
           return;
         }
 
-        // Basic file size validation
-        const MAX_SIZE = 50 * 1024 * 1024; // 50MB for stories
+        // Increase file size limit for videos (50MB), photos remain 10MB
+        const isVideoFile = ['mp4', 'mov', 'avi', 'mkv'].includes(extension);
+        const MAX_SIZE = isVideoFile ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB for videos, 10MB for photos
         if (file.fileSize && file.fileSize > MAX_SIZE) {
-          console.error('[STORY_PICK_FAIL]: File too large -', file.fileSize);
+          Alert.alert('File Too Large', `${isVideoFile ? 'Video' : 'Image'} files must be less than ${isVideoFile ? '50MB' : '10MB'}`);
           return;
         }
 
-        setSelectedFile(file);
-        setStoryData(prev => ({
-          ...prev,
-          type: 'photo',
-          title: prev.title || `Story - ${new Date().toLocaleTimeString()}`
-        }));
+        setSelectedFiles(prev => [...prev, file]);
+        if (!photoData.title) {
+          const fileType = isVideoFile ? 'Video' : 'Photo';
+          setPhotoData(prev => ({
+            ...prev,
+            title: prev.title || `${fileType} - ${new Date().toLocaleTimeString()}`
+          }));
+        }
       }
     } catch (error) {
-      console.error('[STORY_PHOTO_PICK_FAIL]:', error);
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
     }
   };
 
-  const pickVideo = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['video/mp4', 'video/quicktime', 'video/x-msvideo'],
-        copyToCacheDirectory: true,
-      });
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
-      if (!result.canceled && result.assets[0]) {
-        const file = result.assets[0];
-        
-        // Basic file type validation (DocumentPicker uses different properties)
-        const fileName = file.name || '';
-        const extension = fileName.split('.').pop()?.toLowerCase();
-        const allowedExtensions = ['mp4', 'mov', 'avi'];
-        
-        if (!extension || !allowedExtensions.includes(extension)) {
-          console.error('[STORY_VIDEO_PICK_FAIL]: Invalid file extension -', extension);
-          return;
-        }
-
-        // Basic file size validation (DocumentPicker uses size)
-        const MAX_SIZE = 50 * 1024 * 1024; // 50MB for stories
-        if (file.size && file.size > MAX_SIZE) {
-          console.error('[STORY_VIDEO_PICK_FAIL]: File too large -', file.size);
-          return;
-        }
-
-        setSelectedFile(file);
-        setStoryData(prev => ({
-          ...prev,
-          type: 'video',
-          title: prev.title || `Story - ${new Date().toLocaleTimeString()}`
-        }));
-      }
-    } catch (error) {
-      console.error('[STORY_VIDEO_PICK_FAIL]:', error);
+  const addTag = () => {
+    if (tagInput.trim() && !photoData.tags.includes(tagInput.trim())) {
+      setPhotoData(prev => ({
+        ...prev,
+        tags: [...prev.tags, tagInput.trim()]
+      }));
+      setTagInput('');
     }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setPhotoData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) {
-      console.error('[STORY_UPLOAD_FAIL]: No file selected');
+    if (selectedFiles.length === 0) {
+      Alert.alert('No Files Selected', 'Please select at least one photo or video for your story');
       return;
     }
 
-    if (!storyData.title.trim()) {
-      console.error('[STORY_UPLOAD_FAIL]: Missing title');
+    if (!photoData.title.trim()) {
+      Alert.alert('Missing Content', `Please enter ${isShayari ? 'shayari text' : 'a title'} for your story`);
       return;
     }
 
-    // Direct connection to story.js folder
+    // Direct connection to story.js (Decision Maker)
     try {
-      const storyHandler = require('../story.js');
-      const result = await storyHandler.receiveFile(selectedFile, storyData);
+      const storyHandler = require('./story.js');
+      const selectedFile = selectedFiles[0];
+      const result = await storyHandler.receiveFile(selectedFile?.uri, {
+        ...photoData,
+        size: selectedFile?.fileSize,
+        type: selectedFile?.mimeType || 'image/jpeg',
+        name: selectedFile?.fileName
+      });
       
       if (result.success) {
         Alert.alert('Success', result.message);
-        setSelectedFile(null);
-        setStoryData({ title: '', type: 'photo', duration: 15, isPrivate: false });
         onClose();
         router.replace('/');
       } else {
@@ -175,165 +203,199 @@ export default function StoryUpload({
     }
   };
 
+  // Direct Upload Function for Photos - DISABLED
+  const uploadPhotosDirectly = async (files: any[], metadata: any, isShayari: boolean = false) => {
+    // Upload service disabled - returning mock results
+    const uploadResults = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const uploadId = `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const result = {
+        url: '',
+        id: uploadId,
+        metadata: {
+          ...metadata,
+          userId: 'guest_user',
+          uploadId,
+          fileName: file.fileName || `photo_${uploadId}.jpg`,
+          uploadDisabled: true
+        },
+        success: true
+      };
+      
+      uploadResults.push(result);
+    }
+    
+    console.log('Photo Upload Disabled (BunnyCDN removed):', uploadResults);
+    return uploadResults;
+  };
+
+  const renderSelectedFile = ({ item, index }: { item: any; index: number }) => {
+    const isVideo = item.mimeType?.includes('video') || item.fileName?.toLowerCase().match(/\.(mp4|mov|avi|mkv)$/);
+    
+    return (
+      <View style={styles.selectedFileItem}>
+        {isVideo ? (
+          <View style={styles.selectedFileImage as any}>
+            <MaterialIcons name="videocam" size={32} color="#6A5ACD" />
+          </View>
+        ) : (
+          <Image 
+            source={{ uri: item.uri }} 
+            style={styles.selectedFileImage} 
+            onLoad={() => console.log('[STORY_UPLOAD]: Image loaded successfully:', item.uri)}
+            onError={(error) => console.error('[STORY_UPLOAD]: Image failed to load:', error)}
+          />
+        )}
+        <TouchableOpacity
+          style={styles.removeFileButton}
+          onPress={() => removeFile(index)}
+        >
+          <MaterialIcons name="close" size={20} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.selectedFileName} numberOfLines={1}>
+          {item.fileName}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.uploadArea}>
-        <TouchableOpacity 
-          style={[styles.uploadButton, selectedFile && styles.uploadButtonSelected]}
-          onPress={pickFile}
-          disabled={bridgeUploading || internalUploading}
-        >
-          <MaterialIcons 
-            name={storyData.type === 'video' ? "videocam" : "photo-camera"} 
-            size={48} 
-            color={selectedFile ? theme.colors.primary.main : theme.colors.text.tertiary} 
-          />
-          <Text style={[styles.uploadText, selectedFile && styles.uploadTextSelected]}>
-            {selectedFile ? selectedFile.name : 'Choose Photo or Video'}
-          </Text>
-          <Text style={styles.uploadSubtext}>
-            Photos (10MB) or Videos (100MB)
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.uploadButtonsRow}>
+          <TouchableOpacity 
+            style={[styles.uploadButton, styles.galleryButton]}
+            onPress={pickPhotos}
+            disabled={uploading}
+          >
+            <MaterialIcons name="photo-library" size={24} color="#6A5ACD" />
+            <Text style={styles.uploadButtonText}>Gallery</Text>
+            <Text style={styles.uploadButtonSubtext}>Choose multiple</Text>
+          </TouchableOpacity>
 
-        {selectedFile && (
-          <View style={styles.fileInfo}>
-            <View style={styles.fileInfoItem}>
-              <Text style={styles.fileInfoLabel}>Type:</Text>
-              <Text style={styles.fileInfoValue}>
-                {storyData.type === 'video' ? 'Video Story' : 'Photo Story'}
-              </Text>
-            </View>
-            <View style={styles.fileInfoItem}>
-              <Text style={styles.fileInfoLabel}>Size:</Text>
-              <Text style={styles.fileInfoValue}>
-                {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-              </Text>
-            </View>
-            {storyData.type === 'video' && (
-              <View style={styles.fileInfoItem}>
-                <Text style={styles.fileInfoLabel}>Duration:</Text>
-                <Text style={styles.fileInfoValue}>{storyData.duration}s</Text>
-              </View>
-            )}
+          <TouchableOpacity 
+            style={[styles.uploadButton, styles.cameraButton]}
+            onPress={takePhoto}
+            disabled={uploading}
+          >
+            <MaterialIcons name="photo-camera" size={24} color="#6A5ACD" />
+            <Text style={styles.uploadButtonText}>Camera</Text>
+            <Text style={styles.uploadButtonSubtext}>Take photo/video</Text>
+          </TouchableOpacity>
+        </View>
+
+        {selectedFiles.length > 0 && (
+          <View style={styles.selectedFilesContainer}>
+            <Text style={styles.selectedFilesTitle}>
+              Selected Media ({selectedFiles.length})
+            </Text>
+            <FlatList
+              data={selectedFiles}
+              renderItem={renderSelectedFile}
+              keyExtractor={(item, index) => index.toString()}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.selectedFilesList}
+            />
           </View>
         )}
       </View>
 
       <View style={styles.formSection}>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Story Title *</Text>
+          <Text style={styles.label}>{isShayari ? 'Shayari Text *' : 'Title *'}</Text>
           <TextInput
-            style={styles.input}
-            value={storyData.title}
-            onChangeText={(text) => setStoryData(prev => ({ ...prev, title: text }))}
-            placeholder="Enter story title..."
+            style={[styles.input, isShayari && styles.textArea]}
+            value={photoData.title}
+            onChangeText={(text) => setPhotoData(prev => ({ ...prev, title: text }))}
+            placeholder={isShayari ? 'Write your beautiful shayari here...' : 'Enter photo title...'}
             placeholderTextColor="#666"
-            maxLength={50}
+            maxLength={isShayari ? 500 : 100}
+            multiline={isShayari}
+            numberOfLines={isShayari ? 6 : 1}
+            textAlignVertical={isShayari ? 'top' : 'auto'}
           />
-          <Text style={styles.charCount}>{storyData.title.length}/50</Text>
+          <Text style={styles.charCount}>{photoData.title.length}/{isShayari ? 500 : 100}</Text>
         </View>
-
-        {storyData.type === 'video' && (
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Duration (seconds)</Text>
-            <View style={styles.durationContainer}>
-              <TouchableOpacity
-                style={styles.durationButton}
-                onPress={() => setStoryData(prev => ({ 
-                  ...prev, 
-                  duration: Math.max(1, prev.duration - 5) 
-                }))}
-              >
-                <MaterialIcons name="remove" size={20} color={theme.colors.primary.main} />
-              </TouchableOpacity>
-              <Text style={styles.durationText}>{storyData.duration}s</Text>
-              <TouchableOpacity
-                style={styles.durationButton}
-                onPress={() => setStoryData(prev => ({ 
-                  ...prev, 
-                  duration: Math.min(60, prev.duration + 5) 
-                }))}
-              >
-                <MaterialIcons name="add" size={20} color={theme.colors.primary.main} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.helpText}>
-              Story duration: 1-60 seconds
-            </Text>
-          </View>
-        )}
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Story Settings</Text>
-          <View style={styles.settingsContainer}>
-            <TouchableOpacity
-              style={styles.settingItem}
-              onPress={() => setStoryData(prev => ({ ...prev, isPrivate: !prev.isPrivate }))}
-            >
-              <View style={styles.settingLeft}>
-                <MaterialIcons 
-                  name={storyData.isPrivate ? "visibility-off" : "visibility"} 
-                  size={20} 
-                  color={storyData.isPrivate ? theme.colors.primary.main : theme.colors.text.secondary} 
-                />
-                <View style={styles.settingText}>
-                  <Text style={styles.settingTitle}>Visibility</Text>
-                  <Text style={styles.settingDescription}>
-                    {storyData.isPrivate ? 'Only close friends' : 'All followers'}
-                  </Text>
-                </View>
-              </View>
-              <View style={[
-                styles.toggle, 
-                storyData.isPrivate && styles.toggleActive
-              ]}>
-                <View style={[
-                  styles.toggleDot,
-                  storyData.isPrivate && styles.toggleDotActive
-                ]} />
-              </View>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.label}>Category *</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryChip,
+                  photoData.category === category && styles.categoryChipSelected
+                ]}
+                onPress={() => setPhotoData(prev => ({ ...prev, category }))}
+              >
+                <Text style={[
+                  styles.categoryChipText,
+                  photoData.category === category && styles.categoryChipTextSelected
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
-        <View style={styles.infoBox}>
-          <MaterialIcons name="timer" size={20} color={theme.colors.primary.main} />
-          <Text style={styles.infoText}>
-            Stories automatically disappear after 24 hours. They&apos;re perfect for sharing casual moments and behind-the-scenes content.
-          </Text>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Tags</Text>
+          <View style={styles.tagInputContainer}>
+            <TextInput
+              style={styles.tagInput}
+              value={tagInput}
+              onChangeText={setTagInput}
+              placeholder="Add tags..."
+              placeholderTextColor="#666"
+              onSubmitEditing={addTag}
+              returnKeyType="done"
+            />
+            <TouchableOpacity style={styles.addTagButton} onPress={addTag}>
+              <MaterialIcons name="add" size={20} color="#6A5ACD" />
+            </TouchableOpacity>
+          </View>
+          
+          {photoData.tags.length > 0 && (
+            <View style={styles.tagsContainer}>
+              {photoData.tags.map((tag, index) => (
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>#{tag}</Text>
+                  <TouchableOpacity onPress={() => removeTag(tag)}>
+                    <MaterialIcons name="close" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </View>
 
       <TouchableOpacity 
-        style={[styles.uploadButtonMain, (bridgeUploading || internalUploading) && styles.uploadButtonDisabled]}
+        style={[styles.uploadButtonMain, (uploading || internalUploading) && styles.uploadButtonDisabled]}
         onPress={handleUpload}
-        disabled={(bridgeUploading || internalUploading) || !selectedFile}
+        disabled={(uploading || internalUploading) || selectedFiles.length === 0}
       >
-        {(bridgeUploading || internalUploading) ? (
+        {(uploading || internalUploading) ? (
           <>
-            <ActivityIndicator size="small" color="#fff" />
-            <Text style={styles.uploadButtonText}>Uploading...</Text>
+            <ActivityIndicator size="small" color="#FFFFFF" />
+            <Text style={styles.uploadButtonText}>
+              {uploading ? `Uploading... ${uploadProgress}%` : 'Uploading...'}
+            </Text>
           </>
         ) : (
           <>
-            <MaterialIcons name="upload" size={20} color="#FFFFFF" />
+            <MaterialIcons name="upload" size={24} color="#FFFFFF" />
             <Text style={styles.uploadButtonText}>Upload Story</Text>
           </>
         )}
       </TouchableOpacity>
-
-      {(bridgeUploading || internalUploading) && (
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View 
-              style={[styles.progressFill, { width: `${bridgeProgress || internalUploadProgress}%` }]} 
-            />
-          </View>
-          <Text style={styles.progressText}>{bridgeProgress || internalUploadProgress}%</Text>
-        </View>
-      )}
     </ScrollView>
   );
 }
@@ -341,230 +403,242 @@ export default function StoryUpload({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.primary,
+    backgroundColor: '#000000',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  placeholder: {
+    width: 34,
   },
   title: {
-    fontSize: theme.typography.fontSize.xxxl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.sm,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#212529',
+    marginTop: 8,
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.xxl,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
+    fontSize: 14,
+    color: '#6c757d',
+    marginTop: 4,
   },
   uploadArea: {
     padding: 8,
   },
+  uploadButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   uploadButton: {
     flex: 1,
+    backgroundColor: '#1a1a1a',
     borderWidth: 2,
-    borderColor: theme.colors.border.secondary,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
+    borderColor: '#333333',
+    borderRadius: 12,
+    padding: 20,
     alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
   },
-  uploadButtonSelected: {
-    borderColor: theme.colors.primary.main,
-    backgroundColor: theme.colors.background.elevated,
+  galleryButton: {
+    borderColor: '#6A5ACD',
   },
-  uploadText: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.md,
+  cameraButton: {
+    borderColor: '#6A5ACD',
   },
-  uploadTextSelected: {
-    color: theme.colors.primary.main,
+  uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 8,
   },
-  uploadSubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
-    marginTop: theme.spacing.xs,
+  uploadButtonSubtext: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 4,
   },
-  fileInfo: {
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background.elevated,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
+  selectedFilesContainer: {
+    marginTop: 16,
   },
-  fileInfoItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.xs,
+  selectedFilesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
   },
-  fileInfoLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.typography.fontWeight.medium,
+  selectedFilesList: {
+    marginTop: 8,
   },
-  fileInfoValue: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.primary,
-    fontWeight: theme.typography.fontWeight.semibold,
+  selectedFileItem: {
+    alignItems: 'center',
+    marginRight: 12,
+    width: 80,
+  },
+  selectedFileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#1a1a1a',
+  },
+  videoPreview: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeFileButton: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#6A5ACD',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedFileName: {
+    fontSize: 10,
+    color: '#CCCCCC',
+    marginTop: 4,
+    textAlign: 'center',
   },
   formSection: {
-    padding: theme.spacing.lg,
+    padding: 16,
   },
   inputGroup: {
-    marginBottom: theme.spacing.xl,
+    marginBottom: 20,
   },
   label: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
   },
   input: {
+    backgroundColor: '#1a1a1a',
     borderWidth: 1,
-    borderColor: theme.colors.border.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.primary,
-    backgroundColor: theme.colors.background.elevated,
+    borderColor: '#333333',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  textArea: {
+    height: 100,
+    paddingTop: 12,
   },
   charCount: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
+    fontSize: 12,
+    color: '#666666',
     textAlign: 'right',
-    marginTop: theme.spacing.xs,
+    marginTop: 4,
   },
-  durationContainer: {
+  categoryScroll: {
+    flexDirection: 'row',
+  },
+  categoryChip: {
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#333333',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+  },
+  categoryChipSelected: {
+    backgroundColor: '#6A5ACD',
+    borderColor: '#6A5ACD',
+  },
+  categoryChipText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  categoryChipTextSelected: {
+    color: '#fff',
+  },
+  tagInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.background.elevated,
+    backgroundColor: '#1a1a1a',
     borderWidth: 1,
-    borderColor: theme.colors.border.primary,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.md,
+    borderColor: '#333333',
+    borderRadius: 8,
+    paddingHorizontal: 12,
   },
-  durationButton: {
-    padding: theme.spacing.sm,
+  tagInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#FFFFFF',
   },
-  durationText: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.primary,
-    marginHorizontal: theme.spacing.xl,
+  addTagButton: {
+    backgroundColor: '#6A5ACD',
+    borderRadius: 8,
+    padding: 8,
   },
-  helpText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
-    marginTop: theme.spacing.xs,
-    fontStyle: 'italic',
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 8,
   },
-  settingsContainer: {
-    backgroundColor: theme.colors.background.elevated,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border.primary,
-  },
-  settingItem: {
+  tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
+    backgroundColor: '#6A5ACD',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
   },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: theme.spacing.md,
-  },
-  settingText: {
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  settingDescription: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.secondary,
-  },
-  toggle: {
-    width: 48,
-    height: 28,
-    backgroundColor: theme.colors.border.primary,
-    borderRadius: 14,
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  toggleActive: {
-    backgroundColor: theme.colors.primary.main,
-  },
-  toggleDot: {
-    width: 24,
-    height: 24,
-    backgroundColor: theme.colors.text.primary,
-    borderRadius: 12,
-  },
-  toggleDotActive: {
-    alignSelf: 'flex-end',
-  },
-  infoBox: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.background.elevated,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-    lineHeight: 18,
+  tagText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
   },
   uploadButtonMain: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.primary.main,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
-    paddingVertical: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    gap: theme.spacing.sm,
-    ...theme.elevation.md,
+    backgroundColor: '#6A5ACD',
+    marginHorizontal: 16,
+    marginBottom: 20,
+    paddingVertical: 16,
+    borderRadius: 8,
+    gap: 8,
   },
   uploadButtonDisabled: {
-    backgroundColor: theme.colors.border.primary,
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
+    backgroundColor: '#444444',
   },
   progressContainer: {
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
+    marginHorizontal: 16,
+    marginBottom: 20,
   },
   progressBar: {
     height: 4,
-    backgroundColor: theme.colors.border.primary,
+    backgroundColor: '#333333',
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: theme.colors.primary.main,
+    backgroundColor: '#6A5ACD',
   },
   progressText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
+    fontSize: 12,
+    color: '#CCCCCC',
     textAlign: 'center',
-    marginTop: theme.spacing.sm,
+    marginTop: 8,
   },
 });

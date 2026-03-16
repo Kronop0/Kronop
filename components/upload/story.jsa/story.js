@@ -1,7 +1,8 @@
-// Story Upload Handler - Frontend Only
-// Calls dedicated R2 server for secure upload
+// Story Upload Handler - The Decision Maker
+// Routes files to appropriate handlers based on type
 
-const r2UploadHandler = require('./r2Server');
+const photoHandler = require('./photo.js');
+const videoHandler = require('./video.js');
 
 const storyHandler = {
   receiveFile: async (fileData, metadata) => {
@@ -9,43 +10,36 @@ const storyHandler = {
       console.log('📖 Story file received:', fileData);
       console.log('📊 Metadata:', metadata);
 
-      // Get file as buffer
-      let fileBuffer;
-      if (fileData && fileData.uri) {
-        const fileResponse = await fetch(fileData.uri);
-        fileBuffer = await fileResponse.arrayBuffer();
-        fileBuffer = Buffer.from(fileBuffer);
-      }
-
-      if (!fileBuffer) {
-        throw new Error('Failed to read file data');
-      }
-
-      // Call R2 server handler directly
-      console.log('🚀 Sending to R2 server handler...');
-      const result = await r2UploadHandler.uploadStory(fileBuffer, metadata?.name || 'story.jpg', metadata);
+      // Check file type from metadata or file extension
+      const fileType = metadata?.type || '';
+      const fileName = metadata?.name || '';
+      const isVideo = fileType.includes('video') || fileName.toLowerCase().endsWith('.mp4') || fileName.toLowerCase().endsWith('.mov') || fileName.toLowerCase().endsWith('.avi');
       
-      if (result.success) {
-        console.log('✅ R2 upload successful:', result);
+      console.log('🔍 File type detected:', isVideo ? 'Video' : 'Photo');
+
+      if (isVideo) {
+        console.log('🎥 Routing to video handler...');
+        const result = await videoHandler.receiveFile(fileData, metadata);
         return {
-          success: true,
-          message: 'Story uploaded successfully to Cloudflare R2',
-          fileId: result.fileId,
-          fileName: result.fileName,
-          publicUrl: result.publicUrl,
-          uploadTime: result.uploadTime,
-          storyType: metadata?.type || 'photo',
-          duration: metadata?.duration || 15
+          ...result,
+          storyType: 'video',
+          routedTo: 'video.js'
         };
       } else {
-        throw new Error(result.message || 'Upload failed');
+        console.log('📷 Routing to photo handler...');
+        const result = await photoHandler.receiveFile(fileData, metadata);
+        return {
+          ...result,
+          storyType: 'photo',
+          routedTo: 'photo.js'
+        };
       }
 
     } catch (error) {
       console.error('❌ Story upload error:', error);
       return {
         success: false,
-        message: 'Story upload failed to Cloudflare R2',
+        message: 'Story upload failed - routing error',
         error: error.message,
         fileId: null,
         publicUrl: null
