@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { StoryViewer, StorySection } from '../../Apptepbar/Story';
+import storyDataService from '../../Apptepbar/Story/services/storyDataService';
 import { theme } from '../../constants/theme';
 import { useAlert } from '../../template';
 import { API_BASE_URL } from '../../constants/network';
@@ -67,6 +68,15 @@ export default function HomeScreen() {
   const [selectedStoryGroup, setSelectedStoryGroup] = useState<any[]>([]);
   const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
 
+  // [KRONOP-DEBUG] Add useEffect to track selectedStoryGroup changes
+  useEffect(() => {
+    console.log('[KRONOP-DEBUG] 🔄 selectedStoryGroup state changed:', {
+      storiesCount: selectedStoryGroup.length,
+      viewerVisible: storyViewerVisible,
+      stories: selectedStoryGroup.map(s => ({ id: s.id, userName: s.userName, type: s.story_type }))
+    });
+  }, [selectedStoryGroup, storyViewerVisible]);
+
   // Photo categories state - Vertical with infinite scroll
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryPhotos, setCategoryPhotos] = useState<any[]>([]);
@@ -82,122 +92,14 @@ export default function HomeScreen() {
   const loadStories = async () => {
     setStoriesLoading(true);
     try {
-      // Use the new story service for grouped stories
-      const result = await fetch(`${API_BASE_URL}/stories`);
-      const data = await result.json();
-      if (data.success) {
-        setGroupedStories(data.data as any);
-      } else {
-        // Fallback to mock data if API fails
-        const mockStories = [
-          {
-            userId: 'user1',
-            userName: 'John Doe',
-            userAvatar: 'https://via.placeholder.com/100',
-            stories: [
-              {
-                id: 's1',
-                userId: 'user1',
-                userName: 'John Doe',
-                userAvatar: 'https://via.placeholder.com/100',
-                imageUrl: 'https://picsum.photos/1080x1920?random=1',
-                timestamp: new Date().toISOString(),
-                viewed: false
-              }
-            ],
-            latestTimestamp: new Date().toISOString()
-          },
-          {
-            userId: 'user2',
-            userName: 'Jane Smith',
-            userAvatar: 'https://via.placeholder.com/100',
-            stories: [
-              {
-                id: 's2',
-                userId: 'user2',
-                userName: 'Jane Smith',
-                userAvatar: 'https://via.placeholder.com/100',
-                imageUrl: 'https://picsum.photos/1080x1920?random=2',
-                timestamp: new Date().toISOString(),
-                viewed: true
-              }
-            ],
-            latestTimestamp: new Date().toISOString()
-          },
-          {
-            userId: 'user3',
-            userName: 'Mike Johnson',
-            userAvatar: 'https://via.placeholder.com/100',
-            stories: [
-              {
-                id: 's3',
-                userId: 'user3',
-                userName: 'Mike Johnson',
-                userAvatar: 'https://via.placeholder.com/100',
-                imageUrl: 'https://picsum.photos/1080x1920?random=3',
-                timestamp: new Date().toISOString(),
-                viewed: false
-              }
-            ],
-            latestTimestamp: new Date().toISOString()
-          },
-          {
-            userId: 'user4',
-            userName: 'Sarah Williams',
-            userAvatar: 'https://via.placeholder.com/100',
-            stories: [
-              {
-                id: 's4',
-                userId: 'user4',
-                userName: 'Sarah Williams',
-                userAvatar: 'https://via.placeholder.com/100',
-                imageUrl: 'https://picsum.photos/1080x1920?random=4',
-                timestamp: new Date().toISOString(),
-                viewed: true
-              }
-            ],
-            latestTimestamp: new Date().toISOString()
-          },
-          {
-            userId: 'user5',
-            userName: 'David Brown',
-            userAvatar: 'https://via.placeholder.com/100',
-            stories: [
-              {
-                id: 's5',
-                userId: 'user5',
-                userName: 'David Brown',
-                userAvatar: 'https://via.placeholder.com/100',
-                imageUrl: 'https://picsum.photos/1080x1920?random=5',
-                timestamp: new Date().toISOString(),
-                viewed: false
-              }
-            ],
-            latestTimestamp: new Date().toISOString()
-          },
-          {
-            userId: 'user6',
-            userName: 'Emily Davis',
-            userAvatar: 'https://via.placeholder.com/100',
-            stories: [
-              {
-                id: 's6',
-                userId: 'user6',
-                userName: 'Emily Davis',
-                userAvatar: 'https://via.placeholder.com/100',
-                imageUrl: 'https://picsum.photos/1080x1920?random=6',
-                timestamp: new Date().toISOString(),
-                viewed: true
-              }
-            ],
-            latestTimestamp: new Date().toISOString()
-          }
-        ];
-        setGroupedStories(mockStories);
-      }
+      // Use the story data service for proper R2 integration
+      console.log('[KRONOP-DEBUG] 🚀 HomeScreen: Loading stories with storyDataService...');
+      const fetchedStories = await storyDataService.fetchStoriesForSection();
+      console.log(`[KRONOP-DEBUG] 📊 HomeScreen: Received ${fetchedStories.length} story groups`);
+      setGroupedStories(fetchedStories);
     } catch (error) {
-      console.error('HomeScreen: Failed to load stories:', error);
-      // Silent fail with empty array
+      console.error('[KRONOP-DEBUG] ❌ HomeScreen: Failed to load stories:', error);
+      // Set empty array instead of mock data to avoid 404 errors
       setGroupedStories([]);
     } finally {
       setStoriesLoading(false);
@@ -235,8 +137,26 @@ export default function HomeScreen() {
       // Add new story
       await handleAddStory();
     } else {
-      // View user's stories
-      setSelectedStoryGroup(storyGroup.stories);
+      // View user's stories - map stories with user information for StoryViewer
+      const storiesForViewer = storyGroup.stories.map(story => ({
+        id: story.id,
+        userId: storyGroup.userId,
+        userName: storyGroup.userName,
+        userAvatar: storyGroup.userAvatar,
+        imageUrl: story.imageUrl,
+        videoUrl: story.videoUrl,
+        fallbackUrl: story.fallbackUrl, // Add fallback URL
+        story_type: story.story_type || story.type
+      }));
+      
+      console.log('[KRONOP-DEBUG] 📱 Stories prepared for StoryViewer:', {
+        count: storiesForViewer.length,
+        userName: storyGroup.userName,
+        firstStoryType: storiesForViewer[0]?.story_type,
+        firstFallbackUrl: storiesForViewer[0]?.fallbackUrl
+      });
+      
+      setSelectedStoryGroup(storiesForViewer);
       setSelectedStoryIndex(storyIndex);
       setStoryViewerVisible(true);
     }
@@ -453,7 +373,6 @@ export default function HomeScreen() {
         stories={selectedStoryGroup}
         initialIndex={selectedStoryIndex}
         onClose={() => setStoryViewerVisible(false)}
-        onRefresh={loadStories}
       />
 
       {/* Upload Bottom Sheet Modal */}

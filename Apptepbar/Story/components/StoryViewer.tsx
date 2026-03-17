@@ -6,15 +6,16 @@ import {
   Modal,
   TouchableOpacity,
   Dimensions,
-  Animated,
-  PanResponder,
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../../constants/theme';
 
-// Local Story interface since types folder was deleted
+// [KRONOP-DEBUG] StoryViewer component initialized
+console.log('[KRONOP-DEBUG] 🎬 StoryViewer component loading...');
+
+// Simple Story interface
 interface Story {
   id: string;
   userId: string;
@@ -22,9 +23,11 @@ interface Story {
   userAvatar: string;
   imageUrl?: string;
   videoUrl?: string;
-  duration?: number;
-  viewed: boolean;
-  timestamp: string;
+  url?: string; // Main URL from R2
+  fallbackUrl?: string; // Fallback URL for errors
+  story_type: 'image' | 'video';
+  type?: 'image' | 'video'; // Add type for compatibility
+  useLocalAsset?: boolean; // Add this for local asset fallback
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -34,35 +37,52 @@ interface StoryViewerProps {
   stories: Story[];
   initialIndex: number;
   onClose: () => void;
-  onRefresh?: () => void;
 }
 
-const STORY_DURATION = 5000; // 5 seconds per story
+// Error Placeholder Component
+function ErrorPlaceholder({ type, onRetry }: { type: 'image' | 'video'; onRetry: () => void }) {
+  return (
+    <View style={styles.errorPlaceholder}>
+      <MaterialIcons 
+        name={type === 'video' ? 'videocam-off' : 'image-not-supported'} 
+        size={64} 
+        color="#666" 
+      />
+      <Text style={styles.errorText}>Loading Failed</Text>
+      <Text style={styles.errorSubtext}>
+        {type === 'video' ? 'Video could not be loaded' : 'Image could not be loaded'}
+      </Text>
+      <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+        <MaterialIcons name="refresh" size={20} color="#fff" />
+        <Text style={styles.retryButtonText}>Reload</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
-// Separate component for video stories to ensure hooks are always called in the same order
-function VideoStory({ videoUrl, isPlaying, style }: { videoUrl: string; isPlaying: boolean; style: any }) {
-  const player = useVideoPlayer({
-    uri: videoUrl,
-    headers: {
-      'User-Agent': 'KronopApp'
-    }
-  }, (player) => {
+// Simple video component with increased timeout
+function SimpleVideoStory({ videoUrl, style }: { videoUrl: string; style: any }) {
+  // [KRONOP-DEBUG] Video component initialization
+  console.log('[KRONOP-DEBUG] 🎥 SimpleVideoStory component initializing...');
+  console.log('[KRONOP-DEBUG]   - Video URL:', videoUrl);
+
+  const player = useVideoPlayer(videoUrl, (player) => {
+    console.log('[KRONOP-DEBUG] 🔧 Video player configured');
     player.loop = false;
     player.muted = true;
+    // Increased timeout to 30 seconds for slow networks
+    player.timeUpdateEventInterval = 1000;
   });
 
   useEffect(() => {
-    if (isPlaying) {
-      player.play();
-    } else {
-      player.pause();
-    }
-  }, [isPlaying]);
+    console.log('[KRONOP-DEBUG] ▶️ Video player effect triggered');
+    // Video will auto-play when component mounts
+  }, []);
 
   return (
     <VideoView 
       player={player} 
-      style={[style, { zIndex: 1, flex: 1, width: '100%', height: '100%' }]}
+      style={style}
       contentFit="cover"
       nativeControls={false}
       fullscreenOptions={{
@@ -73,205 +93,247 @@ function VideoStory({ videoUrl, isPlaying, style }: { videoUrl: string; isPlayin
   );
 }
 
-export function StoryViewer({ visible, stories, initialIndex, onClose, onRefresh }: StoryViewerProps) {
+export function StoryViewer({ visible, stories, initialIndex, onClose }: StoryViewerProps) {
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialIndex);
-  const [progress, setProgress] = useState(0);
-  const [isPaused, setIsPaused] = useState(false); // Start playing immediately
-  
-  const progressAnim = useRef(new Animated.Value(0)).current;
-  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [mediaError, setMediaError] = React.useState(false);
+  const [avatarError, setAvatarError] = React.useState(false);
+  const currentStory = stories[currentStoryIndex];
 
-  // Filter out "add-story" from stories array for viewing
-  const viewableStories = stories.filter(story => story.id !== 'add-story');
-  const currentStory = viewableStories[currentStoryIndex];
-
-  // Determine if current story is a video
-  const isVideo = currentStory?.videoUrl || currentStory?.imageUrl?.includes('.mp4') || currentStory?.imageUrl?.includes('video');
-
-  // Pan responder for swipe gestures
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        setIsPaused(true);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        setIsPaused(false);
-        
-        // Swipe left (next story)
-        if (gestureState.dx < -50) {
-          goToNext();
-        }
-        // Swipe right (previous story)
-        else if (gestureState.dx > 50) {
-          goToPrevious();
-        }
-        // Swipe down (close)
-        else if (gestureState.dy > 100) {
-          onClose();
-        }
-        // Tap left side (previous)
-        else if (gestureState.dx < 0 && Math.abs(gestureState.dx) < 50) {
-          goToPrevious();
-        }
-        // Tap right side (next)
-        else if (gestureState.dx > 0 && Math.abs(gestureState.dx) < 50) {
-          goToNext();
-        }
-      },
-    })
-  ).current;
-
+  // Reset error states when story changes
   useEffect(() => {
-    if (visible && !isPaused) {
-      startProgress();
-    } else {
-      stopProgress();
-    }
+    setMediaError(false);
+    setAvatarError(false);
+  }, [currentStoryIndex]);
 
-    return () => stopProgress();
-  }, [visible, currentStoryIndex, isPaused]);
-
-  // Auto-play effect: Start playing immediately when modal opens
+  // [KRONOP-DEBUG] Add useEffect to monitor props and state changes
   useEffect(() => {
-    if (visible) {
-      setIsPaused(false); // Ensure playing starts when modal opens
-    }
-  }, [visible]);
-
-  const startProgress = () => {
-    progressAnim.setValue(0);
-    setProgress(0);
+    console.log('[KRONOP-DEBUG] 🔄 StoryViewer useEffect triggered:');
+    console.log('[KRONOP-DEBUG]   - Visible:', visible);
+    console.log('[KRONOP-DEBUG]   - Stories count:', stories.length);
+    console.log('[KRONOP-DEBUG]   - Initial index:', initialIndex);
+    console.log('[KRONOP-DEBUG]   - Current story index:', currentStoryIndex);
+    console.log('[KRONOP-DEBUG]   - Current story exists:', !!currentStory);
     
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: STORY_DURATION,
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished) {
-        goToNext();
-      }
-    });
-
-    let elapsed = 0;
-    progressInterval.current = setInterval(() => {
-      elapsed += 100;
-      setProgress(elapsed / STORY_DURATION);
-      
-      if (elapsed >= STORY_DURATION) {
-        stopProgress();
-      }
-    }, 100);
-  };
-
-  const stopProgress = () => {
-    if (progressInterval.current) {
-      clearInterval(progressInterval.current);
-      progressInterval.current = null;
+    // Only render if we have stories and viewer is visible
+    if (visible && stories.length > 0) {
+      console.log('[KRONOP-DEBUG] ✅ StoryViewer should render - conditions met');
+    } else if (visible && stories.length === 0) {
+      console.log('[KRONOP-DEBUG] ❌ StoryViewer cannot render - no stories available');
+    } else if (!visible) {
+      console.log('[KRONOP-DEBUG] 🚫 StoryViewer hidden - visible is false');
     }
-    progressAnim.stopAnimation();
-  };
+  }, [visible, stories.length, initialIndex, currentStoryIndex, currentStory]);
+
+  // [KRONOP-DEBUG] Log StoryViewer props and state
+  console.log('[KRONOP-DEBUG] 📱 StoryViewer props received:');
+  console.log('[KRONOP-DEBUG]   - Visible:', visible);
+  console.log('[KRONOP-DEBUG]   - Stories count:', stories.length);
+  console.log('[KRONOP-DEBUG]   - Initial index:', initialIndex);
+  console.log('[KRONOP-DEBUG]   - Current story index:', currentStoryIndex);
+
+  // [KRONOP-DEBUG] Log current story details
+  if (currentStory) {
+    console.log('[KRONOP-DEBUG] 📖 Current story details:');
+    console.log('[KRONOP-DEBUG]   - Story ID:', currentStory.id);
+    console.log('[KRONOP-DEBUG]   - User Name:', currentStory.userName);
+    console.log('[KRONOP-DEBUG]   - Story Type:', currentStory.story_type);
+    console.log('[KRONOP-DEBUG]   - Image URL:', currentStory.imageUrl);
+    console.log('[KRONOP-DEBUG]   - Video URL:', currentStory.videoUrl);
+    console.log('[KRONOP-DEBUG]   - Fallback URL:', currentStory.fallbackUrl);
+  }
 
   const goToNext = () => {
-    if (currentStoryIndex < viewableStories.length - 1) {
-      setCurrentStoryIndex(currentStoryIndex + 1);
+    console.log('[KRONOP-DEBUG] ➡️ Going to next story...');
+    if (currentStoryIndex < stories.length - 1) {
+      const nextIndex = currentStoryIndex + 1;
+      console.log(`[KRONOP-DEBUG]   - Moving from index ${currentStoryIndex} to ${nextIndex}`);
+      setCurrentStoryIndex(nextIndex);
     } else {
+      console.log('[KRONOP-DEBUG] 🏁 Reached last story, closing viewer');
       onClose();
     }
   };
 
   const goToPrevious = () => {
+    console.log('[KRONOP-DEBUG] ⬅️ Going to previous story...');
     if (currentStoryIndex > 0) {
-      setCurrentStoryIndex(currentStoryIndex - 1);
+      const prevIndex = currentStoryIndex - 1;
+      console.log(`[KRONOP-DEBUG]   - Moving from index ${currentStoryIndex} to ${prevIndex}`);
+      setCurrentStoryIndex(prevIndex);
+    } else {
+      console.log('[KRONOP-DEBUG] 🚫 Already at first story, cannot go back');
     }
   };
 
-  if (!currentStory) {
+  // Add proper conditional rendering check
+  if (!visible || stories.length === 0) {
+    console.log('[KRONOP-DEBUG] ❌ StoryViewer: Not rendering -', {
+      visible,
+      storiesCount: stories.length,
+      reason: !visible ? 'Viewer not visible' : 'No stories available'
+    });
     return null;
   }
+
+  if (!currentStory) {
+    console.log('[KRONOP-DEBUG] ❌ No current story available, returning null');
+    return null;
+  }
+
+  // Enhanced isVideo detection with multiple fallbacks and better logging
+  const isVideo = currentStory.story_type === 'video' || 
+                   currentStory.type === 'video' ||
+                   !!currentStory.videoUrl || 
+                   (currentStory.imageUrl && (currentStory.imageUrl.includes('.mp4') || currentStory.imageUrl.includes('.mov') || currentStory.imageUrl.includes('.avi'))) ||
+                   (currentStory.url && (currentStory.url.includes('.mp4') || currentStory.url.includes('.mov') || currentStory.url.includes('.avi'))) ||
+                   (currentStory.fallbackUrl && currentStory.fallbackUrl.includes('.mp4'));
+
+  // [KRONOP-DEBUG] Enhanced logging for isVideo detection
+  console.log('[KRONOP-DEBUG] 🎯 Enhanced isVideo detection:');
+  console.log(`[KRONOP-DEBUG]   - story_type: ${currentStory.story_type}`);
+  console.log(`[KRONOP-DEBUG]   - type: ${currentStory.type}`);
+  console.log(`[KRONOP-DEBUG]   - videoUrl: ${currentStory.videoUrl}`);
+  console.log(`[KRONOP-DEBUG]   - imageUrl contains mp4: ${currentStory.imageUrl?.includes('.mp4')}`);
+  console.log(`[KRONOP-DEBUG]   - url contains mp4: ${currentStory.url?.includes('.mp4')}`);
+  console.log(`[KRONOP-DEBUG]   - fallbackUrl contains mp4: ${currentStory.fallbackUrl?.includes('.mp4')}`);
+  console.log(`[KRONOP-DEBUG]   - Final isVideo result: ${isVideo}`);
+  
+  const mediaUrl = isVideo 
+    ? (currentStory.videoUrl || currentStory.imageUrl || currentStory.url) 
+    : (currentStory.imageUrl || currentStory.url);
+  
+  // Get fallback URL if media failed to load
+  const getMediaSource = () => {
+    // Check if story uses local asset
+    if (currentStory.useLocalAsset) {
+      return require('../../../assets/images/logo.png');
+    }
+    if (mediaError && currentStory.fallbackUrl) {
+      return { uri: currentStory.fallbackUrl };
+    }
+    return { uri: mediaUrl };
+  };
+
+  const getAvatarSource = () => {
+    // Check if story uses local asset
+    if (currentStory.useLocalAsset) {
+      return require('../../../assets/images/logo.png');
+    }
+    if (avatarError && currentStory.fallbackUrl) {
+      return { uri: currentStory.fallbackUrl };
+    }
+    return { uri: currentStory.userAvatar };
+  };
+
+  // Retry function to reset error state and try again
+  const handleRetry = () => {
+    console.log('[KRONOP-DEBUG] 🔄 User pressed retry - resetting error state');
+    setMediaError(false);
+    setAvatarError(false);
+  };
+
+  console.log('[KRONOP-DEBUG] 🎯 Media URL determined:');
+  console.log('[KRONOP-DEBUG]   - Is Video:', isVideo);
+  console.log('[KRONOP-DEBUG]   - Final Media URL:', mediaUrl);
 
   return (
     <Modal
       visible={visible}
       animationType="none"
       transparent={false}
-      onRequestClose={onClose}
+      onRequestClose={() => {
+        console.log('[KRONOP-DEBUG] 🚪 Modal close requested');
+        onClose();
+      }}
     >
-      <View style={styles.container} {...panResponder.panHandlers}>
+      <View style={styles.container}>
         {/* Story Background - Image or Video */}
-        {isVideo ? (
-          <VideoStory 
-            videoUrl={currentStory.videoUrl || currentStory.imageUrl}
-            isPlaying={visible && !isPaused}
-            style={styles.storyMedia}
-          />
-        ) : (
-          <Image
-            source={{ uri: currentStory.imageUrl }}
-            style={styles.storyMedia}
-            contentFit="cover"
-          />
-        )}
-
-        {/* Gradient Overlay */}
-        <View style={styles.topGradient} />
-        <View style={styles.bottomGradient} />
-
-        {/* Progress Bars */}
-        <View style={styles.progressContainer}>
-          {viewableStories.map((_, index) => (
-            <View key={index} style={styles.progressBarBg}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width:
-                      index < currentStoryIndex
-                        ? '100%'
-                        : index === currentStoryIndex
-                        ? `${progress * 100}%`
-                        : '0%',
-                  },
-                ]}
+        <View style={styles.storyMedia}>
+          {isVideo ? (
+            mediaError ? (
+              <ErrorPlaceholder type="video" onRetry={handleRetry} />
+            ) : (
+              <SimpleVideoStory 
+                videoUrl={getMediaSource().uri}
+                style={styles.storyMedia}
               />
-            </View>
-          ))}
+            )
+          ) : (
+            mediaError ? (
+              <ErrorPlaceholder type="image" onRetry={handleRetry} />
+            ) : (
+              <Image
+                source={getMediaSource()}
+                style={styles.storyMedia}
+                contentFit="cover"
+                onLoad={() => console.log('[KRONOP-DEBUG] 🖼️ Story image loaded successfully')}
+                onError={(error) => {
+                  console.log('[KRONOP-DEBUG] ❌ Story image failed to load:', error);
+                  console.log('[KRONOP-DEBUG]   - Attempted URL:', getMediaSource().uri);
+                  if (!mediaError) {
+                    setMediaError(true);
+                  }
+                }}
+              />
+            )
+          )}
         </View>
 
-        {/* Header */}
+        {/* Simple Header */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
             <Image
-              source={{ uri: currentStory.userAvatar }}
+              source={getAvatarSource()}
               style={styles.userAvatar}
               contentFit="cover"
+              onLoad={() => console.log('[KRONOP-DEBUG] 👤 User avatar loaded successfully')}
+              onError={(error) => {
+                console.log('[KRONOP-DEBUG] ❌ User avatar failed to load:', error);
+                console.log('[KRONOP-DEBUG]   - Attempted URL:', getAvatarSource().uri);
+                if (!avatarError) {
+                  setAvatarError(true);
+                }
+              }}
             />
             <Text style={styles.userName}>{currentStory.userName}</Text>
-            <Text style={styles.timestamp}>
-              {new Date(currentStory.timestamp).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
-            </Text>
           </View>
           
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity 
+            onPress={() => {
+              console.log('[KRONOP-DEBUG] ❌ Close button pressed');
+              onClose();
+            }} 
+            style={styles.closeButton}
+          >
             <MaterialIcons name="close" size={28} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* Navigation Areas (Tap left/right) */}
-        <View style={styles.tapAreas}>
+        {/* Simple Navigation */}
+        <View style={styles.navigationContainer}>
           <TouchableOpacity
-            style={styles.tapLeft}
+            style={styles.navButton}
             onPress={goToPrevious}
-            activeOpacity={1}
-          />
+            disabled={currentStoryIndex === 0}
+          >
+            <MaterialIcons 
+              name="chevron-left" 
+              size={32} 
+              color={currentStoryIndex === 0 ? "rgba(255,255,255,0.3)" : "#fff"} 
+            />
+          </TouchableOpacity>
+          
           <TouchableOpacity
-            style={styles.tapRight}
+            style={styles.navButton}
             onPress={goToNext}
-            activeOpacity={1}
-          />
+            disabled={currentStoryIndex === stories.length - 1}
+          >
+            <MaterialIcons 
+              name="chevron-right" 
+              size={32} 
+              color={currentStoryIndex === stories.length - 1 ? "rgba(255,255,255,0.3)" : "#fff"} 
+            />
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -287,48 +349,45 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
     position: 'absolute',
-    zIndex: 1,
+  },
+  errorPlaceholder: {
     flex: 1,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
   },
-  topGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 200,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+  errorText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
   },
-  bottomGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 150,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+  errorSubtext: {
+    color: '#999',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
   },
-  progressContainer: {
+  retryButton: {
     flexDirection: 'row',
-    position: 'absolute',
-    top: 50,
-    left: 8,
-    right: 8,
-    gap: 4,
-    zIndex: 10,
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 20,
+    gap: 8,
   },
-  progressBarBg: {
-    flex: 1,
-    height: 2,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#fff',
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     position: 'absolute',
-    top: 70,
+    top: 50,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -355,30 +414,30 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.bold,
   },
-  timestamp: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: theme.typography.fontSize.sm,
-  },
   closeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tapAreas: {
+  navigationContainer: {
     position: 'absolute',
-    top: 0,
+    bottom: 50,
     left: 0,
     right: 0,
-    bottom: 0,
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    zIndex: 10,
   },
-  tapLeft: {
-    flex: 1,
-  },
-  tapRight: {
-    flex: 1,
+  navButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -1,37 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { SupabaseAuthService, supabase } from '../services/supabaseAuthService'; // Removed - services folder deleted
-// import { User } from '@supabase/supabase-js'; // Removed - using mock
-
-// Mock supabase and User for development
-const supabase = {
-  auth: {
-    onAuthStateChange: (callback: any) => {
-      // Mock subscription
-      const subscription = {
-        unsubscribe: () => {}
-      };
-      // Simulate auth state change after 1 second
-      setTimeout(() => {
-        callback('SIGNED_IN', {
-          user: {
-            id: 'mock_user_id',
-            email: 'mock@example.com',
-            user_metadata: { name: 'Mock User' }
-          },
-          access_token: 'mock_token'
-        });
-      }, 1000);
-      return { data: { subscription } };
-    }
-  }
-};
-
-const User = {
-  id: 'mock_user_id',
-  email: 'mock@example.com',
-  user_metadata: { name: 'Mock User' }
-};
 
 interface AuthUser {
   id: string;
@@ -57,40 +25,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadUser();
-    
-    // Set up auth state listener
-    const setupAuthListener = async () => {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-        const authUser = session?.user || null;
-        setUser(authUser);
-        if (authUser) {
-          AsyncStorage.setItem('supabase_token', session?.access_token || '');
-        } else {
-          AsyncStorage.removeItem('supabase_token');
-        }
-      });
-      return subscription;
-    };
-
-    const subscriptionPromise = setupAuthListener();
-    
-    return () => {
-      subscriptionPromise.then(subscription => subscription.unsubscribe());
-    };
   }, []);
 
   const loadUser = async () => {
     try {
-      // const result = await SupabaseAuthService.getCurrentSession(); // Removed - using mock
-      // Mock session result
-      const result = {
-        success: true,
-        data: User
+      // Simple mock user for development
+      const mockUser = {
+        id: 'mock_user_id',
+        email: 'mock@example.com',
+        user_metadata: { name: 'Mock User' }
       };
-      
-      if (result.success && result.data) {
-        setUser(result.data as AuthUser);
-      }
+      setUser(mockUser);
     } catch (error) {
       console.error('Auth load error', error);
     } finally {
@@ -100,19 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      // const result = await SupabaseAuthService.signIn(email, password); // Removed - using mock
-      // Mock login result
-      const result = {
-        success: true,
-        data: {
-          user: User
-        }
+      // Simple mock login
+      const mockUser = {
+        id: 'mock_user_id',
+        email: email,
+        user_metadata: { name: 'Mock User' }
       };
-      
-      if (result.success && result.data?.user) {
-        setUser(result.data.user as AuthUser);
-      }
-      return result;
+      setUser(mockUser);
+      return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
@@ -120,19 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signup = async (email: string, password: string, displayName?: string) => {
     try {
-      // const result = await SupabaseAuthService.signUp(email, password, displayName); // Removed - using mock
-      // Mock signup result
-      const result = {
-        success: true,
-        data: {
-          user: User
-        }
+      // Simple mock signup
+      const mockUser = {
+        id: 'mock_user_id',
+        email: email,
+        user_metadata: { name: displayName || 'Mock User' }
       };
-      
-      if (result.success && result.data?.user) {
-        setUser(result.data.user as AuthUser);
-      }
-      return result;
+      setUser(mockUser);
+      return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
@@ -140,9 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      // await SupabaseAuthService.signOut(); // Removed - using mock
-      // Mock logout
-      console.log('Mock logout called');
       setUser(null);
     } catch (error) {
       console.error('Logout error', error);

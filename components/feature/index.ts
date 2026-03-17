@@ -1,4 +1,2 @@
-export { StoryViewer } from '../../Apptepbar/Story/StoryViewer';
-export { StorySection } from '../../Apptepbar/Story/StorySection';
-export { StoryItem } from '../../Apptepbar/Story/StoryItem';
+export { StoryViewer, StorySection, StoryItem } from '../../Apptepbar/Story';
 export { PhotoCategoryCard } from './PhotoCategoryCard';

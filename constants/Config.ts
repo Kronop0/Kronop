@@ -28,9 +28,6 @@ export const API_KEYS = {
   OPENVERSE: process.env.EXPO_PUBLIC_OPENVERSE_KEY || '',
   STABLE_DIFFUSION: process.env.EXPO_PUBLIC_STABLE_DIFFUSION_KEY || '',
   
-  // Supabase
-  SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
-  SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
   
   // OneSignal
   ONESIGNAL_APP_ID: process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID || '',
