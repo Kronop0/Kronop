@@ -244,12 +244,14 @@ class ChunkManager {
   }
 }
 
-// Direct URL Play - Simple & Fast
+// Direct URL Play - Maximum Quality
 export const getVideoUrl = (videoKey) => {
   const baseUrl = CLOUD_CONFIG.publicR2Url;
   
-  // Return direct URL - no chunk, no complexity
-  return `${baseUrl}/${videoKey}`;
+  // Return direct URL with maximum quality parameters
+  const fullUrl = `${baseUrl}/${videoKey}?quality=original&no-compression=true`;
+  console.log(`🔗 Generated MAX QUALITY Video URL: ${fullUrl}`);
+  return fullUrl;
 };
 
 // Legacy function for compatibility

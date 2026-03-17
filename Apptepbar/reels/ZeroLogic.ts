@@ -29,14 +29,14 @@ export const fetchReelsFromR2 = async () => {
     console.log('📡 R2 Response:', response.KeyCount || 0, 'objects found');
 
     if (response.Contents && response.Contents.length > 0) {
-      // Filter for video files and create reel data
       const videoFiles = response.Contents.filter(obj => 
         obj.Key && (obj.Key.endsWith('.mp4') || obj.Key.endsWith('.mov') || obj.Key.endsWith('.mp4'))
       );
 
       console.log('🎬 Found video files:', videoFiles.length);
+      console.log('📋 ALL VIDEO FILES IN BUCKET:');
       videoFiles.forEach((file, index) => {
-        console.log(`📹 Video ${index + 1}:`, file.Key);
+        console.log(`📹 Video ${index + 1}: ${file.Key} (Size: ${file.Size || 'unknown'} bytes, Modified: ${file.LastModified || 'unknown'})`);
       });
 
       const reels = videoFiles.map((file, index) => {
@@ -46,8 +46,8 @@ export const fetchReelsFromR2 = async () => {
         return {
           id: fileWithoutExt,
           _id: fileWithoutExt,
-          videoUrl: file.Key!, // IMPORTANT: Use full Key with Reels/ prefix
-          url: file.Key!,     // Keep full path
+          videoUrl: file.Key!,
+          url: file.Key!,
           filename: fileName,
           title: fileWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
           description: `Amazing reel: ${fileWithoutExt.replace(/[-_]/g, ' ')}`,
@@ -66,6 +66,10 @@ export const fetchReelsFromR2 = async () => {
       });
 
       console.log('✅ Reels fetched from R2:', reels.length);
+      console.log('🎯 FINAL REELS LIST:');
+      reels.forEach((reel, index) => {
+        console.log(`🎬 Reel ${index + 1}: ${reel.id} (${reel.filename}) - URL: ${reel.videoUrl}`);
+      });
       return reels;
     } else {
       console.log('⚠️ No reels found in R2 bucket');

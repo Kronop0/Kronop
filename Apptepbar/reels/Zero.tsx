@@ -63,6 +63,55 @@ const Zero: React.FC = () => {
     }
   }, [preWarmedVideos]);
 
+  // Fetch videos directly from R2 bucket
+  const fetchVideosFromAPI = useCallback(async () => {
+    try {
+      console.log('🎬 Fetching videos from API...');
+      
+      // Fetch from R2 only - no mock data
+      const reelsData = await fetchReelsFromR2();
+      
+      if (reelsData && reelsData.length > 0) {
+        console.log('✅ Fetched reels from R2:', reelsData.length);
+        
+        // Transform to VideoItem format with detailed logging
+        const transformedVideos = reelsData.map((reel, index) => {
+          const videoUrl = getVideoUrl(reel.videoUrl);
+          console.log(`🔄 Transforming reel ${index + 1}: ${reel.id} -> ${videoUrl}`);
+          
+          return {
+            id: reel.id,
+            uri: videoUrl,
+            title: reel.title || reel.description || 'Amazing Reel',
+            channelName: reel.channelName || reel.username || 'Kronop',
+            channelLogo: `https://picsum.photos/seed/${reel.id}/200/200.jpg`,
+            isVerified: false,
+            likes: reel.likes || Math.floor(Math.random() * 10000),
+            comments: reel.comments || Math.floor(Math.random() * 1000),
+            shares: reel.shares || Math.floor(Math.random() * 500),
+          };
+        });
+        
+        console.log('🎯 FINAL VIDEO LIST FOR REELS:');
+        transformedVideos.forEach((video, index) => {
+          console.log(`🎬 Video ${index + 1}: ${video.id} - URI: ${video.uri} - Title: ${video.title}`);
+        });
+        
+        setVideos(transformedVideos);
+        setLoading(false);
+        console.log('🚀 Reels loaded successfully!');
+      } else {
+        console.log('⚠️ No reels data received');
+        setVideos([]);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching videos:', error);
+      setError('Failed to load reels');
+      setLoading(false);
+    }
+  }, []);
+
   // Initialize and fetch videos
   useEffect(() => {
     const initializeReels = async () => {
@@ -75,12 +124,20 @@ const Zero: React.FC = () => {
         setLoading(false);
       }
     };
-    
-    // Only initialize if videos array is empty
-    if (videos.length === 0) {
-      initializeReels();
-    }
-  }, [videos.length]);
+
+    initializeReels();
+
+    // Auto-refresh every 30 seconds to check for new videos
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing reels for new videos...');
+      fetchVideosFromAPI();
+    }, 30000); // 30 seconds
+
+    return () => {
+      clearInterval(refreshInterval);
+      console.log('🛑 Auto-refresh stopped');
+    };
+  }, [fetchVideosFromAPI]);
 
   // Simplified preloading - only focus on next reel
   useEffect(() => {
@@ -117,57 +174,6 @@ const Zero: React.FC = () => {
     }
     
   }, [currentVisibleIndex, videos]); // Remove complex dependencies
-
-  // Fetch videos directly from R2 bucket
-  const fetchVideosFromAPI = async () => {
-    try {
-      console.log('🎬 Fetching videos from API...');
-      
-      // Fetch from R2 only - no mock data
-      const reelsData = await fetchReelsFromR2();
-      
-      if (reelsData && reelsData.length > 0) {
-        console.log('✅ Fetched reels from R2:', reelsData.length);
-        
-        // Transform API data to VideoItem format
-        const transformedVideos = reelsData.map((reel: any) => {
-          const videoUrl = getVideoUrl(reel.videoUrl);
-          console.log(`🎥 Transforming reel: ${reel.id} -> ${videoUrl}`);
-          
-          return {
-            id: reel.id,
-            uri: videoUrl,
-            title: reel.title || reel.description || 'Amazing Reel',
-            channelName: reel.channelName || reel.username || 'Kronop',
-            channelLogo: `https://picsum.photos/seed/${reel.id}/200/200.jpg`,
-            isVerified: false,
-            likes: reel.likes || Math.floor(Math.random() * 10000),
-            comments: reel.comments || Math.floor(Math.random() * 1000),
-            shares: reel.shares || Math.floor(Math.random() * 500),
-            supports: reel.supports || 0,
-            videoUrl: reel.videoUrl,
-          };
-        });
-        
-        console.log('🎯 Transformed videos:', transformedVideos.length);
-        transformedVideos.forEach((video: any, index: number) => {
-          console.log(`🎬 Video ${index + 1}:`, video.id, video.uri);
-        });
-        setVideos(transformedVideos);
-        
-        setError(null);
-      } else {
-        console.warn('⚠️ No reels found in R2 bucket');
-        setVideos([]);
-      }
-      
-    } catch (error) {
-      console.error('💥 Fetch Error:', error);
-      setVideos([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onViewableItemsChanged = React.useCallback(({ viewableItems }: { viewableItems: ViewToken<VideoItem>[] }) => {
     console.log('👀 Viewable items changed:', viewableItems.length);
