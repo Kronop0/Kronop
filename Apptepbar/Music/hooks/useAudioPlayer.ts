@@ -65,11 +65,35 @@ export function useAudioPlayer() {
         if (status.isLoaded) {
           setDuration(status.durationMillis || 0);
           setPosition(status.positionMillis || 0);
-          setIsPlaying(status.isPlaying);
+          
+          // Only update isPlaying if it actually changed to avoid infinite loops
+          const actualPlayingState = status.isPlaying || false;
+          if (actualPlayingState !== isPlaying) {
+            setIsPlaying(actualPlayingState);
+          }
 
-          // Auto play next song when current finishes
-          if (status.didJustFinish) {
-            handleNext();
+          // Auto play next song when current finishes (only if user was playing)
+          if (status.didJustFinish && isPlaying) {
+            // Auto-next logic will be handled by handleNext when called
+            let nextIndex: number;
+            if (repeatMode === RepeatMode.ONE) {
+              nextIndex = currentIndex;
+            } else if (isShuffle) {
+              nextIndex = Math.floor(Math.random() * playlist.length);
+            } else {
+              nextIndex = currentIndex + 1;
+              if (nextIndex >= playlist.length) {
+                nextIndex = repeatMode === RepeatMode.ALL ? 0 : currentIndex;
+              }
+            }
+
+            if (nextIndex !== currentIndex || repeatMode === RepeatMode.ONE) {
+              setCurrentIndex(nextIndex);
+              loadSong(nextIndex);
+              if (repeatMode === RepeatMode.ONE) {
+                setTimeout(() => audioService.play(), 100);
+              }
+            }
           }
         }
       });
@@ -78,8 +102,9 @@ export function useAudioPlayer() {
     } catch (error) {
       console.error('Failed to load song:', error);
       setIsLoading(false);
+      setIsPlaying(false);
     }
-  }, [playlist]);
+  }, [playlist, isPlaying, currentIndex, repeatMode, isShuffle, playlist.length]);
 
   // Load first song on mount
   useEffect(() => {
@@ -91,15 +116,20 @@ export function useAudioPlayer() {
   // Play/Pause toggle
   const togglePlayPause = useCallback(async () => {
     try {
+      if (!currentSong) return;
+      
       if (isPlaying) {
         await audioService.pause();
+        setIsPlaying(false); // Immediately update state
       } else {
         await audioService.play();
+        // Let the playback status listener update the state
       }
     } catch (error) {
       console.error('Failed to toggle play/pause:', error);
+      setIsPlaying(false); // Reset to safe state on error
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentSong]);
 
   // Next song
   const handleNext = useCallback(() => {
@@ -176,19 +206,35 @@ export function useAudioPlayer() {
 
   // Play specific song from list
   const playSongAtIndex = useCallback(async (index: number) => {
-    if (index === currentIndex && isPlaying) {
-      // If same song is playing, pause it
-      await audioService.pause();
-    } else if (index === currentIndex && !isPlaying) {
-      // If same song is paused, resume it
-      await audioService.play();
-    } else {
-      // Load and play new song
-      setCurrentIndex(index);
-      await loadSong(index);
-      setTimeout(() => audioService.play(), 100);
+    if (index < 0 || index >= playlist.length) return;
+    
+    try {
+      if (index === currentIndex) {
+        // If same song, just toggle play/pause
+        if (isPlaying) {
+          await audioService.pause();
+          setIsPlaying(false);
+        } else {
+          await audioService.play();
+        }
+      } else {
+        // Load and play new song
+        setCurrentIndex(index);
+        await loadSong(index);
+        // Start playing after a short delay to ensure song is loaded
+        setTimeout(async () => {
+          try {
+            await audioService.play();
+          } catch (error) {
+            console.error('Failed to play new song:', error);
+          }
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Failed to play song at index:', error);
+      setIsPlaying(false);
     }
-  }, [currentIndex, isPlaying, loadSong]);
+  }, [currentIndex, playlist.length, isPlaying, loadSong]);
 
   return {
     playlist,

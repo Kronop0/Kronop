@@ -41,13 +41,19 @@ class AudioService {
 
   async play(): Promise<void> {
     if (this.sound) {
-      await this.sound.playAsync();
+      const status = await this.sound.getStatusAsync();
+      if (status.isLoaded && !status.isPlaying) {
+        await this.sound.playAsync();
+      }
     }
   }
 
   async pause(): Promise<void> {
     if (this.sound) {
-      await this.sound.pauseAsync();
+      const status = await this.sound.getStatusAsync();
+      if (status.isLoaded && status.isPlaying) {
+        await this.sound.pauseAsync();
+      }
     }
   }
 
