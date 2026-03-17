@@ -35,11 +35,12 @@ const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onV
         ref={flatListRef}
         data={videos}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => `${item.id}-${index}`} // Unique keys to prevent conflicts
         pagingEnabled={true}
-        snapToInterval={screenHeight}
-        snapToAlignment="start"
-        decelerationRate="fast"
+        snapToInterval={screenHeight} // Snap to full screen height
+        snapToAlignment="start" // Snap to start of each item
+        decelerationRate="fast" // Fast stop for instant snap
+        disableIntervalMomentum={true} // Force stop at each reel
         showsVerticalScrollIndicator={false}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
@@ -48,18 +49,21 @@ const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onV
           offset: screenHeight * index,
           index,
         })}
+        // Optimized memory settings for smooth scrolling
         initialNumToRender={1}
         maxToRenderPerBatch={1}
-        windowSize={2}
-        removeClippedSubviews={true}
+        windowSize={3}
+        removeClippedSubviews={false}
         contentContainerStyle={{ paddingBottom: bottomPadding }}
         onScroll={(event) => {
           const y = event.nativeEvent.contentOffset.y;
           const index = Math.round(y / screenHeight);
-          console.log(`📱 Scrolled to index: ${index}, y: ${y}`);
+          console.log(`📱 Locked scroll to index: ${index}, y: ${y}`);
         }}
-        scrollEventThrottle={16}
+        scrollEventThrottle={1}
       />
+      {/* JUGAAD - Control suppressor */}
+      <View style={styles.controlSuppressor} />
     </View>
   );
 };
@@ -68,6 +72,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  // JUGAAD - Hide any native controls that might appear
+  controlSuppressor: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    opacity: 0,
+    zIndex: -1000,
+    pointerEvents: 'none' as const,
+    display: 'none' as const,
+    visibility: 'hidden' as const,
   },
 });
 

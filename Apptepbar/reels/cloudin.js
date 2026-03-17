@@ -244,159 +244,40 @@ class ChunkManager {
   }
 }
 
-// Active chunk managers for videos
-const activeChunkManagers = new Map();
+// Direct URL Play - Simple & Fast
+export const getVideoUrl = (videoKey) => {
+  const baseUrl = CLOUD_CONFIG.publicR2Url;
+  
+  // Return direct URL - no chunk, no complexity
+  return `${baseUrl}/${videoKey}`;
+};
 
-/**
- * Get R2 URL specifically for reels with chunk-based streaming
- * @param {string} videoKey - Video file key or filename
- * @returns {string} Complete R2 streaming URL for reels
- */
-function getReelUrl(videoKey) {
-  if (!videoKey) {
-    console.warn('⚠️ Reel video key is empty');
-    return '';
-  }
-  
-  // Remove leading slash if present
-  const cleanKey = videoKey.startsWith('/') ? videoKey.slice(1) : videoKey;
-  
-  // Add Reels/ prefix if not already present
-  const reelKey = cleanKey.startsWith('Reels/') ? cleanKey : `Reels/${cleanKey}`;
-  
-  // Construct full R2 URL
-  const fullUrl = `${CLOUD_CONFIG.publicR2Url}/${reelKey}`;
-  
-  console.log(`🎬 Reel URL: ${fullUrl}`);
-  
-  // Initialize chunk manager for this video
-  if (!activeChunkManagers.has(fullUrl)) {
-    const chunkManager = new ChunkManager(fullUrl);
-    activeChunkManagers.set(fullUrl, chunkManager);
-    
-    // Initialize chunk manager asynchronously
-    chunkManager.initialize().then(success => {
-      if (success) {
-        console.log('🚀 Chunk Manager ready for:', fullUrl);
-      }
-    });
-  }
-  
-  return fullUrl;
-}
+// Legacy function for compatibility
+export const getReelUrl = (reelKey) => {
+  return getVideoUrl(reelKey);
+};
 
-/**
- * Get chunk data for specific video
- * @param {string} videoUrl - Complete video URL
- * @param {number} chunkIndex - Chunk index to fetch
- * @returns {Promise<ArrayBuffer|null>} Chunk data
- */
-async function getVideoChunk(videoUrl, chunkIndex) {
-  const chunkManager = activeChunkManagers.get(videoUrl);
-  
-  if (!chunkManager) {
-    console.warn('⚠️ No chunk manager found for:', videoUrl);
-    return null;
-  }
-  
-  // If chunk already loaded, return immediately
-  if (chunkManager.isChunkLoaded(chunkIndex)) {
-    return chunkManager.getChunk(chunkIndex)?.data || null;
-  }
-  
-  // Load chunk on demand
-  const chunks = await chunkManager.preloadChunks([chunkIndex]);
-  return chunks[0] || null;
-}
+// Empty active managers for compatibility (no chunk system)
+export const activeChunkManagers = new Map();
 
-/**
- * Get streaming progress for video
- * @param {string} videoUrl - Complete video URL
- * @returns {Object} Progress information
- */
-function getStreamingProgress(videoUrl) {
-  const chunkManager = activeChunkManagers.get(videoUrl);
-  return chunkManager ? chunkManager.getProgress() : null;
-}
+// Legacy functions for compatibility (no chunk system)
+export const getVideoChunk = async (videoUrl, chunkIndex) => {
+  console.log('🚀 Direct URL Play - No chunk system');
+  return null;
+};
 
-/**
- * Prefetch next chunks for smooth playback
- * @param {string} videoUrl - Complete video URL
- * @param {number} currentChunkIndex - Current playing chunk
- */
-async function prefetchNextChunks(videoUrl, currentChunkIndex) {
-  const chunkManager = activeChunkManagers.get(videoUrl);
-  
-  if (!chunkManager) return;
-  
-  const nextChunks = chunkManager.getNextChunks(currentChunkIndex);
-  if (nextChunks.length > 0) {
-    console.log(`🔄 Prefetching chunks: ${nextChunks.join(', ')}`);
-    await chunkManager.preloadChunks(nextChunks);
-  }
-}
+export const getStreamingProgress = (videoUrl) => {
+  console.log('🚀 Direct URL Play - No chunk system');
+  return null;
+};
 
-/**
- * Cleanup chunk manager for video
- * @param {string} videoUrl - Complete video URL
- */
-function cleanupChunkManager(videoUrl) {
-  const chunkManager = activeChunkManagers.get(videoUrl);
-  if (chunkManager) {
-    console.log('🧹 Cleaning up chunk manager for:', videoUrl);
-    activeChunkManagers.delete(videoUrl);
-  }
-}
+export const prefetchNextChunks = async (videoUrl, currentChunkIndex) => {
+  console.log('� Direct URL Play - No chunk system');
+};
 
-/**
- * Get public R2 URL for video streaming
- * @param {string} videoKey - Video file key/path
- * @returns {string} Complete streaming URL
- */
-function getVideoUrl(videoKey) {
-  if (!videoKey) {
-    console.warn('⚠️ Video key is empty');
-    return '';
-  }
-  
-  // Remove leading slash if present
-  const cleanKey = videoKey.startsWith('/') ? videoKey.slice(1) : videoKey;
-  
-  // IMPORTANT: If key doesn't start with 'Reels/', add it
-  const finalKey = cleanKey.startsWith('Reels/') ? cleanKey : `Reels/${cleanKey}`;
-  
-  // Construct full URL
-  const fullUrl = `${CLOUD_CONFIG.publicR2Url}/${finalKey}`;
-  
-  console.log(`🎬 Video URL: ${fullUrl}`);
-  return fullUrl;
-}
-
-/**
- * Get streaming URL with quality preference
- * @param {string} videoKey - Video file key
- * @param {string} quality - Video quality (low, medium, high, ultra)
- * @returns {string} Quality-specific streaming URL
- */
-function getQualityStreamUrl(videoKey, quality = 'medium') {
-  const qualitySuffix = CLOUD_CONFIG.quality[quality] || CLOUD_CONFIG.quality.medium;
-  const qualityKey = `${videoKey}_${qualitySuffix}`;
-  
-  return getVideoUrl(qualityKey);
-}
-
-/**
- * Generate range request URL for partial video loading
- * @param {string} videoKey - Video file key
- * @param {number} start - Start byte position
- * @param {number} end - End byte position
- * @returns {string} Range request URL
- */
-function getRangeUrl(videoKey, start = 0, end = null) {
-  const baseUrl = getVideoUrl(videoKey);
-  // For R2, we need to use the base URL and let the fetch function handle Range headers
-  return baseUrl;
-}
+export const cleanupChunkManager = (videoUrl) => {
+  console.log('🚀 Direct URL Play - No chunk system');
+};
 
 /**
  * Check if URL is valid R2 streaming URL
@@ -439,16 +320,30 @@ function getOptimizedUrl(videoKey, networkInfo = {}) {
   }
 }
 
+// Legacy quality function for compatibility
+function getQualityStreamUrl(videoKey, quality = 'medium') {
+  console.log('🚀 Direct URL Play - No quality system');
+  return getVideoUrl(videoKey);
+}
+
+// Network-based quality selection (simplified)
+function getAdaptiveStreamUrl(videoKey, networkType = 'wifi', speed = 'fast') {
+  // For Direct URL Play, return the same URL regardless of quality
+  return getVideoUrl(videoKey);
+}
+
 // Export configuration and functions
 module.exports = {
   CLOUD_CONFIG,
   getReelUrl,
   getVideoUrl,
-  getRangeUrl,
   getVideoChunk,
   getStreamingProgress,
   prefetchNextChunks,
   cleanupChunkManager,
+  getQualityStreamUrl,
+  getAdaptiveStreamUrl,
+  getOptimizedUrl,
   r2Config: CLOUD_CONFIG.r2Config,
   r2PublicUrl: CLOUD_CONFIG.publicR2Url,
   r2Bucket: BUCKET_REELS,

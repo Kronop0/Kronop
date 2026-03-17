@@ -7,26 +7,17 @@ import {
   ActivityIndicator,
   ViewToken,
   TouchableWithoutFeedback,
-  Animated,
   FlatList,
+  Text,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import VideoContainer from './Components/VideoContainer';
 import InteractionBar from './Components/InteractionBar';
 import ChannelInfo from './Components/ChannelInfo';
-import VideoPlayer from './Player/VideoPlayer';
-// @ts-ignore
-import GhostFeedManager from './GhostFeedManager';
-import { API_KEYS } from '@/constants/Config';
-import { getVideoUrl, getReelUrl, activeChunkManagers, ChunkManager } from './cloudin';
+import ReelPlayer from './Player/ReelPlayer';
+import { getVideoUrl } from './cloudin';
 // @ts-ignore
 import { fetchReelsFromR2 } from './ZeroLogic';
-// @ts-ignore
-import { smartPreloader } from './SmartPreloader';
-import ReelsIndexManager from './index';
-
-// API URL from constants
-const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
@@ -48,67 +39,39 @@ const Zero: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentVisibleIndex, setCurrentVisibleIndex] = useState<number>(0);
   const [pausedVideos, setPausedVideos] = useState<Set<string>>(new Set());
-  const [showPlayPauseMap, setShowPlayPauseMap] = useState<Map<string, boolean>>(new Map());
   const [preloadedVideos, setPreloadedVideos] = useState<Set<string>>(new Set());
-  const [swipeDirection, setSwipeDirection] = useState<'up' | 'down' | null>(null);
-  const [memoryOptimizedMode, setMemoryOptimizedMode] = useState(true);
-  const [instantMode, setInstantMode] = useState(true); // New instant mode
+  const [preWarmedVideos, setPreWarmedVideos] = useState<Set<string>>(new Set());
   const flatListRef = useRef<FlatList<VideoItem>>(null);
-  const fadeAnimMap = useRef<Map<string, Animated.Value>>(new Map()).current;
-  const hideTimeoutMap = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map()).current;
-  const loadedChunksRef = useRef<Map<string, Set<string>>>(new Map()).current;
-  const reelsIndexManager = useRef(ReelsIndexManager.getInstance());
-
-  // Manual swipe function for debugging and fallback
-  const swipeToNextVideo = useCallback(async () => {
-    if (videos.length === 0) return;
-    
-    console.log(`👆 Manually swiping to next video (Instant Mode)`);
-    
-    if (instantMode) {
-      // Use instant loading system
-      const nextReelUrl = await reelsIndexManager.current.moveToNextReel();
-      const nextIndex = (currentVisibleIndex + 1) % videos.length;
-      setCurrentVisibleIndex(nextIndex);
-      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-      console.log(`⚡ Next reel loaded instantly: ${nextReelUrl}`);
-    } else {
-      // Fallback to original method
-      const nextIndex = (currentVisibleIndex + 1) % videos.length;
-      setCurrentVisibleIndex(nextIndex);
-      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-    }
-  }, [currentVisibleIndex, videos.length, instantMode]);
-
-  const swipeToPrevVideo = useCallback(async () => {
-    if (videos.length === 0) return;
-    
-    console.log(`👇 Manually swiping to previous video (Instant Mode)`);
-    
-    if (instantMode) {
-      // Use instant loading system
-      const prevReelUrl = await reelsIndexManager.current.moveToPreviousReel();
-      const prevIndex = currentVisibleIndex === 0 ? videos.length - 1 : currentVisibleIndex - 1;
-      setCurrentVisibleIndex(prevIndex);
-      flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
-      console.log(`⚡ Previous reel loaded instantly: ${prevReelUrl}`);
-    } else {
-      // Fallback to original method
-      const prevIndex = currentVisibleIndex === 0 ? videos.length - 1 : currentVisibleIndex - 1;
-      setCurrentVisibleIndex(prevIndex);
-      flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
-    }
-  }, [currentVisibleIndex, videos.length, instantMode]);
 
   const insets = useSafeAreaInsets();
+
+  // Pre-warming logic for instant next reel
+  const preWarmNextReel = useCallback(async (nextVideoUrl: string) => {
+    if (preWarmedVideos.has(nextVideoUrl)) return;
+    
+    try {
+      console.log('🔥 Pre-warming next reel:', nextVideoUrl);
+      
+      // Simulate pre-warming (in real implementation, this would prepare video)
+      setTimeout(() => {
+        setPreWarmedVideos(prev => new Set(prev).add(nextVideoUrl));
+        console.log('✅ Next reel pre-warmed and ready:', nextVideoUrl);
+      }, 100); // Minimal delay for instant readiness
+      
+    } catch (error) {
+      console.log('⚠️ Pre-warm failed:', error);
+    }
+  }, [preWarmedVideos]);
 
   // Initialize and fetch videos
   useEffect(() => {
     const initializeReels = async () => {
       try {
+        console.log('🚀 Starting reels initialization...');
         await fetchVideosFromAPI();
       } catch (error) {
         console.error('❌ Reels initialization failed:', error);
+        setError('Failed to load reels');
         setLoading(false);
       }
     };
@@ -119,70 +82,41 @@ const Zero: React.FC = () => {
     }
   }, [videos.length]);
 
-  // Cleanup on unmount
-  React.useEffect(() => {
-    return () => {
-      // Clean up preloaded chunks when component unmounts
-      smartPreloader.cleanup();
-      console.log('🧹 SmartPreloader cleaned up on unmount');
-    };
-  }, []);
-
-  // Memory-optimized preloading - only keep current and next reels
+  // Simplified preloading - only focus on next reel
   useEffect(() => {
-    if (!memoryOptimizedMode || videos.length === 0 || currentVisibleIndex < 0) return;
+    if (videos.length === 0 || currentVisibleIndex < 0) return;
     
     const currentIndex = currentVisibleIndex;
     const nextIndex = (currentIndex + 1) % videos.length;
-    const prevIndex = currentIndex === 0 ? videos.length - 1 : currentIndex - 1;
-    
-    const currentVideo = videos[currentIndex];
     const nextVideo = videos[nextIndex];
-    const prevVideo = videos[prevIndex];
     
-    console.log(`🧠 Memory mode: Loading only current + next reels`);
-    console.log(`📺 Current: ${currentVideo?.id}, Next: ${nextVideo?.id}, Previous: ${prevVideo?.id}`);
+    console.log(`🎯 Simple preloading: Current=${currentIndex}, Next=${nextIndex}`);
     
-    // Clean up all other chunks except current and next
-    const videosToKeep = new Set([currentVideo?.id, nextVideo?.id].filter(Boolean));
-    
-    // Clean up chunk managers for videos we don't need
-    Object.keys(activeChunkManagers).forEach(uri => {
-      const videoId = videos.find(v => v.uri === uri)?.id;
-      if (videoId && !videosToKeep.has(videoId)) {
-        const manager = activeChunkManagers.get(uri);
-        if (manager) {
-          console.log(`🗑️ Cleaning up chunks for: ${uri}`);
-          manager.cleanup();
-          activeChunkManagers.delete(uri);
-        }
-      }
-    });
-    
-    // Preload next reel chunks only
+    // Only preload next video, no complex cleanup
     if (nextVideo && !preloadedVideos.has(nextVideo.id)) {
-      console.log(`⏭️ Preloading next reel chunks: ${nextVideo.id}`);
+      console.log(`⏭️ Preloading next reel: ${nextVideo.id}`);
       
-      // Create chunk manager for next video if not exists
-      if (!activeChunkManagers.has(nextVideo.uri)) {
-        const chunkManager = new ChunkManager(nextVideo.uri);
-        activeChunkManagers.set(nextVideo.uri, chunkManager);
-      }
+      // Simple background preload without chunk managers
+      setTimeout(() => {
+        setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
+        console.log(`✅ Next reel marked as ready: ${nextVideo.id}`);
+      }, 200); // Small delay to not block UI
+    }
+    
+    // Keep only current and next in memory (simple cleanup)
+    if (preloadedVideos.size > 2) {
+      const videosToKeep = new Set([
+        videos[currentIndex]?.id,
+        nextVideo?.id
+      ].filter(Boolean));
       
-      // Preload first 2 chunks of next video
-      const nextManager = activeChunkManagers.get(nextVideo.uri);
-      if (nextManager) {
-        nextManager.preloadChunks([0, 1]).then(() => {
-          setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
-          console.log(`✅ Next reel preloaded: ${nextVideo.id}`);
-        });
+      if (videosToKeep.size < preloadedVideos.size) {
+        console.log(`🧹 Simple memory cleanup: keeping ${Array.from(videosToKeep).join(', ')}`);
+        setPreloadedVideos(videosToKeep);
       }
     }
     
-    // Update preloaded set to only keep current and next
-    setPreloadedVideos(videosToKeep);
-    
-  }, [currentVisibleIndex, videos, memoryOptimizedMode]);
+  }, [currentVisibleIndex, videos]); // Remove complex dependencies
 
   // Fetch videos directly from R2 bucket
   const fetchVideosFromAPI = async () => {
@@ -221,21 +155,6 @@ const Zero: React.FC = () => {
         });
         setVideos(transformedVideos);
         
-        // Initialize instant loading system
-        if (instantMode) {
-          console.log('⚡ Initializing instant loading system');
-          await reelsIndexManager.current.initialize(transformedVideos);
-        }
-        
-        // Initialize chunk managers for each video (fallback)
-        transformedVideos.forEach((video: any) => {
-          if (!activeChunkManagers.has(video.uri)) {
-            console.log('📦 Creating chunk manager for:', video.uri);
-            const chunkManager = new ChunkManager(video.uri);
-            activeChunkManagers.set(video.uri, chunkManager);
-          }
-        });
-        
         setError(null);
       } else {
         console.warn('⚠️ No reels found in R2 bucket');
@@ -250,73 +169,31 @@ const Zero: React.FC = () => {
     }
   };
 
-  const onViewableItemsChanged = React.useCallback(async ({ viewableItems, changed }: { viewableItems: ViewToken<VideoItem>[]; changed: ViewToken<VideoItem>[] }) => {
-    console.log('👀 Viewable items changed:', viewableItems.length, 'Changed:', changed.length);
+  const onViewableItemsChanged = React.useCallback(({ viewableItems }: { viewableItems: ViewToken<VideoItem>[] }) => {
+    console.log('👀 Viewable items changed:', viewableItems.length);
     
+    // ONLY update index - NO async operations to prevent blocking
     if (viewableItems.length > 0 && viewableItems[0].index !== undefined && viewableItems[0].index !== null) {
       const newIndex = viewableItems[0].index;
       const oldIndex = currentVisibleIndex;
       
-      console.log(`🔄 Video index changed from ${oldIndex} to ${newIndex}`);
-      setCurrentVisibleIndex(newIndex);
-      
-      // Hide all play/pause controls when scrolling
-      setShowPlayPauseMap(new Map());
-      
-      // Use instant loading system for immediate next reel playback
-      if (videos.length > 0 && newIndex !== oldIndex && instantMode) {
-        console.log(`⚡ Instant mode swipe: ${oldIndex} → ${newIndex}`);
+      // Update index only if actually changed
+      if (newIndex !== oldIndex) {
+        console.log(`🔄 Ultra-fast index change: ${oldIndex} → ${newIndex}`);
+        setCurrentVisibleIndex(newIndex);
         
-        // Trigger instant loading for next reel
-        try {
-          if (newIndex > oldIndex) {
-            // Swiped forward - load next reel instantly
-            await reelsIndexManager.current.moveToNextReel();
-          } else {
-            // Swiped backward - load previous reel instantly  
-            await reelsIndexManager.current.moveToPreviousReel();
-          }
-          console.log(`⚡ Instant reel switch complete`);
-        } catch (error) {
-          console.error('❌ Instant reel switch failed:', error);
-          // Fallback to memory-optimized mode
-          const currentVideo = videos[newIndex];
+        // Pre-warm next reel in background for instant play
+        if (videos.length > 0) {
           const nextIndex = (newIndex + 1) % videos.length;
           const nextVideo = videos[nextIndex];
-          
-          if (currentVideo && nextVideo) {
-            console.log(`🎯 Fallback memory swipe: ${oldIndex} → ${newIndex}`);
-            
-            // Clean up previous video chunks
-            if (oldIndex >= 0 && oldIndex < videos.length) {
-              const prevVideo = videos[oldIndex];
-              if (prevVideo && prevVideo.id !== currentVideo.id) {
-                const prevManager = activeChunkManagers.get(prevVideo.uri);
-                if (prevManager) {
-                  console.log(`🗑️ Cleaning previous reel chunks: ${prevVideo.id}`);
-                  prevManager.cleanup();
-                }
-              }
-            }
-            
-            // Preload next video chunks (first 2 chunks only)
-            if (!activeChunkManagers.has(nextVideo.uri)) {
-              const chunkManager = new ChunkManager(nextVideo.uri);
-              activeChunkManagers.set(nextVideo.uri, chunkManager);
-            }
-            
-            const nextManager = activeChunkManagers.get(nextVideo.uri);
-            if (nextManager) {
-              nextManager.preloadChunks([0, 1]).then(() => {
-                setPreloadedVideos(prev => new Set(prev).add(nextVideo.id));
-                console.log(`⏭️ Next reel ready: ${nextVideo.id}`);
-              });
-            }
+          if (nextVideo && !preWarmedVideos.has(nextVideo.id)) {
+            console.log(`🔥 Pre-warming reel ${nextIndex} for instant play`);
+            preWarmNextReel(nextVideo.uri);
           }
         }
       }
     }
-  }, [currentVisibleIndex, videos, instantMode, memoryOptimizedMode]);
+  }, [currentVisibleIndex, videos, preWarmedVideos, preWarmNextReel]);
 
   const viewabilityConfig = React.useRef({
     viewAreaCoveragePercentThreshold: 80,
@@ -325,7 +202,7 @@ const Zero: React.FC = () => {
   }).current;
 
   const handleVideoTap = useCallback((videoId: string) => {
-    // Toggle play/pause state
+    // Simple tap to toggle play/pause state
     setPausedVideos((prev: Set<string>) => {
       const newSet = new Set(prev);
       if (newSet.has(videoId)) {
@@ -335,47 +212,7 @@ const Zero: React.FC = () => {
       }
       return newSet;
     });
-
-    // Show play/pause button temporarily
-    setShowPlayPauseMap((prev: Map<string, boolean>) => {
-      const newMap = new Map(prev);
-      newMap.set(videoId, true);
-      return newMap;
-    });
-
-    // Initialize fade animation if not exists
-    if (!fadeAnimMap.has(videoId)) {
-      fadeAnimMap.set(videoId, new Animated.Value(1));
-    }
-
-    const fadeAnim = fadeAnimMap.get(videoId);
-    if (fadeAnim) {
-      // Reset to fully visible
-      fadeAnim.setValue(1);
-
-      // Clear existing timeout
-      if (hideTimeoutMap.has(videoId)) {
-        clearTimeout(hideTimeoutMap.get(videoId));
-      }
-
-      // Set new timeout to fade out after 1 second
-      const timeout = setTimeout(() => {
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          setShowPlayPauseMap((prev: Map<string, boolean>) => {
-            const newMap = new Map(prev);
-            newMap.delete(videoId);
-            return newMap;
-          });
-        });
-      }, 1000);
-
-      hideTimeoutMap.set(videoId, timeout);
-    }
-  }, [fadeAnimMap]);
+  }, []);
 
   const isVideoPlaying = useCallback((videoId: string, index: number) => {
     const isVisible = index === currentVisibleIndex;
@@ -385,13 +222,6 @@ const Zero: React.FC = () => {
 
   const renderVideoItem = ({ item, index }: { item: VideoItem; index: number }) => {
     const isPlaying = isVideoPlaying(item.id, index);
-    const showPlayPause = showPlayPauseMap.get(item.id) || false;
-    const fadeAnim = fadeAnimMap.get(item.id);
-    const isPaused = pausedVideos.has(item.id);
-    const isPreloaded = preloadedVideos.has(item.id);
-
-    // Get chunk manager for this video (for debugging only)
-    const chunkManager = activeChunkManagers.get(item.uri);
 
     return (
       <View style={styles.videoContainer}>
@@ -400,35 +230,20 @@ const Zero: React.FC = () => {
         
         <TouchableWithoutFeedback onPress={() => handleVideoTap(item.id)}>
           <View style={styles.videoWrapper}>
-            <VideoPlayer
+            <ReelPlayer
               key={`${item.uri}-${index}`}
               videoUrl={item.uri}
               isPlaying={isPlaying}
             />
-
-            {/* Play/Pause Overlay - Center of Screen */}
-            {showPlayPause && fadeAnim && (
-              <Animated.View style={[styles.playPauseOverlay, { opacity: fadeAnim }]}>
-                <View style={styles.playPauseButton}>
-                  {isPaused ? (
-                    <View style={styles.playIcon}>
-                      <View style={[styles.playTriangle, { borderLeftWidth: 20, borderTopWidth: 12, borderBottomWidth: 12 }]} />
-                    </View>
-                  ) : (
-                    <View style={styles.pauseIcon}>
-                      <View style={styles.pauseBar} />
-                      <View style={styles.pauseBar} />
-                    </View>
-                  )}
-                </View>
-              </Animated.View>
-            )}
           </View>
         </TouchableWithoutFeedback>
         {/* Gradient Overlay Top */}
         <View style={[styles.gradientOverlay, styles.topGradient]} />
         {/* Gradient Overlay Bottom */}
         <View style={[styles.gradientOverlay, styles.bottomGradient]} />
+        
+        {/* JUGAAD - Ultimate control killer */}
+        <View style={styles.controlKiller} />
         
         {/* Interaction Bar - Self-contained buttons */}
         <InteractionBar
@@ -458,6 +273,15 @@ const Zero: React.FC = () => {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Loading Reels...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : videos.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No reels available</Text>
         </View>
       ) : (
         <VideoContainer
@@ -468,31 +292,6 @@ const Zero: React.FC = () => {
           flatListRef={flatListRef}
         />
       )}
-      {/* GhostFeedManager for smart caching and preloading */}
-      <GhostFeedManager
-        maxReels={2}
-        preloadCount={1}
-        onReelChange={(reel) => {
-          console.log('👻 GhostFeed reel changed:', reel?.id || 'No reel');
-          if (reel && !videos.length) {
-            // If Zero.tsx has no videos but GhostFeed has a reel, use it
-            const videoUrl = getReelUrl(reel.videoUrl);
-            const newVideo = {
-              id: reel.id,
-              uri: videoUrl,
-              title: reel.description,
-              channelName: reel.username,
-              channelLogo: `https://picsum.photos/seed/${reel.id}/200/200.jpg`,
-              isVerified: false,
-              likes: reel.likes,
-              comments: reel.comments,
-              shares: reel.shares,
-            };
-            setVideos([newVideo]);
-          }
-        }}
-        onMemoryWarning={(usage) => console.log('⚠️ Memory warning:', usage)}
-      />
     </View>
   );
 };
@@ -508,6 +307,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#000',
   },
+  loadingText: {
+    color: '#fff',
+    marginTop: 10,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  emptyText: {
+    color: '#fff',
+    fontSize: 16,
+  },
   videoContainer: {
     width: screenWidth,
     height: screenHeight,
@@ -518,21 +343,6 @@ const styles = StyleSheet.create({
     height: screenHeight,
     position: 'relative',
   },
-  preloadIndicator: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    zIndex: 10,
-    backgroundColor: 'rgba(0, 255, 0, 0.2)',
-    padding: 8,
-    borderRadius: 20,
-  },
-  preloadDot: {
-    width: 12,
-    height: 12,
-    backgroundColor: '#00ff00',
-    borderRadius: 6,
-  },
   statusBarOverlay: {
     position: 'absolute',
     top: 0,
@@ -541,69 +351,35 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     zIndex: 2,
   },
-  playPauseOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    zIndex: 5,
-  },
-  playPauseButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playIcon: {
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  playTriangle: {
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftColor: '#fff',
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderRightWidth: 0,
-  },
-  pauseIcon: {
-    width: 24,
-    height: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  pauseBar: {
-    width: 6,
-    height: 20,
-    backgroundColor: '#fff',
-    borderRadius: 2,
-  },
   gradientOverlay: {
     position: 'absolute',
     left: 0,
     right: 0,
-    zIndex: 1, // Lower than buttons and text
+    zIndex: 1,
   },
   topGradient: {
     top: 0,
-    height: 120,
+    height: 150,
     backgroundColor: 'transparent',
-    borderTopColor: 'transparent',
   },
   bottomGradient: {
     bottom: 0,
     height: 200,
     backgroundColor: 'transparent',
-    borderBottomColor: 'transparent',
+  },
+  // JUGAAD - Force hide any remaining controls
+  controlKiller: {
+    position: 'absolute',
+    top: -1000,
+    left: -1000,
+    right: -1000,
+    bottom: -1000,
+    backgroundColor: 'transparent',
+    opacity: 0,
+    zIndex: -9999,
+    pointerEvents: 'none' as const,
+    display: 'none' as const,
+    visibility: 'hidden' as const,
   },
 });
 

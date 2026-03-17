@@ -216,24 +216,6 @@ export const checkUserLiked = async (videoId: string): Promise<boolean> => {
   }
 };
 
-// Check if user supports channel
-export const checkUserSupports = async (channelName: string): Promise<boolean> => {
-  try {
-    const response = await fetch(`${KRONOP_API_URL}/api/channels/${channelName}/support/status`, {
-      headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
-      }
-    });
-    if (response.ok) {
-      const data = await response.json();
-      return data.supported || false;
-    }
-    return false;
-  } catch (error) {
-    return false;
-  }
-};
-
 // Get viewer count
 export const getViewerCount = async (videoId: string): Promise<number> => {
   try {
