@@ -28,6 +28,9 @@ interface Story {
   story_type: 'image' | 'video';
   type?: 'image' | 'video'; // Add type for compatibility
   useLocalAsset?: boolean; // Add this for local asset fallback
+  timestamp?: Date;
+  thumbnailUrl?: string;
+  duration?: number;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -37,6 +40,7 @@ interface StoryViewerProps {
   stories: Story[];
   initialIndex: number;
   onClose: () => void;
+  onProfilePress?: (story: Story) => void;
 }
 
 // Error Placeholder Component
@@ -93,10 +97,11 @@ function SimpleVideoStory({ videoUrl, style }: { videoUrl: string; style: any })
   );
 }
 
-export function StoryViewer({ visible, stories, initialIndex, onClose }: StoryViewerProps) {
+export function StoryViewer({ visible, stories, initialIndex, onClose, onProfilePress }: StoryViewerProps) {
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialIndex);
   const [mediaError, setMediaError] = React.useState(false);
   const [avatarError, setAvatarError] = React.useState(false);
+  const [isSupported, setIsSupported] = React.useState(false);
   const currentStory = stories[currentStoryIndex];
 
   // Reset error states when story changes
@@ -104,6 +109,20 @@ export function StoryViewer({ visible, stories, initialIndex, onClose }: StoryVi
     setMediaError(false);
     setAvatarError(false);
   }, [currentStoryIndex]);
+
+  // Toggle support
+  const handleSupportPress = () => {
+    setIsSupported(!isSupported);
+    console.log('[KRONOP-DEBUG] 💜 Support toggled:', !isSupported);
+  };
+
+  // Handle profile press in header
+  const handleProfilePress = () => {
+    console.log('[KRONOP-DEBUG] 👤 Profile pressed in StoryViewer for:', currentStory.userName);
+    if (onProfilePress) {
+      onProfilePress(currentStory);
+    }
+  };
 
   // [KRONOP-DEBUG] Add useEffect to monitor props and state changes
   useEffect(() => {
@@ -281,7 +300,11 @@ export function StoryViewer({ visible, stories, initialIndex, onClose }: StoryVi
 
         {/* Simple Header */}
         <View style={styles.header}>
-          <View style={styles.userInfo}>
+          <TouchableOpacity 
+            style={styles.userInfo} 
+            onPress={handleProfilePress}
+            activeOpacity={0.7}
+          >
             <Image
               source={getAvatarSource()}
               style={styles.userAvatar}
@@ -296,43 +319,22 @@ export function StoryViewer({ visible, stories, initialIndex, onClose }: StoryVi
               }}
             />
             <Text style={styles.userName}>{currentStory.userName}</Text>
-          </View>
+          </TouchableOpacity>
           
+          {/* Support/Unsupport Button */}
           <TouchableOpacity 
-            onPress={() => {
-              console.log('[KRONOP-DEBUG] ❌ Close button pressed');
-              onClose();
-            }} 
-            style={styles.closeButton}
-          >
-            <MaterialIcons name="close" size={28} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Simple Navigation */}
-        <View style={styles.navigationContainer}>
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={goToPrevious}
-            disabled={currentStoryIndex === 0}
+            style={[styles.supportButton, isSupported && styles.supportedButton]}
+            onPress={handleSupportPress}
+            activeOpacity={0.7}
           >
             <MaterialIcons 
-              name="chevron-left" 
-              size={32} 
-              color={currentStoryIndex === 0 ? "rgba(255,255,255,0.3)" : "#fff"} 
+              name={isSupported ? 'check' : 'add'} 
+              size={14} 
+              color={isSupported ? '#8B00FF' : '#FFFFFF'} 
             />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={goToNext}
-            disabled={currentStoryIndex === stories.length - 1}
-          >
-            <MaterialIcons 
-              name="chevron-right" 
-              size={32} 
-              color={currentStoryIndex === stories.length - 1 ? "rgba(255,255,255,0.3)" : "#fff"} 
-            />
+            <Text style={[styles.supportButtonText, isSupported && styles.supportedButtonText]}>
+              {isSupported ? 'Supported' : 'Support'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -344,19 +346,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+    justifyContent: 'center', // Center content vertically
+    alignItems: 'center', // Center content horizontally
   },
   storyMedia: {
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+    height: SCREEN_HEIGHT - 120, // Reduced height for header and navigation space
     position: 'absolute',
+    top: 55, // Even closer to header (overlap slightly)
+    alignSelf: 'center', // Center horizontally
   },
   errorPlaceholder: {
     flex: 1,
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+    height: SCREEN_HEIGHT - 120,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1a1a1a',
+    position: 'absolute',
+    top: 5, // Even closer
+    alignSelf: 'center',
   },
   errorText: {
     color: '#fff',
@@ -387,7 +396,7 @@ const styles = StyleSheet.create({
   },
   header: {
     position: 'absolute',
-    top: 50,
+    top: 10,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -395,6 +404,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
     zIndex: 10,
+    height: 50,
   },
   userInfo: {
     flexDirection: 'row',
@@ -414,30 +424,27 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.bold,
   },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navigationContainer: {
-    position: 'absolute',
-    bottom: 50,
-    left: 0,
-    right: 0,
+  supportButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.lg,
-    zIndex: 10,
-  },
-  navButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#8B00FF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+    gap: 4,
+    marginLeft: 8,
+  },
+  supportedButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: '#8B00FF',
+  },
+  supportButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  supportedButtonText: {
+    color: '#8B00FF',
   },
 });

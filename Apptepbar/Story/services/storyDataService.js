@@ -2,6 +2,7 @@
 // This file shows how to use R2 service to fetch and format stories for StorySection
 
 const r2StoryService = require('./R2 service.js');
+const indexService = require('./IndexService.js');
 
 // [KRONOP-DEBUG] Story Data Service initialized
 console.log('[KRONOP-DEBUG] 📦 Story Data Service initializing...');
@@ -13,6 +14,7 @@ class StoryDataService {
 
   /**
    * Fetch stories from R2 and format for StorySection
+   * Returns individual stories - each story gets its own box
    */
   async fetchStoriesForSection() {
     console.log('[KRONOP-DEBUG] 🔄 fetchStoriesForSection called');
@@ -22,12 +24,11 @@ class StoryDataService {
       const rawStories = await r2StoryService.fetchStories();
       console.log(`[KRONOP-DEBUG] 📥 Received ${rawStories.length} raw stories from R2`);
 
-      // Group stories by user (for now, group all under a demo user)
-      // In real app, you would group by actual user IDs from your auth system
-      const groupedStories = this.groupStoriesByUser(rawStories);
+      // Return individual stories - NO grouping
+      const formattedStories = this.formatIndividualStories(rawStories);
       
-      console.log(`[KRONOP-DEBUG] 📊 Created ${groupedStories.length} story groups`);
-      return groupedStories;
+      console.log(`[KRONOP-DEBUG] 📊 Returning ${formattedStories.length} individual stories`);
+      return formattedStories;
 
     } catch (error) {
       console.error('[KRONOP-DEBUG] ❌ Error in fetchStoriesForSection:', error);
@@ -39,9 +40,62 @@ class StoryDataService {
   }
 
   /**
-   * Get fallback demo stories when R2 service is unavailable
+   * Format individual stories without grouping
+   * Includes user profile information from IndexService
    */
-  getFallbackDemoStories() {
+  async formatIndividualStories(stories) {
+    console.log('[KRONOP-DEBUG] 📝 Formatting individual stories with user profiles...');
+    
+    const formattedStories = await Promise.all(
+      stories.map(async (story) => {
+        // Get user profile from IndexService
+        const userId = story.userId || this.extractUserIdFromPath(story.bucketPath);
+        const userProfile = await indexService.fetchUserProfile(userId);
+        
+        return {
+          id: story.id,
+          imageUrl: story.imageUrl,
+          videoUrl: story.videoUrl,
+          thumbnailUrl: story.thumbnailUrl,
+          fallbackUrl: story.fallbackUrl,
+          duration: story.duration,
+          type: story.type || story.story_type,
+          story_type: story.story_type || story.type,
+          timestamp: new Date(story.created_at || Date.now()),
+          url: story.url,
+          useLocalAsset: story.useLocalAsset,
+          // User profile info from IndexService
+          userId: userId,
+          userName: userProfile?.userName || 'User',
+          userAvatar: userProfile?.avatar,
+          channelName: userProfile?.channelName,
+          supporters: userProfile?.supporters,
+          isVerified: userProfile?.isVerified
+        };
+      })
+    );
+    
+    console.log(`[KRONOP-DEBUG] ✅ Formatted ${formattedStories.length} stories with profiles`);
+    return formattedStories;
+  }
+
+  /**
+   * Extract user ID from bucket path
+   */
+  extractUserIdFromPath(bucketPath) {
+    if (!bucketPath) return 'default-user';
+    const parts = bucketPath.split('/');
+    if (parts.length >= 2) {
+      return parts[1] || 'default-user';
+    }
+    return 'default-user';
+  }
+
+  /**
+   * Get fallback demo stories when R2 service is unavailable
+   * Returns individual stories - each story gets its own box
+   */
+  async getFallbackDemoStories() {
     console.log('[KRONOP-DEBUG] 🎭 Creating fallback demo stories with local assets...');
     
     // Demo stories with local assets instead of non-existent R2 URLs
@@ -59,8 +113,9 @@ class StoryDataService {
         created_at: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
         size: 50000,
         fileName: 'demo-story-1.jpg',
-        bucketPath: 'stories/demo-story-1.jpg',
-        useLocalAsset: true
+        bucketPath: 'stories/user-1/demo-story-1.jpg',
+        useLocalAsset: true,
+        userName: 'User Alpha'
       },
       {
         id: 'demo-story-2',
@@ -75,8 +130,9 @@ class StoryDataService {
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
         size: 45000,
         fileName: 'demo-story-2.jpg',
-        bucketPath: 'stories/demo-story-2.jpg',
-        useLocalAsset: true
+        bucketPath: 'stories/user-2/demo-story-2.jpg',
+        useLocalAsset: true,
+        userName: 'User Beta'
       },
       {
         id: 'demo-story-3',
@@ -91,15 +147,16 @@ class StoryDataService {
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3 hours ago
         size: 1000000,
         fileName: 'demo-story-3.mp4',
-        bucketPath: 'stories/demo-story-3.mp4',
-        useLocalAsset: true
+        bucketPath: 'stories/user-3/demo-story-3.mp4',
+        useLocalAsset: true,
+        userName: 'User Gamma'
       }
     ];
 
     console.log(`[KRONOP-DEBUG] 📦 Created ${demoStories.length} demo stories`);
     
-    // Group demo stories by users
-    return this.groupStoriesByUser(demoStories);
+    // Return individual stories with user profiles - NO grouping
+    return this.formatIndividualStories(demoStories);
   }
 
   /**

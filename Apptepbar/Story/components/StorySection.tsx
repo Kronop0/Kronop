@@ -34,24 +34,37 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const STORY_BOX_WIDTH = 78;
 const STORY_BOX_HEIGHT = 110;
 
-interface GroupedStory {
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  stories: Story[];
-  latestTimestamp: string;
+interface StoryItem {
+  id: string;
+  userId?: string;
+  userName?: string;
+  userAvatar?: string;
+  channelName?: string;
+  supporters?: number;
+  isVerified?: boolean;
+  imageUrl?: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  duration?: number;
+  type: 'image' | 'video';
+  story_type: 'image' | 'video';
+  timestamp: Date;
+  url?: string;
+  useLocalAsset?: boolean;
 }
 
 interface StorySectionProps {
-  stories: GroupedStory[];
+  stories: StoryItem[];
   loading?: boolean;
-  onStoryPress: (storyGroup: GroupedStory, storyIndex?: number) => void;
+  onStoryPress: (story: StoryItem) => void;
+  onProfilePress?: (story: StoryItem) => void;
 }
 
 export function StorySection({ 
   stories, 
   loading = false, 
-  onStoryPress
+  onStoryPress,
+  onProfilePress
 }: StorySectionProps) {
   
   // [KRONOP-DEBUG] Log received props
@@ -60,40 +73,36 @@ export function StorySection({
   console.log('[KRONOP-DEBUG]   - Loading state:', loading);
   console.log('[KRONOP-DEBUG]   - onStoryPress function:', typeof onStoryPress);
 
-  // Simple sorting by latest timestamp
+  // Simple sorting by timestamp (newest first)
   const sortedStories = [...stories].sort((a, b) => {
-    return new Date(b.latestTimestamp).getTime() - new Date(a.latestTimestamp).getTime();
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
 
   // [KRONOP-DEBUG] Log sorting result
   console.log('[KRONOP-DEBUG] 🔄 Stories sorted by timestamp:');
   sortedStories.forEach((story, index) => {
-    console.log(`[KRONOP-DEBUG]   ${index + 1}. ${story.userName} - ${story.stories.length} stories`);
+    console.log(`[KRONOP-DEBUG]   ${index + 1}. ${story.id} - ${story.type}`);
   });
 
-  const renderStoryItem = ({ item, index }: { item: GroupedStory; index: number }) => {
-    const latestStory = item.stories[item.stories.length - 1];
-
+  const renderStoryItem = (item: StoryItem, index: number) => {
     // [KRONOP-DEBUG] Log individual story item rendering
-    console.log(`[KRONOP-DEBUG] 🎨 Rendering story item ${index + 1}: ${item.userName}`);
-    console.log(`[KRONOP-DEBUG]   - User ID: ${item.userId}`);
-    console.log(`[KRONOP-DEBUG]   - Stories in group: ${item.stories.length}`);
-    console.log(`[KRONOP-DEBUG]   - Latest story type: ${latestStory?.type || latestStory?.story_type}`);
-    console.log(`[KRONOP-DEBUG]   - Latest story imageUrl: ${latestStory?.imageUrl}`);
-    console.log(`[KRONOP-DEBUG]   - Latest story videoUrl: ${latestStory?.videoUrl}`);
-    console.log(`[KRONOP-DEBUG]   - Latest story thumbnailUrl: ${latestStory?.thumbnailUrl}`);
-    console.log(`[KRONOP-DEBUG]   - Latest story url: ${latestStory?.url}`);
+    console.log(`[KRONOP-DEBUG] 🎨 Rendering story item ${index + 1}: ${item.id}`);
+    console.log(`[KRONOP-DEBUG]   - Story type: ${item.type || item.story_type}`);
+    console.log(`[KRONOP-DEBUG]   - Story imageUrl: ${item.imageUrl}`);
+    console.log(`[KRONOP-DEBUG]   - Story videoUrl: ${item.videoUrl}`);
+    console.log(`[KRONOP-DEBUG]   - Story thumbnailUrl: ${item.thumbnailUrl}`);
+    console.log(`[KRONOP-DEBUG]   - Story url: ${item.url}`);
 
     // Determine the correct URL to display for thumbnail
     const getDisplayUrl = () => {
       // Check if story uses local asset
-      if (latestStory?.useLocalAsset) {
+      if (item?.useLocalAsset) {
         return require('../../../assets/images/logo.png');
       }
-      if (latestStory?.thumbnailUrl) return latestStory.thumbnailUrl;
-      if (latestStory?.imageUrl) return latestStory.imageUrl;
-      if (latestStory?.videoUrl) return latestStory.videoUrl;
-      if (latestStory?.url) return latestStory.url;
+      if (item?.thumbnailUrl) return item.thumbnailUrl;
+      if (item?.imageUrl) return item.imageUrl;
+      if (item?.videoUrl) return item.videoUrl;
+      if (item?.url) return item.url;
       return item.userAvatar; // Fallback to user avatar
     };
 
@@ -101,28 +110,50 @@ export function StorySection({
     console.log(`[KRONOP-DEBUG]   - Final display URL: ${displayUrl}`);
 
     const handleStoryPress = () => {
-      console.log(`[KRONOP-DEBUG] 👆 Story pressed: ${item.userName}`);
-      console.log(`[KRONOP-DEBUG]   - Story group ID: ${item.userId}`);
-      console.log(`[KRONOP-DEBUG]   - Total stories in group: ${item.stories.length}`);
+      console.log(`[KRONOP-DEBUG] 👆 Story pressed: ${item.id}`);
       onStoryPress(item);
+    };
+
+    const handleProfilePress = () => {
+      console.log(`[KRONOP-DEBUG] 👤 Profile pressed for: ${item.userName}`);
+      if (onProfilePress) {
+        onProfilePress(item);
+      }
     };
 
     return (
       <TouchableOpacity
+        key={item.id}
         style={styles.storyBox}
         onPress={handleStoryPress}
         activeOpacity={0.8}
       >
+        {/* Story Thumbnail Image */}
         <Image
           source={{ uri: displayUrl }}
           style={styles.storyImage}
           contentFit="cover"
-          onLoad={() => console.log(`[KRONOP-DEBUG] 🖼️ Story image loaded successfully for ${item.userName}`)}
+          onLoad={() => console.log(`[KRONOP-DEBUG] 🖼️ Story image loaded successfully for ${item.id}`)}
           onError={(error) => {
-            console.log(`[KRONOP-DEBUG] ❌ Story image failed to load for ${item.userName}:`, error);
+            console.log(`[KRONOP-DEBUG] ❌ Story image failed to load for ${item.id}:`, error);
             console.log(`[KRONOP-DEBUG]   - Attempted URL: ${displayUrl}`);
           }}
         />
+        
+        {/* User Avatar Overlay - Top Left (Profile pe click) */}
+        <TouchableOpacity 
+          style={styles.userAvatarContainer}
+          onPress={handleProfilePress}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={{ 
+              uri: item.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.userName || 'User')}&background=8B00FF&color=fff&size=32`
+            }}
+            style={styles.userAvatar}
+            contentFit="cover"
+          />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -173,8 +204,8 @@ export function StorySection({
         contentContainerStyle={styles.storiesContainer}
       >
         {sortedStories.map((item, index) => (
-          <View key={item.userId} style={styles.storyWrapper}>
-            {renderStoryItem({ item, index })}
+          <View key={item.id} style={styles.storyWrapper}>
+            {renderStoryItem(item, index)}
           </View>
         ))}
       </ScrollView>
@@ -210,8 +241,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#e9ecef',
-    borderWidth: 1,
-    borderColor: '#8B00FF',
     position: 'relative',
     padding: 1,
   },
@@ -219,6 +248,26 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 10,
+  },
+  // User Avatar Overlay Styles
+  userAvatarContainer: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#000',
+    borderWidth: 1.5,
+    borderColor: '#8B00FF',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
   },
   loadingContainer: {
     paddingVertical: theme.spacing.xl,

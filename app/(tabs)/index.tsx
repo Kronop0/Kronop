@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { StoryViewer, StorySection } from '../../Apptepbar/Story';
+import ProfileScreen from '../../Apptepbar/Story/components/profile';
 import storyDataService from '../../Apptepbar/Story/services/storyDataService';
 import { theme } from '../../constants/theme';
 import { useAlert } from '../../template';
@@ -42,13 +43,22 @@ const PHOTO_CATEGORIES = [
   { id: 'technology', name: 'Technology', keywords: ['tech', 'technology', 'computer', 'phone', 'gadget', 'device'] },
 ];
 
-// Grouped stories by user
-interface GroupedStory {
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  stories: any[];
-  latestTimestamp: string;
+// Individual story item
+interface StoryItem {
+  id: string;
+  userId?: string;
+  userName?: string;
+  userAvatar?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  fallbackUrl?: string;
+  duration?: number;
+  type: 'image' | 'video';
+  story_type: 'image' | 'video';
+  timestamp: Date;
+  url?: string;
+  useLocalAsset?: boolean;
 }
 
 export default function HomeScreen() {
@@ -61,12 +71,16 @@ export default function HomeScreen() {
   const [selectedUploadScreen, setSelectedUploadScreen] = useState<string | null>(null);
   
 
-  // Stories state - Grouped by user
-  const [groupedStories, setGroupedStories] = useState<GroupedStory[]>([]);
+  // Stories state - Individual stories (each story = one box)
+  const [stories, setStories] = useState<StoryItem[]>([]);
   const [storiesLoading, setStoriesLoading] = useState(true);
   const [storyViewerVisible, setStoryViewerVisible] = useState(false);
   const [selectedStoryGroup, setSelectedStoryGroup] = useState<any[]>([]);
   const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
+  
+  // Profile Modal State
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [selectedProfileUser, setSelectedProfileUser] = useState<StoryItem | null>(null);
 
   // [KRONOP-DEBUG] Add useEffect to track selectedStoryGroup changes
   useEffect(() => {
@@ -88,19 +102,19 @@ export default function HomeScreen() {
   // Story upload loading state
   const [uploadingStory, setUploadingStory] = useState(false);
 
-  // Load and group stories by user
+  // Load individual stories
   const loadStories = async () => {
     setStoriesLoading(true);
     try {
       // Use the story data service for proper R2 integration
       console.log('[KRONOP-DEBUG] 🚀 HomeScreen: Loading stories with storyDataService...');
       const fetchedStories = await storyDataService.fetchStoriesForSection();
-      console.log(`[KRONOP-DEBUG] 📊 HomeScreen: Received ${fetchedStories.length} story groups`);
-      setGroupedStories(fetchedStories);
+      console.log(`[KRONOP-DEBUG] 📊 HomeScreen: Received ${fetchedStories.length} individual stories`);
+      setStories(fetchedStories);
     } catch (error) {
       console.error('[KRONOP-DEBUG] ❌ HomeScreen: Failed to load stories:', error);
       // Set empty array instead of mock data to avoid 404 errors
-      setGroupedStories([]);
+      setStories([]);
     } finally {
       setStoriesLoading(false);
     }
@@ -132,34 +146,36 @@ export default function HomeScreen() {
     }
   };
 
-  const handleStoryPress = async (storyGroup: GroupedStory, storyIndex: number = 0) => {
-    if (storyGroup.stories[0]?.id === 'add-story') {
-      // Add new story
-      await handleAddStory();
-    } else {
-      // View user's stories - map stories with user information for StoryViewer
-      const storiesForViewer = storyGroup.stories.map(story => ({
-        id: story.id,
-        userId: storyGroup.userId,
-        userName: storyGroup.userName,
-        userAvatar: storyGroup.userAvatar,
-        imageUrl: story.imageUrl,
-        videoUrl: story.videoUrl,
-        fallbackUrl: story.fallbackUrl, // Add fallback URL
-        story_type: story.story_type || story.type
-      }));
-      
-      console.log('[KRONOP-DEBUG] 📱 Stories prepared for StoryViewer:', {
-        count: storiesForViewer.length,
-        userName: storyGroup.userName,
-        firstStoryType: storiesForViewer[0]?.story_type,
-        firstFallbackUrl: storiesForViewer[0]?.fallbackUrl
-      });
-      
-      setSelectedStoryGroup(storiesForViewer);
-      setSelectedStoryIndex(storyIndex);
-      setStoryViewerVisible(true);
-    }
+  const handleStoryPress = async (story: StoryItem) => {
+    // View single story
+    const storyForViewer = [{
+      id: story.id,
+      userId: story.userId,
+      userName: story.userName || 'User',
+      userAvatar: story.userAvatar,
+      imageUrl: story.imageUrl,
+      videoUrl: story.videoUrl,
+      fallbackUrl: story.fallbackUrl,
+      story_type: story.story_type || story.type
+    }];
+    
+    console.log('[KRONOP-DEBUG] 📱 Story prepared for StoryViewer:', {
+      id: story.id,
+      userName: story.userName,
+      storyType: story.story_type,
+      fallbackUrl: story.fallbackUrl
+    });
+    
+    setSelectedStoryGroup(storyForViewer);
+    setSelectedStoryIndex(0);
+    setStoryViewerVisible(true);
+  };
+
+  // Handle Profile Press - Open Profile Modal
+  const handleProfilePress = (story: StoryItem) => {
+    console.log('[KRONOP-DEBUG] 👤 Opening profile for:', story.userName);
+    setSelectedProfileUser(story);
+    setProfileModalVisible(true);
   };
 
   // Compressed header button handlers
@@ -306,9 +322,10 @@ export default function HomeScreen() {
           <>
             {/* Stories Section - Simple Horizontal Boxes */}
             <StorySection
-              stories={groupedStories}
+              stories={stories}
               loading={storiesLoading}
               onStoryPress={handleStoryPress}
+              onProfilePress={handleProfilePress}
             />
 
             {/* Photo Categories Section - HORIZONTAL SCROLL, TEXT ONLY */}
@@ -373,6 +390,31 @@ export default function HomeScreen() {
         stories={selectedStoryGroup}
         initialIndex={selectedStoryIndex}
         onClose={() => setStoryViewerVisible(false)}
+        onProfilePress={(story) => {
+          console.log('[KRONOP-DEBUG] 👤 Profile pressed from StoryViewer for:', story.userName);
+          setSelectedProfileUser({
+            id: story.id,
+            userId: story.userId,
+            userName: story.userName,
+            userAvatar: story.userAvatar,
+            type: story.type,
+            story_type: story.story_type,
+            timestamp: story.timestamp,
+            imageUrl: story.imageUrl,
+            videoUrl: story.videoUrl,
+            thumbnailUrl: story.thumbnailUrl,
+            fallbackUrl: story.fallbackUrl,
+            duration: story.duration,
+          });
+          setProfileModalVisible(true);
+        }}
+      />
+
+      {/* Profile Modal */}
+      <ProfileScreen
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        userData={selectedProfileUser}
       />
 
       {/* Upload Bottom Sheet Modal */}
