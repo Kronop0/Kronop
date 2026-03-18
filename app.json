@@ -1,116 +1,43 @@
 {
   "expo": {
-    "main": "expo-router/entry",
     "name": "Kronop",
     "slug": "kronop",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
-    "scheme": "com.kronop.app",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "*/"
+    ],
     "ios": {
       "supportsTablet": true,
-      "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "This app uses your location to personalize content and services.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location to personalize content and services."
-      }
+      "bundleIdentifier": "com.kronop.app"
     },
     "android": {
-      "package": "com.anonymous.kronop",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true,
-      "permissions": [
-        "INTERNET",
-        "ACCESS_NETWORK_STATE",
-        "RECORD_AUDIO",
-        "MODIFY_AUDIO_SETTINGS",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ]
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/logo.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "splash": {
-            "image": "./assets/images/logo.png",
-            "imageWidth": 200,
-            "resizeMode": "contain",
-            "backgroundColor": "#000000"
-          },
-          "backgroundColor": "#000000"
-        }
-      ],
-      "expo-web-browser",
-      "@react-native-community/datetimepicker",
-      "@react-native-google-signin/google-signin",
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": ""
-        }
-      ],
-      "expo-asset",
-      "expo-audio",
-      "expo-font",
-      "expo-localization",
-      "expo-mail-composer",
-      "expo-secure-store",
-      "expo-sqlite",
-      "expo-video",
-      [
-        "expo-build-properties",
-        {}
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true
+      "package": "com.kronop.app"
     },
     "extra": {
-      "router": {},
       "eas": {
-        "projectId": "b119a84a-5a57-4eb1-9a69-e50bb1cfd408"
+        "projectId": "61a99a9f-ea90-4fa5-aaec-132e2d8bb76c"
       },
-      "EXPO_PUBLIC_PORT": "",
-      "EXPO_PUBLIC_RENDER_SERVICE_ID": "",
-      "EXPO_PUBLIC_BASE_URL": "",
-      "EXPO_PUBLIC_ENVIRONMENT": "",
-      "EXPO_PUBLIC_DEPLOYMENT_PORT": "",
-      "EXPO_PUBLIC_REPLACEMENT_DONE": "",
-      "EXPO_PUBLIC_MONGODB_URI": "",
-      "EXPO_PUBLIC_SUPABASE_URL": "",
-      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
-      "EXPO_PUBLIC_SUPABASE_DB_URL": "",
-      "EXPO_PUBLIC_SUPABASE_PROJECT_ID": "",
-      "EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY": "",
-      "EXPO_PUBLIC_R2_ACCOUNT_ID": "",
-      "EXPO_PUBLIC_R2_ACCESS_KEY_ID": "",
-      "EXPO_PUBLIC_R2_SECRET_ACCESS_KEY": "",
-      "EXPO_PUBLIC_R2_ENDPOINT": "",
-      "EXPO_PUBLIC_BUCKET_REELS": "",
-      "EXPO_PUBLIC_BUCKET_VIDEO": "",
-      "EXPO_PUBLIC_BUCKET_LIVE": "",
-      "EXPO_PUBLIC_BUCKET_STORY": "",
-      "EXPO_PUBLIC_BUCKET_PHOTO": "",
-      "EXPO_PUBLIC_BUCKET_SONG": "",
-      "EXPO_PUBLIC_FIREBASE_API_KEY": "",
-      "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "",
-      "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "",
-      "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "",
-      "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "",
-      "EXPO_PUBLIC_FIREBASE_APP_ID": "",
-      "EXPO_PUBLIC_ESTAELIT_BNA_KAR_DO": ""
-    }
+      "EXPO_PUBLIC_SUPABASE_URL": "https://grrsbryflrpfmsbmicha.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_KEGJsOe80NANcpRDmvkHOw_PvvNCOMV",
+      "EXPO_PUBLIC_R2_ACCESS_KEY_ID": "465983939146a7cbb7167537d9d4ebd1",
+      "EXPO_PUBLIC_R2_SECRET_ACCESS_KEY": "7386255bccd5111ddd8bd3057bbe8995e2c02a74b3ef579cd6b0daf4c1500c94",
+      "EXPO_PUBLIC_R2_ACCOUNT_ID": "f9bb6756691d33713172b3bf9afdd0f4",
+      "EXPO_PUBLIC_BUCKET_REELS": "kronop-reels",
+      "EXPO_PUBLIC_BUCKET_STORY": "kronop-story",
+      "EXPO_PUBLIC_R2_ENDPOINT": "https://f9bb6756691d33713172b3bf9afdd0f4.r2.cloudflarestorage.com"
+    },
+    "owner": "kronopaman"
   }
 }

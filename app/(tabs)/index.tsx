@@ -180,7 +180,7 @@ export default function HomeScreen() {
 
   // Compressed header button handlers
   const handleNotificationPress = () => router.push('/notifications' as any);
-  const handleSearchPress = () => router.push('/search-user/index' as any);
+  const handleSearchPress = () => router.push('/search-user' as any);
   const handleChatPress = () => router.push('/chat' as any);
   const handleMusicPress = () => router.push('/music' as any);
   const handleUploadPress = () => setShowUploadModal(true);
@@ -308,7 +308,7 @@ export default function HomeScreen() {
         <Text style={styles.appTitle}>Kronop</Text>
         <View style={styles.headerActions}>
           <HeaderButton icon="bell-outline" onPress={handleNotificationPress} testID="notification-btn" />
-          <HeaderButton icon="account-search-outline" onPress={handleSearchPress} testID="search-btn" />
+          <HeaderButton icon="account-search" onPress={handleSearchPress} testID="search-btn" />
           <HeaderButton icon="chat-outline" onPress={handleChatPress} testID="chat-btn" />
           <HeaderButton icon="music-note-outline" onPress={handleMusicPress} testID="music-btn" />
         </View>
