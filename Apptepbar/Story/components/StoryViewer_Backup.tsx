@@ -175,7 +175,7 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
         
         return newProgress;
       });
-    }, 100) as unknown as NodeJS.Timeout;
+    }, 100);
   };
 
   const stopProgress = () => {
@@ -250,6 +250,43 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
     }
   };
 
+  // [KRONOP-DEBUG] Add useEffect to monitor props and state changes
+  useEffect(() => {
+    console.log('[KRONOP-DEBUG] 🔄 StoryViewer useEffect triggered:');
+    console.log('[KRONOP-DEBUG]   - Visible:', visible);
+    console.log('[KRONOP-DEBUG]   - Stories count:', stories.length);
+    console.log('[KRONOP-DEBUG]   - Initial index:', initialIndex);
+    console.log('[KRONOP-DEBUG]   - Current story index:', currentStoryIndex);
+    console.log('[KRONOP-DEBUG]   - Current story exists:', !!currentStory);
+    
+    // Only render if we have stories and viewer is visible
+    if (visible && stories.length > 0) {
+      console.log('[KRONOP-DEBUG] ✅ StoryViewer should render - conditions met');
+    } else if (visible && stories.length === 0) {
+      console.log('[KRONOP-DEBUG] ❌ StoryViewer cannot render - no stories available');
+    } else if (!visible) {
+      console.log('[KRONOP-DEBUG] 🚫 StoryViewer hidden - visible is false');
+    }
+  }, [visible, stories.length, initialIndex, currentStoryIndex, currentStory]);
+
+  // [KRONOP-DEBUG] Log StoryViewer props and state
+  console.log('[KRONOP-DEBUG] 📱 StoryViewer props received:');
+  console.log('[KRONOP-DEBUG]   - Visible:', visible);
+  console.log('[KRONOP-DEBUG]   - Stories count:', stories.length);
+  console.log('[KRONOP-DEBUG]   - Initial index:', initialIndex);
+  console.log('[KRONOP-DEBUG]   - Current story index:', currentStoryIndex);
+
+  // [KRONOP-DEBUG] Log current story details
+  if (currentStory) {
+    console.log('[KRONOP-DEBUG] 📖 Current story details:');
+    console.log('[KRONOP-DEBUG]   - Story ID:', currentStory.id);
+    console.log('[KRONOP-DEBUG]   - User Name:', currentStory.userName);
+    console.log('[KRONOP-DEBUG]   - Story Type:', currentStory.story_type);
+    console.log('[KRONOP-DEBUG]   - Image URL:', currentStory.imageUrl);
+    console.log('[KRONOP-DEBUG]   - Video URL:', currentStory.videoUrl);
+    console.log('[KRONOP-DEBUG]   - Fallback URL:', currentStory.fallbackUrl);
+  }
+
   const goToNext = () => {
     console.log('[KRONOP-DEBUG] ➡️ Going to next story...');
     stopProgress();
@@ -299,6 +336,16 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
                    (currentStory.imageUrl && (currentStory.imageUrl.includes('.mp4') || currentStory.imageUrl.includes('.mov') || currentStory.imageUrl.includes('.avi'))) ||
                    (currentStory.url && (currentStory.url.includes('.mp4') || currentStory.url.includes('.mov') || currentStory.url.includes('.avi'))) ||
                    (currentStory.fallbackUrl && currentStory.fallbackUrl.includes('.mp4'));
+
+  // [KRONOP-DEBUG] Enhanced logging for isVideo detection
+  console.log('[KRONOP-DEBUG] 🎯 Enhanced isVideo detection:');
+  console.log(`[KRONOP-DEBUG]   - story_type: ${currentStory.story_type}`);
+  console.log(`[KRONOP-DEBUG]   - type: ${currentStory.type}`);
+  console.log(`[KRONOP-DEBUG]   - videoUrl: ${currentStory.videoUrl}`);
+  console.log(`[KRONOP-DEBUG]   - imageUrl contains mp4: ${currentStory.imageUrl?.includes('.mp4')}`);
+  console.log(`[KRONOP-DEBUG]   - url contains mp4: ${currentStory.url?.includes('.mp4')}`);
+  console.log(`[KRONOP-DEBUG]   - fallbackUrl contains mp4: ${currentStory.fallbackUrl?.includes('.mp4')}`);
+  console.log(`[KRONOP-DEBUG]   - Final isVideo result: ${isVideo}`);
   
   const mediaUrl = isVideo 
     ? (currentStory.videoUrl || currentStory.imageUrl || currentStory.url) 
@@ -333,6 +380,10 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
     setMediaError(false);
     setAvatarError(false);
   };
+
+  console.log('[KRONOP-DEBUG] 🎯 Media URL determined:');
+  console.log('[KRONOP-DEBUG]   - Is Video:', isVideo);
+  console.log('[KRONOP-DEBUG]   - Final Media URL:', mediaUrl);
 
   return (
     <Modal
@@ -397,6 +448,7 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
             )
           )}
         </TouchableOpacity>
+        </View>
 
         {/* Simple Header */}
         <View style={styles.header}>
@@ -471,12 +523,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', // Center content vertically
+    alignItems: 'center', // Center content horizontally
   },
   progressContainer: {
     position: 'absolute',
-    top: 50, // Right below header (header: top=0, height=50, so ends at 50)
+    top: 50,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -498,10 +550,10 @@ const styles = StyleSheet.create({
   },
   storyMedia: {
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT - 120,
+    height: SCREEN_HEIGHT - 120, // Reduced height for header and navigation space
     position: 'absolute',
-    top: 1,
-    alignSelf: 'center',
+    top: 1, // Maximum overlap - photo starts almost at top
+    alignSelf: 'center', // Center horizontally
   },
   errorPlaceholder: {
     flex: 1,
@@ -511,7 +563,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1a1a1a',
     position: 'absolute',
-    top: 5,
+    top: 5, // Even closer
     alignSelf: 'center',
   },
   errorText: {
@@ -543,7 +595,7 @@ const styles = StyleSheet.create({
   },
   header: {
     position: 'absolute',
-    top: 0, // Move to very top
+    top: 10,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -552,7 +604,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     zIndex: 10,
     height: 50,
-    backgroundColor: 'rgba(0,0,0,0.3)', // Add subtle background for better visibility
   },
   userInfo: {
     flexDirection: 'row',

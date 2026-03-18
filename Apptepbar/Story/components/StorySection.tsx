@@ -82,8 +82,16 @@ export function StorySection({
   console.log('[KRONOP-DEBUG]   - Loading state:', loading);
   console.log('[KRONOP-DEBUG]   - onStoryPress function:', typeof onStoryPress);
 
-  // Filter stories - only show other users' stories, not owner's
+  // [KRONOP-DEBUG] Enhanced filtering logic
+  console.log(`[KRONOP-DEBUG] 🔍 Filtering stories for currentUserId: ${currentUserId}, ownerId: ${ownerId}`);
+  
+  // Owner's stories - show in OwnerStoryBox
+  const ownerStories = stories.filter(story => story.userId === ownerId);
+  console.log(`[KRONOP-DEBUG] 📱 Owner stories found: ${ownerStories.length}`);
+  
+  // Other users' stories - show in StoryItem list
   const otherUserStories = stories.filter(story => story.userId !== ownerId);
+  console.log(`[KRONOP-DEBUG] 👥 Other user stories found: ${otherUserStories.length}`);
   
   // Simple sorting by timestamp (newest first)
   const sortedStories = [...otherUserStories].sort((a, b) => {
@@ -215,7 +223,7 @@ export function StorySection({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.storiesContainer}
       >
-        {/* Owner Story Box - Always First */}
+        {/* Owner Story Box - Always First - Shows current user's own stories */}
         <View style={styles.storyWrapper}>
           <OwnerStoryBox
             onPress={() => {
@@ -232,7 +240,7 @@ export function StorySection({
           />
         </View>
         
-        {/* Other Users' Stories */}
+        {/* Other Users' Stories - All stories except owner's */}
         {sortedStories.map((item, index) => (
           <View key={item.id} style={styles.storyWrapper}>
             {renderStoryItem(item, index)}

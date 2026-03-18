@@ -8,10 +8,103 @@ import {
   FlatList,
   ActivityIndicator,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import StarButton from './StarButton';
+
+// Story View Service for API calls
+class StoryViewService {
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+  }
+
+  // Record a story view
+  async recordStoryView(storyId: string, userId: string): Promise<boolean> {
+    try {
+      console.log(`[KRONOP-DEBUG] 👀 Recording story view: storyId=${storyId}, userId=${userId}`);
+      
+      const response = await fetch(`${this.baseUrl}/api/stories/${storyId}/view`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          viewedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`[KRONOP-DEBUG] ✅ Story view recorded:`, data);
+        return true;
+      } else {
+        console.error(`[KRONOP-DEBUG] ❌ Failed to record story view: ${response.status}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[KRONOP-DEBUG] ❌ Error recording story view:', error);
+      return false;
+    }
+  }
+
+  // Get story views with user details
+  async getStoryViews(storyId: string): Promise<StoryView[]> {
+    try {
+      console.log(`[KRONOP-DEBUG] 📊 Fetching story views for: ${storyId}`);
+      
+      const response = await fetch(`${this.baseUrl}/api/stories/${storyId}/views`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`[KRONOP-DEBUG] ✅ Retrieved ${data.views?.length || 0} story views`);
+        return data.views || [];
+      } else {
+        console.error(`[KRONOP-DEBUG] ❌ Failed to fetch story views: ${response.status}`);
+        return [];
+      }
+    } catch (error) {
+      console.error('[KRONOP-DEBUG] ❌ Error fetching story views:', error);
+      return [];
+    }
+  }
+
+  // Toggle star on story view
+  async toggleStoryStar(storyId: string, userId: string, hasStarred: boolean): Promise<boolean> {
+    try {
+      console.log(`[KRONOP-DEBUG] ⭐ Toggling story star: storyId=${storyId}, userId=${userId}, hasStarred=${hasStarred}`);
+      
+      const response = await fetch(`${this.baseUrl}/api/stories/${storyId}/star`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          hasStarred: hasStarred,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`[KRONOP-DEBUG] ✅ Story star updated:`, data);
+        return true;
+      } else {
+        console.error(`[KRONOP-DEBUG] ❌ Failed to update story star: ${response.status}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[KRONOP-DEBUG] ❌ Error updating story star:', error);
+      return false;
+    }
+  }
+}
+
+const storyViewService = new StoryViewService();
 
 // View count interface
 interface StoryView {
@@ -87,45 +180,70 @@ export default function StoryViewCounter({ visible, onClose, storyId, storyOwner
   const [loading, setLoading] = useState(false);
   const [viewCount, setViewCount] = useState(0);
   const [starCount, setStarCount] = useState(0);
+  const [hasViewed, setHasViewed] = useState(false);
+  const [hasStarred, setHasStarred] = useState(false);
 
   useEffect(() => {
-    if (visible) {
+    if (visible && storyId && currentUserId) {
+      // Record the view when modal opens
+      recordView();
       loadViewData();
     }
-  }, [visible, storyId]);
+  }, [visible, storyId, currentUserId]);
+
+  // Record story view in database
+  const recordView = async () => {
+    if (!currentUserId || !storyId) return;
+    
+    try {
+      const success = await storyViewService.recordStoryView(storyId, currentUserId);
+      if (success) {
+        setHasViewed(true);
+        console.log(`[KRONOP-DEBUG] ✅ Story view recorded for user ${currentUserId}`);
+      }
+    } catch (error) {
+      console.error('[KRONOP-DEBUG] ❌ Error recording view:', error);
+    }
+  };
 
   const loadViewData = async () => {
     setLoading(true);
     try {
-      // Simulate API call to fetch view data
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Fetch real view data from backend
+      const views = await storyViewService.getStoryViews(storyId);
       
-      // In real app, you would fetch from your backend
-      // const response = await fetch(`/api/stories/${storyId}/views`);
-      // const data = await response.json();
+      setViewData(views);
+      setViewCount(views.length);
       
-      // For now, use mock data
+      // Count stars
+      const starredCount = views.filter(view => view.hasStarred).length;
+      setStarCount(starredCount);
+      
+      // Check if current user has starred this story
+      const currentUserView = views.find(view => view.userId === currentUserId);
+      setHasStarred(currentUserView?.hasStarred || false);
+      
+      console.log(`[KRONOP-DEBUG] 📊 Story view count loaded: ${views.length} views, ${starredCount} stars`);
+    } catch (error) {
+      console.error('[KRONOP-DEBUG] ❌ Error loading view data:', error);
+      
+      // Fallback to mock data for demo purposes
+      console.log('[KRONOP-DEBUG] 🔄 Using fallback mock data...');
       const filteredViews = mockViewData.filter(view => view.storyId === storyId);
       setViewData(filteredViews);
       setViewCount(filteredViews.length);
       
-      // Count stars
       const starredCount = filteredViews.filter(view => view.hasStarred).length;
       setStarCount(starredCount);
-      
-      console.log(`[KRONOP-DEBUG] 📊 Story view count loaded: ${filteredViews.length} views, ${starredCount} stars`);
-    } catch (error) {
-      console.error('Error loading view data:', error);
-      setViewData([]);
-      setViewCount(0);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTimeAgo = (timestamp: Date) => {
+  const formatTimeAgo = (timestamp: Date | string) => {
     const now = new Date();
-    const diffMs = now.getTime() - timestamp.getTime();
+    const time = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    const diffMs = now.getTime() - time.getTime();
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -134,6 +252,38 @@ export default function StoryViewCounter({ visible, onClose, storyId, storyOwner
     if (diffMinutes < 60) return `${diffMinutes}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
+  };
+
+  // Handle star toggle
+  const handleStarToggle = async () => {
+    if (!currentUserId || !storyId) return;
+    
+    const newStarState = !hasStarred;
+    
+    try {
+      const success = await storyViewService.toggleStoryStar(storyId, currentUserId, newStarState);
+      
+      if (success) {
+        setHasStarred(newStarState);
+        // Update local view data
+        setViewData(prevData => 
+          prevData.map(view => 
+            view.userId === currentUserId 
+              ? { ...view, hasStarred: newStarState }
+              : view
+          )
+        );
+        // Update star count
+        setStarCount(prev => newStarState ? prev + 1 : prev - 1);
+        
+        console.log(`[KRONOP-DEBUG] ⭐ Star ${newStarState ? 'added' : 'removed'} successfully`);
+      } else {
+        Alert.alert('Error', 'Failed to update star. Please try again.');
+      }
+    } catch (error) {
+      console.error('[KRONOP-DEBUG] ❌ Error toggling star:', error);
+      Alert.alert('Error', 'Failed to update star. Please try again.');
+    }
   };
 
   const renderViewItem = ({ item }: { item: StoryView }) => (
@@ -169,27 +319,42 @@ export default function StoryViewCounter({ visible, onClose, storyId, storyOwner
       onRequestClose={onClose}
     >
       <View style={styles.halfScreenModal}>
-        {/* Header */}
+        {/* Modal Header */}
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Story Views</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <MaterialIcons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
-        {/* View Count */}
+        {/* View and Star Counts */}
         <View style={styles.viewCountContainer}>
-          <MaterialIcons name="visibility" size={24} color="#8B00FF" />
-          <Text style={styles.viewCountText}>{viewCount} views</Text>
+          <MaterialIcons name="visibility" size={20} color="#FFFFFF" />
+          <Text style={styles.viewCountText}>{viewCount} {viewCount === 1 ? 'View' : 'Views'}</Text>
         </View>
-
-        {/* Star Count - Only for story owner */}
-        {isStoryOwner && (
-          <View style={styles.starCountContainer}>
-            <MaterialIcons name="star" size={24} color="#FFD700" />
-            <Text style={styles.starCountText}>{starCount} stars</Text>
-          </View>
-        )}
+        
+        <View style={styles.starCountContainer}>
+          <MaterialIcons name="star" size={20} color="#FFD700" />
+          <Text style={styles.starCountText}>{starCount} {starCount === 1 ? 'Star' : 'Stars'}</Text>
+          
+          {/* Star Button for Current User */}
+          {currentUserId && !isStoryOwner && (
+            <TouchableOpacity 
+              style={[styles.starButton, hasStarred && styles.starButtonActive]}
+              onPress={handleStarToggle}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons 
+                name={hasStarred ? 'star' : 'star-border'} 
+                size={16} 
+                color={hasStarred ? '#FFFFFF' : '#FFD700'} 
+              />
+              <Text style={[styles.starButtonText, hasStarred && styles.starButtonTextActive]}>
+                {hasStarred ? 'Starred' : 'Star'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Views List */}
         {loading ? (
@@ -334,5 +499,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     textAlign: 'center',
+  },
+  starButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+    marginLeft: 'auto',
+  },
+  starButtonActive: {
+    backgroundColor: '#FFD700',
+  },
+  starButtonText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  starButtonTextActive: {
+    color: '#FFFFFF',
   },
 });
