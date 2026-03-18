@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import StarButton from './StarButton';
 
 // View count interface
 interface StoryView {
@@ -20,6 +21,7 @@ interface StoryView {
   userAvatar: string;
   viewedAt: Date;
   storyId: string;
+  hasStarred?: boolean;
 }
 
 interface StoryViewCounterProps {
@@ -27,6 +29,8 @@ interface StoryViewCounterProps {
   onClose: () => void;
   storyId: string;
   storyOwnerId: string;
+  currentUserId?: string; // Current user ID
+  isStoryOwner?: boolean; // Is current user the story owner
 }
 
 // Mock view data - in real app, this would come from your backend
@@ -37,7 +41,8 @@ const mockViewData: StoryView[] = [
     userName: 'rajesh_kumar',
     userAvatar: 'https://picsum.photos/40/40?random=1',
     viewedAt: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-    storyId: 'story1'
+    storyId: 'story1',
+    hasStarred: true
   },
   {
     id: '2',
@@ -45,7 +50,8 @@ const mockViewData: StoryView[] = [
     userName: 'priya_sharma',
     userAvatar: 'https://picsum.photos/40/40?random=2',
     viewedAt: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
-    storyId: 'story1'
+    storyId: 'story1',
+    hasStarred: false
   },
   {
     id: '3',
@@ -53,7 +59,8 @@ const mockViewData: StoryView[] = [
     userName: 'amit_singh',
     userAvatar: 'https://picsum.photos/40/40?random=3',
     viewedAt: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-    storyId: 'story1'
+    storyId: 'story1',
+    hasStarred: true
   },
   {
     id: '4',
@@ -61,7 +68,8 @@ const mockViewData: StoryView[] = [
     userName: 'neha_patel',
     userAvatar: 'https://picsum.photos/40/40?random=4',
     viewedAt: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-    storyId: 'story1'
+    storyId: 'story1',
+    hasStarred: false
   },
   {
     id: '5',
@@ -69,14 +77,16 @@ const mockViewData: StoryView[] = [
     userName: 'vijay_malhotra',
     userAvatar: 'https://picsum.photos/40/40?random=5',
     viewedAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    storyId: 'story1'
+    storyId: 'story1',
+    hasStarred: true
   }
 ];
 
-export default function StoryViewCounter({ visible, onClose, storyId, storyOwnerId }: StoryViewCounterProps) {
+export default function StoryViewCounter({ visible, onClose, storyId, storyOwnerId, currentUserId, isStoryOwner = false }: StoryViewCounterProps) {
   const [viewData, setViewData] = useState<StoryView[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewCount, setViewCount] = useState(0);
+  const [starCount, setStarCount] = useState(0);
 
   useEffect(() => {
     if (visible) {
@@ -99,7 +109,11 @@ export default function StoryViewCounter({ visible, onClose, storyId, storyOwner
       setViewData(filteredViews);
       setViewCount(filteredViews.length);
       
-      console.log(`[KRONOP-DEBUG] 📊 Story view count loaded: ${filteredViews.length} views`);
+      // Count stars
+      const starredCount = filteredViews.filter(view => view.hasStarred).length;
+      setStarCount(starredCount);
+      
+      console.log(`[KRONOP-DEBUG] 📊 Story view count loaded: ${filteredViews.length} views, ${starredCount} stars`);
     } catch (error) {
       console.error('Error loading view data:', error);
       setViewData([]);
@@ -133,6 +147,14 @@ export default function StoryViewCounter({ visible, onClose, storyId, storyOwner
         <Text style={styles.userName}>{item.userName}</Text>
         <Text style={styles.viewTime}>{formatTimeAgo(item.viewedAt)}</Text>
       </View>
+      
+      {/* Star Icon - Only for story owner to see who starred */}
+      {isStoryOwner && item.hasStarred && (
+        <View style={styles.starIndicator}>
+          <MaterialIcons name="star" size={16} color="#FFD700" />
+        </View>
+      )}
+      
       <View style={styles.viewIndicator}>
         <MaterialIcons name="visibility" size={16} color="#666" />
       </View>
@@ -160,6 +182,14 @@ export default function StoryViewCounter({ visible, onClose, storyId, storyOwner
           <MaterialIcons name="visibility" size={24} color="#8B00FF" />
           <Text style={styles.viewCountText}>{viewCount} views</Text>
         </View>
+
+        {/* Star Count - Only for story owner */}
+        {isStoryOwner && (
+          <View style={styles.starCountContainer}>
+            <MaterialIcons name="star" size={24} color="#FFD700" />
+            <Text style={styles.starCountText}>{starCount} stars</Text>
+          </View>
+        )}
 
         {/* Views List */}
         {loading ? (
@@ -225,10 +255,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#333333',
   },
+  starCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+  },
   viewCountText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  starCountText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFD700',
   },
   loadingContainer: {
     padding: 40,
@@ -271,6 +314,10 @@ const styles = StyleSheet.create({
   },
   viewIndicator: {
     padding: 4,
+  },
+  starIndicator: {
+    padding: 4,
+    marginRight: 4,
   },
   emptyContainer: {
     padding: 40,

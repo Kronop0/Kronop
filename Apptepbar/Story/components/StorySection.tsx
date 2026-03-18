@@ -12,6 +12,7 @@ import {
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../../constants/theme';
+import OwnerStoryBox from './OwnerStoryBox';
 
 // [KRONOP-DEBUG] StorySection component initialized
 console.log('[KRONOP-DEBUG] 📱 StorySection component loading...');
@@ -58,13 +59,21 @@ interface StorySectionProps {
   loading?: boolean;
   onStoryPress: (story: StoryItem) => void;
   onProfilePress?: (story: StoryItem) => void;
+  currentUserId?: string; // Current user ID
+  ownerId?: string; // Owner ID (first box)
+  onOwnerStoryPress?: () => void; // Owner story press handler
+  onOwnerProfilePress?: () => void; // Owner profile press handler
 }
 
 export function StorySection({ 
   stories, 
   loading = false, 
   onStoryPress,
-  onProfilePress
+  onProfilePress,
+  currentUserId,
+  ownerId = 'owner123',
+  onOwnerStoryPress,
+  onOwnerProfilePress
 }: StorySectionProps) {
   
   // [KRONOP-DEBUG] Log received props
@@ -73,8 +82,11 @@ export function StorySection({
   console.log('[KRONOP-DEBUG]   - Loading state:', loading);
   console.log('[KRONOP-DEBUG]   - onStoryPress function:', typeof onStoryPress);
 
+  // Filter stories - only show other users' stories, not owner's
+  const otherUserStories = stories.filter(story => story.userId !== ownerId);
+  
   // Simple sorting by timestamp (newest first)
-  const sortedStories = [...stories].sort((a, b) => {
+  const sortedStories = [...otherUserStories].sort((a, b) => {
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
 
@@ -203,6 +215,24 @@ export function StorySection({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.storiesContainer}
       >
+        {/* Owner Story Box - Always First */}
+        <View style={styles.storyWrapper}>
+          <OwnerStoryBox
+            onPress={() => {
+              if (onOwnerStoryPress) {
+                onOwnerStoryPress();
+              }
+            }}
+            onProfilePress={() => {
+              if (onOwnerProfilePress) {
+                onOwnerProfilePress();
+              }
+            }}
+            ownerId={ownerId}
+          />
+        </View>
+        
+        {/* Other Users' Stories */}
         {sortedStories.map((item, index) => (
           <View key={item.id} style={styles.storyWrapper}>
             {renderStoryItem(item, index)}

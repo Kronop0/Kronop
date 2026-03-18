@@ -11,7 +11,6 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../../constants/theme';
-import StoryViewCounter from './StoryViewCounter';
 
 // [KRONOP-DEBUG] StoryViewer component initialized
 console.log('[KRONOP-DEBUG] 🎬 StoryViewer component loading...');
@@ -42,6 +41,7 @@ interface StoryViewerProps {
   initialIndex: number;
   onClose: () => void;
   onProfilePress?: (story: Story) => void;
+  currentUserId?: string; // Current user ID
 }
 
 // Error Placeholder Component
@@ -98,12 +98,11 @@ function SimpleVideoStory({ videoUrl, style }: { videoUrl: string; style: any })
   );
 }
 
-export function StoryViewer({ visible, stories, initialIndex, onClose, onProfilePress }: StoryViewerProps) {
+export function StoryViewer({ visible, stories, initialIndex, onClose, onProfilePress, currentUserId }: StoryViewerProps) {
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialIndex);
   const [mediaError, setMediaError] = React.useState(false);
   const [avatarError, setAvatarError] = React.useState(false);
   const [isSupported, setIsSupported] = React.useState(false);
-  const [viewCounterVisible, setViewCounterVisible] = React.useState(false);
   const currentStory = stories[currentStoryIndex];
 
   // Reset error states when story changes
@@ -339,28 +338,7 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
             </Text>
           </TouchableOpacity>
         </View>
-
-        {/* View Counter Arrow - Bottom Right */}
-        <TouchableOpacity 
-          style={styles.viewCounterButton}
-          onPress={() => setViewCounterVisible(true)}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons 
-            name="arrow-upward" 
-            size={20} 
-            color="#FFFFFF" 
-          />
-        </TouchableOpacity>
       </View>
-
-      {/* Story View Counter Modal */}
-      <StoryViewCounter
-        visible={viewCounterVisible}
-        onClose={() => setViewCounterVisible(false)}
-        storyId={currentStory.id}
-        storyOwnerId={currentStory.userId}
-      />
     </Modal>
   );
 }
@@ -469,18 +447,5 @@ const styles = StyleSheet.create({
   },
   supportedButtonText: {
     color: '#8B00FF',
-  },
-  viewCounterButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
   },
 });
