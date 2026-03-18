@@ -227,10 +227,10 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { AlertProvider } from '../template/ui';
-import { AuthProvider } from '../template';
 import { GhostStealthProvider } from '../context/GhostStealthContext';
 
 import StatusBarOverlay from '../components/common/StatusBarOverlay';
+import KronopAuthGuard from '../Apptepbar/login/KronopAuthGuard';
 
 // Web3 imports
 import { createConfig, http } from 'wagmi';
@@ -264,15 +264,15 @@ const queryClient = new QueryClient();
 
 export default function RootLayout() {
   return (
-    <View style={{ flex: 1, backgroundColor: '#000000' }}>
+    <KronopAuthGuard>
+      <View style={{ flex: 1, backgroundColor: '#000000' }}>
       {/* Premium Status Bar Overlay - Global */}
       <StatusBarOverlay style="light" backgroundColor="transparent" translucent={true} />
 
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <AlertProvider>
-            <AuthProvider>
-              <GhostStealthProvider>
+            <GhostStealthProvider>
                 <Stack 
                   screenOptions={{ 
                     headerShown: false,
@@ -407,10 +407,10 @@ export default function RootLayout() {
               />
             </Stack>
           </GhostStealthProvider>
-        </AuthProvider>
       </AlertProvider>
     </QueryClientProvider>
   </WagmiProvider>
 </View>
+    </KronopAuthGuard>
   );
 }

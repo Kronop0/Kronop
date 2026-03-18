@@ -2,7 +2,6 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -18,11 +17,11 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Configure Google Sign-In
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  offlineAccess: true,
-});
+// // Configure Google Sign-In
+// GoogleSignin.configure({
+//   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+//   offlineAccess: true,
+// });
 
 // Initialize Firebase services
 export const auth = getAuth(app);
