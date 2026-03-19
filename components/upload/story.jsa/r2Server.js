@@ -1,7 +1,7 @@
 // R2 Server for Story Upload
 // Handles upload to Cloudflare R2 for stories
 
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand } = require('@aws-sdk/client-s3');
 const storyLimitation = require('./storyLimitation');
 
 // R2 Configuration from environment
@@ -148,5 +148,33 @@ const r2Server = {
     }
   }
 };
+
+// Helper function to read file chunks
+async function readFileChunk(fileUri, start, size) {
+  try {
+    console.log(`Reading chunk: start=${start}, size=${size}`);
+
+    // Use expo-file-system to read only the specific bytes we need
+    const chunkData = await require('expo-file-system/legacy').readAsStringAsync(fileUri, {
+      encoding: require('expo-file-system/legacy').EncodingType.Base64,
+      position: start,
+      length: size
+    });
+
+    // Convert Base64 to Uint8Array
+    const binaryString = atob(chunkData);
+    const chunkBuffer = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      chunkBuffer[i] = binaryString.charCodeAt(i);
+    }
+
+    console.log(`✅ Chunk read: ${chunkBuffer.length} bytes`);
+    return chunkBuffer;
+
+  } catch (error) {
+    console.error('Error reading chunk:', error);
+    throw new Error(`Failed to read file chunk: ${error.message}`);
+  }
+}
 
 module.exports = r2Server;

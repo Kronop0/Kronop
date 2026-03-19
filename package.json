@@ -112,7 +112,6 @@
     "expo-mail-composer": "~15.0.8",
     "expo-manifests": "~1.0.10",
     "expo-media-library": "~18.2.1",
-    "expo-modules-autolinking": "~3.0.22",
     "expo-navigation-bar": "~5.0.10",
     "expo-network": "~8.0.8",
     "expo-notifications": "~0.32.16",
@@ -214,21 +213,6 @@
     "ws": "^8.19.0",
     "zustand": "^5.0.2"
   },
-  "rn-core": {
-    "name": "RTNKronopBridge",
-    "version": "1.0.0",
-    "cpp": true,
-    "turboModule": true,
-    "jsi": true,
-    "codegenConfig": {
-      "name": "RTNKronopBridgeSpec",
-      "type": "modules",
-      "jsFile": "components/upload/upload..kronop/video_AI/RTN_Kronop_Bridge/js/RTNKronopBridgeSpec.ts",
-      "android": {
-        "javaPackageName": "com.kronop.rtnvideoai"
-      }
-    }
-  },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/plugin-syntax-import-meta": "^7.10.4",
@@ -238,6 +222,7 @@
     "ajv-keywords": "^5.1.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "concurrently": "^9.2.1",
+    "eas-cli": "^18.4.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "expo-module-scripts": "^5.0.8",
@@ -246,6 +231,21 @@
     "metro-resolver": "^0.82.5",
     "react-dev-inspector": "^2.0.1",
     "typescript": "~5.9.2"
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-track-player",
+          "react-native-fs",
+          "react-native-video-cache",
+          "ffmpeg-kit-react-native",
+          "react-native-vector-icons",
+          "react-native-webrtc"
+        ],
+        "listUnknownPackages": false
+      }
+    }
   },
   "private": true
 }

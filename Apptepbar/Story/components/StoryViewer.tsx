@@ -75,25 +75,26 @@ function SimpleVideoStory({ videoUrl, style }: { videoUrl: string; style: any })
   const player = useVideoPlayer(videoUrl, (player) => {
     console.log('[KRONOP-DEBUG] 🔧 Video player configured');
     player.loop = false;
-    player.muted = true;
+    player.muted = false; // Enable audio
     // Increased timeout to 30 seconds for slow networks
     player.timeUpdateEventInterval = 1000;
   });
 
   useEffect(() => {
-    console.log('[KRONOP-DEBUG] ▶️ Video player effect triggered');
-    // Video will auto-play when component mounts
-  }, []);
+    console.log('[KRONOP-DEBUG] ▶️ Video player effect triggered - starting auto-play');
+    // Auto-play when component mounts
+    if (player) {
+      player.play();
+    }
+  }, [player]);
 
   return (
     <VideoView 
       player={player} 
       style={style}
-      contentFit="cover"
+      contentFit="contain"
       nativeControls={false}
-      fullscreenOptions={{
-        enable: false
-      }}
+      allowsFullscreen={false}
       allowsPictureInPicture={false}
     />
   );
@@ -161,6 +162,7 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
         
         if (newProgress >= 100) {
           // Story completed, move to next
+          console.log('[KRONOP-DEBUG] ⏹️ Story timeout reached - advancing to next');
           clearInterval(progressInterval.current!);
           progressInterval.current = null;
           setIsPlaying(false);
@@ -313,7 +315,26 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
     if (mediaError && currentStory.fallbackUrl) {
       return { uri: currentStory.fallbackUrl };
     }
-    return { uri: mediaUrl };
+    
+    // URL validation for videos
+    let finalUrl = mediaUrl;
+    if (isVideo && mediaUrl) {
+      // Ensure URL starts with https
+      if (!mediaUrl.startsWith('https://')) {
+        console.log('[KRONOP-DEBUG] 🔧 Fixing URL - adding https prefix');
+        finalUrl = 'https://' + mediaUrl;
+      }
+      
+      // Ensure complete R2 URL if it's a partial path
+      if (finalUrl.startsWith('https://') && !finalUrl.includes('r2.dev')) {
+        console.log('[KRONOP-DEBUG] 🔧 Completing R2 URL');
+        finalUrl = 'https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev/' + finalUrl.replace('https://', '');
+      }
+      
+      console.log('[KRONOP-DEBUG] ✅ Validated video URL:', finalUrl);
+    }
+    
+    return { uri: finalUrl };
   };
 
   const getAvatarSource = () => {

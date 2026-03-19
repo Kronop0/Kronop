@@ -1,7 +1,7 @@
 const appJson = {
   expo: {
-    name: "kronop-app",
-    slug: "kronop-app",
+    name: "kronop",
+    slug: "kronop",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -28,7 +28,7 @@ const appJson = {
     },
     extra: {
       eas: {
-        projectId: "your-project-id"
+        projectId: "61a99a9f-ea90-4fa5-aaec-132e2d8bb76c"
       }
     }
   }

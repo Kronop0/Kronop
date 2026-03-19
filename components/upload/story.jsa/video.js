@@ -2,6 +2,7 @@
 // Calls dedicated R2 server for secure upload
 
 const r2UploadHandler = require('./r2Server');
+const FileSystem = require('expo-file-system/legacy');
 
 const videoHandler = {
   receiveFile: async (fileData, metadata) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TouchableOpacity,
   View,
@@ -87,7 +87,26 @@ export function OwnerStoryBox({
     if (mediaError && ownerStory.fallbackUrl) {
       return { uri: ownerStory.fallbackUrl };
     }
-    return { uri: mediaUrl };
+    
+    // URL validation for videos
+    let finalUrl = mediaUrl;
+    if (isVideo && mediaUrl) {
+      // Ensure URL starts with https
+      if (!mediaUrl.startsWith('https://')) {
+        console.log('[KRONOP-DEBUG] 🔧 Fixing URL - adding https prefix');
+        finalUrl = 'https://' + mediaUrl;
+      }
+      
+      // Ensure complete R2 URL if it's a partial path
+      if (finalUrl.startsWith('https://') && !finalUrl.includes('r2.dev')) {
+        console.log('[KRONOP-DEBUG] 🔧 Completing R2 URL');
+        finalUrl = 'https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev/' + finalUrl.replace('https://', '');
+      }
+      
+      console.log('[KRONOP-DEBUG] ✅ Validated video URL:', finalUrl);
+    }
+    
+    return { uri: finalUrl };
   };
   
   // Video component from StoryViewer
@@ -97,12 +116,22 @@ export function OwnerStoryBox({
       player.loop = true;
     });
     
+    useEffect(() => {
+      console.log('[KRONOP-DEBUG] ▶️ Owner video player effect triggered - starting auto-play');
+      // Muted auto-play when component mounts
+      if (player) {
+        player.muted = true;
+        player.play();
+      }
+    }, [player]);
+    
     return (
       <VideoView
         style={style}
         player={player}
         allowsFullscreen={false}
         allowsPictureInPicture={false}
+        contentFit="contain"
       />
     );
   };
