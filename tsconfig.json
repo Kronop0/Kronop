@@ -38,14 +38,14 @@
       "dom",
       "esnext"
     ],
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "noResolve": false
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
     "types/**/*.d.ts",
     "services/**/*.d.ts",
     "config/**/*.ts",
