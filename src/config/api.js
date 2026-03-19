@@ -23,7 +23,6 @@ export const BASE_URL = getBaseUrl();
 // API Endpoints - ALL COMPONENTS MUST USE THESE
 export const API_ENDPOINTS = {
   // Content endpoints
-  PHOTOS: `${BASE_URL}/api/photos`,
   VIDEOS: `${BASE_URL}/api/videos`,
   REELS: `${BASE_URL}/api/reels`,
   STORIES: `${BASE_URL}/api/stories`,

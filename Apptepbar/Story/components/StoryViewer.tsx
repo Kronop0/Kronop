@@ -67,30 +67,86 @@ function ErrorPlaceholder({ type, onRetry }: { type: 'image' | 'video'; onRetry:
 }
 
 // Simple video component with increased timeout
-function SimpleVideoStory({ videoUrl, style }: { videoUrl: string; style: any }) {
+function SimpleVideoStory({ videoUrl, style, onVideoEnd, onPlayerReady }: { 
+  videoUrl: string; 
+  style: any; 
+  onVideoEnd?: () => void;
+  onPlayerReady?: (player: any) => void;
+}) {
   // [KRONOP-DEBUG] Video component initialization
-  console.log('[KRONOP-DEBUG] 🎥 SimpleVideoStory component initializing...');
-  console.log('[KRONOP-DEBUG]   - Video URL:', videoUrl);
+  console.log('[KRONOP-DEBUG] SimpleVideoStory component initializing for URL:', videoUrl);
 
   const player = useVideoPlayer(videoUrl, (player) => {
-    console.log('[KRONOP-DEBUG] 🔧 Video player configured');
+    console.log('[KRONOP-DEBUG] Video player configured for:', videoUrl);
     player.loop = false;
     player.muted = false; // Enable audio
-    // Increased timeout to 30 seconds for slow networks
     player.timeUpdateEventInterval = 1000;
+    
+    // Expose player reference for force cleanup
+    if (onPlayerReady) {
+      onPlayerReady(player);
+    }
   });
 
+  // Initialize and start playing when videoUrl changes
   useEffect(() => {
-    console.log('[KRONOP-DEBUG] ▶️ Video player effect triggered - starting auto-play');
-    // Auto-play when component mounts
+    console.log('[KRONOP-DEBUG] Starting video playback for:', videoUrl);
+    console.log('[KRONOP-DEBUG] ▶️ Starting video playback for:', videoUrl);
     if (player) {
       player.play();
     }
-  }, [player]);
+
+    // Cleanup when component unmounts or videoUrl changes
+    return () => {
+      console.log('[KRONOP-DEBUG] 🧹 Cleaning up player for:', videoUrl);
+      if (player) {
+        try {
+          player.pause();
+        } catch (error) {
+          console.log('[KRONOP-DEBUG] ❌ Error cleaning up player:', error);
+        }
+      }
+    };
+  }, [videoUrl]); // Only depend on videoUrl, not player
+
+  // Add video end detection
+  useEffect(() => {
+    if (!player || !onVideoEnd) return;
+
+    const checkVideoEnd = () => {
+      try {
+        const currentTime = player.currentTime || 0;
+        const duration = player.duration || 0;
+
+        // Check if video has ended (within 0.5 seconds of duration)
+        if (duration > 0 && currentTime >= duration - 0.5 && currentTime > 0) {
+          console.log('[KRONOP-DEBUG] 🎬 Video naturally ended for:', videoUrl);
+          onVideoEnd();
+          // Clear this interval to prevent repeated calls
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('[KRONOP-DEBUG] ❌ Error checking video end for:', videoUrl, error);
+        return false;
+      }
+    };
+
+    // Check every 500ms for video completion
+    const endCheckInterval = setInterval(() => {
+      if (checkVideoEnd()) {
+        clearInterval(endCheckInterval);
+      }
+    }, 500);
+
+    return () => {
+      clearInterval(endCheckInterval);
+    };
+  }, [player, onVideoEnd, videoUrl]); // Include videoUrl to reset when URL changes
 
   return (
-    <VideoView 
-      player={player} 
+    <VideoView
+      player={player}
       style={style}
       contentFit="contain"
       nativeControls={false}
@@ -110,6 +166,8 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
   const [progress, setProgress] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const videoEndedRef = useRef<boolean>(false);
+  const playerRef = useRef<any>(null);
   const currentStory = stories[currentStoryIndex];
 
   // Reset error states and progress when story changes
@@ -144,8 +202,8 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
   const startProgress = () => {
     if (!currentStory) return;
     
-    // Set duration based on story type
-    const duration = currentStory.duration || (currentStory.story_type === 'video' ? 10000 : 5000);
+    // STRICT 9-SECOND LIMIT for all stories (videos and images)
+    const duration = 9000; // Fixed 9 seconds in milliseconds
     
     setIsPlaying(true);
     setProgress(0);
@@ -161,16 +219,14 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
         const newProgress = prev + (100 / (duration / 100));
         
         if (newProgress >= 100) {
-          // Story completed, move to next
-          console.log('[KRONOP-DEBUG] ⏹️ Story timeout reached - advancing to next');
+          // STRICT 9-SECOND LIMIT: Force stop and jump to next story
+          console.log('[KRONOP-DEBUG] ⏹️ STRICT 9-SECOND LIMIT reached - force stopping and jumping to next');
           clearInterval(progressInterval.current!);
           progressInterval.current = null;
           setIsPlaying(false);
           
-          // Auto-advance to next story
-          setTimeout(() => {
-            goToNext();
-          }, 200);
+          // Force stop video and jump to next story immediately
+          forceStopAndNext();
           
           return 100;
         }
@@ -186,6 +242,27 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
       clearInterval(progressInterval.current);
       progressInterval.current = null;
     }
+  };
+
+  // Force stop video and jump to next story with cleanup
+  const forceStopAndNext = () => {
+    console.log('[KRONOP-DEBUG] 🔇 Force stopping current video and cleaning up...');
+    
+    // Force cleanup previous video player
+    if (playerRef.current) {
+      try {
+        playerRef.current.pause();
+        playerRef.current = null; // Clear reference
+      } catch (error) {
+        console.log('[KRONOP-DEBUG] ❌ Error force stopping video:', error);
+      }
+    }
+    
+    // Reset video ended flag for next story
+    videoEndedRef.current = false;
+    
+    // Jump to next story immediately
+    goToNext();
   };
 
   const handlePress = () => {
@@ -260,8 +337,13 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
       const nextIndex = currentStoryIndex + 1;
       console.log(`[KRONOP-DEBUG]   - Moving from index ${currentStoryIndex} to ${nextIndex}`);
       setCurrentStoryIndex(nextIndex);
+      
+      // Reset progress bar immediately for smooth transition
+      setProgress(0);
+      setIsPlaying(true);
     } else {
-      console.log('[KRONOP-DEBUG] 🏁 Reached last story, closing viewer');
+      console.log('[KRONOP-DEBUG] 🏁 All stories completed - closing viewer');
+      // Close the story viewer when all stories are done
       onClose();
     }
   };
@@ -396,6 +478,10 @@ export function StoryViewer({ visible, stories, initialIndex, onClose, onProfile
               <SimpleVideoStory 
                 videoUrl={getMediaSource().uri}
                 style={styles.storyMedia}
+                onVideoEnd={() => {
+                  // This won't trigger now since we use strict 9-second timer
+                  console.log('[KRONOP-DEBUG] 🎯 Video ended naturally (but ignored due to 9s limit)');
+                }}
               />
             )
           ) : (

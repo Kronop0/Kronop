@@ -9,7 +9,6 @@ async function clearMongoDB() {
   const endpoints = [
     '/api/reels/clear',      // Clear all reels
     '/api/stories/clear',    // Clear all stories  
-    '/api/photos/clear',     // Clear all photos
     '/api/videos/clear',     // Clear all videos
     '/api/content/clear'     // Clear all content
   ];

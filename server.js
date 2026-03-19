@@ -297,15 +297,6 @@ const getSmartFeed = async (contentType, req, res) => {
 
 // Content routes - Old reels endpoints removed, now using AllReels system
 
-app.get('/api/photos', cacheMiddleware((req) => `photos:${req.query.userId || 'public'}:${req.query.category || 'all'}:${req.query.page || 1}`, 300), (req, res) => getSmartFeed('Photo', req, res));
-app.get('/api/photos/user', async (req, res) => {
-  try {
-    // BunnyCDN service removed - returning empty data
-    res.json({ success: true, data: [] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Simple content routes
 ['videos', 'live', 'stories'].forEach(type => {
