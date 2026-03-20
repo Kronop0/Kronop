@@ -71,7 +71,7 @@ router.get('/', async (req, res) => {
 router.get('/:type', async (req, res) => {
   try {
     const { type } = req.params;
-    const { page = 1, limit = 5, skip = 0 } = req.query;
+    const { page = 1, limit = 5, skip = 0, category } = req.query;
     
     const validTypes = ['Reel', 'reels', 'Story', 'story', 'Live', 'live', 'Video', 'video', 'Photo', 'photo'];
     if (!validTypes.includes(type)) {
@@ -88,7 +88,12 @@ router.get('/:type', async (req, res) => {
 
     // Get content from database directly (no signed URL needed for public R2)
     const Content = require('../models/Content');
-    let content = await Content.find({ type: finalType, is_active: true })
+    const query = { type: finalType, is_active: true };
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+    
+    let content = await Content.find(query)
       .sort({ created_at: -1 })
       .limit(parsedLimit)
       .select('title url thumbnail tags category views likes created_at user_id filename');
