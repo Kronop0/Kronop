@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -75,6 +75,15 @@ const categories: Category[] = [
 
 export default function PhotoSection() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+
+  // Auto-select 'All' category on app launch
+  useEffect(() => {
+    const allCategory = categories.find(cat => cat.name === 'All');
+    if (allCategory) {
+      setSelectedCategory(allCategory);
+      console.log("[KRONOP-STARTUP] 'All' category auto-selected. Displaying photos on launch.");
+    }
+  }, []);
 
   const handleCategoryPress = (category: Category) => {
     setSelectedCategory(category);
