@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, ScrollView, ActivityIndicator, FlatList, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+
+// Import profile service
+const profileService = require('./profileService');
 
 interface PhotoData {
   title: string;
   description: string;
   tags: string[];
   category: string;
+  userName: string;
+  channelLogo: string;
 }
 
 interface PhotoUploadProps {
@@ -29,13 +34,48 @@ export default function PhotoUpload({
   const router = useRouter();
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [internalUploading, setInternalUploading] = useState(false);
-  const [photoData, setPhotoData] = useState<PhotoData>({ title: '', description: '', tags: [], category: '' });
+  const [photoData, setPhotoData] = useState<PhotoData>({ 
+    title: '', 
+    description: '', 
+    tags: [], 
+    category: '',
+    userName: '',
+    channelLogo: ''
+  });
   const [tagInput, setTagInput] = useState('');
 
-  const categories = [
-    'Nature', 'Portrait', 'Street', 'Architecture', 'Food', 
-    'Travel', 'Fashion', 'Art', 'Animals', 'Sports', 'Other'
+  // Fetch user profile on component mount
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const userProfile = await profileService.fetchUserProfile();
+        
+        if (userProfile.userName || userProfile.channelLogo) {
+          setPhotoData(prev => ({
+            ...prev,
+            userName: userProfile.userName,
+            channelLogo: userProfile.channelLogo
+          }));
+          console.log('👤 User profile loaded:', userProfile);
+        } else {
+          console.log('⚠️ No user profile data found');
+        }
+      } catch (error) {
+        console.error('❌ Failed to load user profile:', error);
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
+  // Dynamic categories from Photo folder - Upload Screen controls everything
+  const photoCategories = [
+    'All', 'Aesthetic', 'AiArt', 'Animals', 'Architecture', 'Art', 'Cars', 
+    'Cyberpunk', 'Family', 'Fashion', 'Food', 'Gaming', 'Macro', 'Minimal', 
+    'Music', 'Nature', 'Photography', 'Space', 'Sports', 'Street', 'Technical', 
+    'Travel', 'Vintage', 'Wallpaper'
   ];
+  const categories = photoCategories;
 
   const pickPhotos = async () => {
     try {
@@ -177,21 +217,57 @@ export default function PhotoUpload({
       return;
     }
 
-    // Direct connection to photo.js folder
+    if (!photoData.category.trim()) {
+      Alert.alert('Missing Category', 'Please select a category for your photo');
+      return;
+    }
+
+    // Dynamic Upload - Photo Upload Screen controls everything
     try {
       const photoHandler = require('./photo.js');
-      const result = await photoHandler.receiveFile(selectedFiles[0]?.uri || '', {
-        ...photoData,
-        size: selectedFiles[0].size,
-        type: selectedFiles[0].mimeType || 'image/jpeg',
-        name: selectedFiles[0].name
-      });
+      const selectedFile = selectedFiles[0];
+      
+      // User Info from Photo Upload Screen (Dynamic)
+      const userInfo = {
+        userName: photoData.userName,
+        channelLogo: photoData.channelLogo
+      };
+      
+      // Dynamic data from Photo Upload Screen
+      const uploadData = {
+        selectedCategory: photoData.category, // User selected category
+        photoTitle: photoData.title, // User entered title
+        tags: photoData.tags, // User entered tags
+        userInfo: userInfo, // User info
+        size: selectedFile?.size || selectedFile?.fileSize,
+        type: selectedFile?.mimeType || 'image/jpeg',
+        name: selectedFile?.name || selectedFile?.fileName
+      };
+      
+      console.log('🚀🔥 UPLOAD STARTING: User clicked upload button!');
+      console.log('📊 UPLOAD DATA:', JSON.stringify(uploadData, null, 2));
+      
+      const result = await photoHandler.receiveFile(selectedFile?.uri || '', uploadData);
+      
+      console.log('🎯 UPLOAD RESULT:', JSON.stringify(result, null, 2));
       
       if (result.success) {
+        console.log('🎉🔥 SUCCESS: Photo upload completed!');
+        if (result.indexFileUrl && result.folderUrl) {
+          console.log('📄 JSON FILE CREATED:', result.indexFileUrl);
+          console.log('📁 USER FOLDER URL:', result.folderUrl);
+          console.log('📁 FOLDER CONTAINS:');
+          console.log(`  📸 ${result.userFolder}/[filename].jpg - Your photo`);
+          console.log(`  📄 ${result.userFolder}/[filename].json - Photo details`);
+          console.log('👤 USER FOLDER:', result.userFolder);
+        } else {
+          console.warn('⚠️ JSON FILE NOT CREATED - Check logs above');
+        }
         Alert.alert('Success', result.message);
         onClose();
         router.replace('/');
       } else {
+        console.error('❌🔥 UPLOAD FAILED:', result.message);
         Alert.alert('Error', result.message);
       }
     } catch (error) {

@@ -84,9 +84,7 @@ const r2UploadHandler = {
       }
 
       // Extract file information
-      const fileExtension = getFileExtension(fileName);
-      const baseName = getFileNameWithoutExtension(fileName);
-      const uniqueFileName = `${baseName}_${Date.now()}${fileExtension}`;
+      const fileExtension = getFileExtension(fileName) || '.jpg';
 
       // Determine content type
       const contentTypes = {
@@ -98,12 +96,34 @@ const r2UploadHandler = {
       };
       const contentType = contentTypes[fileExtension.toLowerCase()] || 'image/jpeg';
 
-      // Create R2 upload URL - Upload to 'photo' folder
+      // Dynamic User-Based Folder Structure - SIMPLIFIED
+      // Get user info for folder structure - DYNAMIC
+      const userName = metadata?.userInfo?.userName || metadata?.userName || 'unknown_user';
+      const sanitizedUserName = String(userName)
+        .replace(/\//g, '_')
+        .replace(/[^\w\-.]/g, '_');
+
+      // Create clean folder structure: {username}/
+      const userFolder = sanitizedUserName; // Direct username folder
+      
+      // Create R2 upload URL - Simplified folder structure
       const bucketName = process.env.EXPO_PUBLIC_BUCKET_PHOTO;
-      const safeFileName = uniqueFileName.replace(/[^\w\-_.]/g, '_'); // Sanitize filename
-      const objectKey = `photo/${safeFileName}`;
+      const safeFileName = String(fileName)
+        .split('/').pop()
+        .replace(/[^\w\-_.]/g, '_'); // Sanitize filename
+
+      // Final file path: {username}/{filename}.jpg (no extra folders)
+      const objectKey = `${userFolder}/${safeFileName}`;
       const endpoint = process.env.EXPO_PUBLIC_R2_ENDPOINT.replace(/\/$/, '');
       const uploadUrl = `${endpoint}/${bucketName}/${objectKey}`;
+      
+      console.log('📁 Folder Structure:', {
+        userFolder,
+        objectKey,
+        userName,
+        sanitizedUserName,
+        safeFileName
+      });
 
       console.log('🚀 Starting R2 photo upload...');
       console.log('🔍 Debug - Endpoint:', endpoint);
@@ -161,7 +181,7 @@ const r2UploadHandler = {
       return {
         success: true,
         fileId: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        fileName: uniqueFileName,
+        fileName: safeFileName,
         originalName: fileName,
         fileSize: byteArray.length,
         contentType: contentType,
@@ -170,10 +190,19 @@ const r2UploadHandler = {
         publicUrl: uploadUrl,
         uploadTime: new Date().toISOString(),
         metadata: {
-          title: metadata?.title || '',
-          category: metadata?.category || '',
+          // User Info from Photo Upload Screen (Dynamic)
+          userName: metadata?.userInfo?.userName || metadata?.userName,
+          channelLogo: metadata?.userInfo?.channelLogo || metadata?.channelLogo,
+          
+          // Content Info from Photo Upload Screen
+          photoTitle: metadata?.photoTitle || metadata?.title || '',
+          selectedCategory: metadata?.selectedCategory || metadata?.category || 'All', // Dynamic category from upload screen
           tags: metadata?.tags || [],
-          description: metadata?.description || ''
+          description: metadata?.description || '',
+          
+          // Folder Structure Info
+          userFolder: userFolder,
+          sanitizedUserName: sanitizedUserName
         }
       };
 

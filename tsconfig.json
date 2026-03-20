@@ -21,6 +21,7 @@
       ]
     },
     "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
     "jsx": "react-jsx",
     "declaration": false,
     "allowImportingTsExtensions": true,

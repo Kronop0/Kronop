@@ -199,7 +199,8 @@ class R2PhotoService {
     try {
       const command = new ListObjectsV2Command({
         Bucket: R2_CONFIG.R2_BUCKET_NAME,
-        Prefix: 'photo/', // All photos are in photo/ folder
+        // Bucket structure: {username}/{filename}.(jpg|png|...)
+        // No additional prefix folders like photo/
         MaxKeys: limit,
       });
 
@@ -215,14 +216,18 @@ class R2PhotoService {
       
       for (let i = 0; i < response.Contents.length; i++) {
         const object = response.Contents[i];
-        if (object.Key && object.Key.endsWith('.jpg')) {
+        if (object.Key && !object.Key.endsWith('.json') && /\.(jpe?g|png|gif|webp)$/i.test(object.Key)) {
           const publicUrl = `${R2_CONFIG.PUBLIC_BUCKET_URL}/${object.Key}`;
           console.log(`[r2_service.ts] Found REAL photo: ${object.Key}`);
+
+          const keyParts = object.Key.split('/');
+          const fileNameWithExt = keyParts[keyParts.length - 1];
+          const baseName = fileNameWithExt.replace(/\.[^/.]+$/, '');
           
           validPhotos.push({
             id: `r2_${i + 1}`,
             url: publicUrl,
-            caption: object.Key.replace('photo/', '').replace('.jpg', ''),
+            caption: baseName,
             user: {
               id: 'r2_user',
               name: 'Kronop Photos',

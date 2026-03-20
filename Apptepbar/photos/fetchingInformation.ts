@@ -78,10 +78,14 @@ class FetchingInformationService {
       const metadata = headResponse.Metadata || {};
       
       // Build comprehensive media info
+      const keyParts = fileKey.split('/');
+      const fileNameWithExt = keyParts[keyParts.length - 1];
+      const baseName = fileNameWithExt.replace(/\.[^/.]+$/, '');
+
       const mediaInfo: MediaInfo = {
         id: fileKey.replace(/[^a-zA-Z0-9]/g, '_'),
         url: `${R2_CONFIG.PUBLIC_BUCKET_URL}/${fileKey}`,
-        title: metadata.title || fileKey.replace('photo/', '').replace('.jpg', ''),
+        title: metadata.title || baseName,
         caption: metadata.caption || metadata.description || '',
         uploader: {
           id: metadata.uploaderId || 'unknown',
