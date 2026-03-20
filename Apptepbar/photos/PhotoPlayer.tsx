@@ -113,7 +113,7 @@ export const PhotoPlayer = ({ category, photos: categoryPhotos, textStyles }: Ph
     const photoContainerStyle = {
       flex: 1,
       aspectRatio: 1, // Fixed square aspect ratio for uniform grid
-      margin: 4,
+      margin: 0.5, // Minimal gap - 0.5px on each side = 1px total
       borderRadius: 0, // Sharp corners
       overflow: 'hidden' as const,
       backgroundColor: '#1A1A1A', // Background for loading state
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   gridContainer: {
-    padding: 8,
+    padding: 1, // Minimal padding - 1px total gap
   },
   gridPhoto: {
     width: '100%',
