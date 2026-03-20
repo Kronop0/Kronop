@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-// import { toggleLike } from '../ZeroLogic';
+import { Star } from 'lucide-react-native';
+import { toggleLike } from '../../reels/ZeroLogic';
 
 interface StarButtonProps {
   videoId: string;
@@ -29,9 +29,8 @@ const StarButton: React.FC<StarButtonProps> = ({
     setCount(Math.max(0, newCount));
     setIsLoading(true);
     
-    // API call - placeholder for now
-    // const success = await toggleLike(videoId, isLiked);
-    const success = true; // Mock success
+    // API call
+    const success = await toggleLike(videoId, isLiked);
     
     if (!success) {
       // Revert on failure
@@ -48,10 +47,11 @@ const StarButton: React.FC<StarButtonProps> = ({
       onPress={handlePress}
       disabled={isLoading}
     >
-      <MaterialIcons 
-        name={isLiked ? "star" : "star-border"} 
+      <Star 
         size={24} 
+        fill={isLiked ? "#FFD700" : "none"}
         color={isLiked ? "#FFD700" : "#FFFFFF"} 
+        strokeWidth={1.5}
       />
       <Text style={styles.count}>{count}</Text>
     </TouchableOpacity>

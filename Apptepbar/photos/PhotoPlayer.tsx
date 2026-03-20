@@ -18,8 +18,10 @@ import { Star, MessageCircle, Heart } from 'lucide-react-native';
 // Import R2 photo service for real data
 import { photoService, type Photo } from './r2_service';
 
-// Import actual button components from local photo folder
-import StarButton from './components/StarButton';
+// Import split components and hooks
+import { PhotoItemComponent, LoadingSpinner, EmptyState } from './PhotoPlayer2';
+import { usePhotoPrefetch, usePhotoFetching } from './PhotoPlayer3';
+import StarButton from './Components/StarButton';
 
 const { width } = Dimensions.get('window');
 
