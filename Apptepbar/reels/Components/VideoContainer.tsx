@@ -49,10 +49,10 @@ const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onV
           offset: screenHeight * index,
           index,
         })}
-        // Optimized memory settings for smooth scrolling
-        initialNumToRender={1}
-        maxToRenderPerBatch={1}
-        windowSize={3}
+        // BUTTER SMOOTH settings for instant transitions
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        windowSize={5}
         removeClippedSubviews={false}
         contentContainerStyle={{ paddingBottom: bottomPadding }}
         onScroll={(event) => {
@@ -71,7 +71,7 @@ const VideoContainer: React.FC<VideoContainerProps> = ({ videos, renderItem, onV
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: 'transparent', // Remove black background
   },
   // JUGAAD - Hide any native controls that might appear
   controlSuppressor: {
@@ -85,7 +85,6 @@ const styles = StyleSheet.create({
     zIndex: -1000,
     pointerEvents: 'none' as const,
     display: 'none' as const,
-    visibility: 'hidden' as const,
   },
 });
 

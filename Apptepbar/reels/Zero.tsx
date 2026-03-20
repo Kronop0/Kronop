@@ -305,13 +305,13 @@ const Zero: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: 'transparent', // Remove black background
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
   },
   loadingText: {
     color: '#fff',
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
   },
   errorText: {
     color: '#ff6b6b',
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
   },
   emptyText: {
     color: '#fff',
@@ -343,11 +343,13 @@ const styles = StyleSheet.create({
     width: screenWidth,
     height: screenHeight,
     position: 'relative',
+    backgroundColor: 'transparent', // Remove black background
   },
   videoWrapper: {
     width: screenWidth,
     height: screenHeight,
     position: 'relative',
+    backgroundColor: 'transparent', // Remove black background
   },
   statusBarOverlay: {
     position: 'absolute',
@@ -385,7 +387,6 @@ const styles = StyleSheet.create({
     zIndex: -9999,
     pointerEvents: 'none' as const,
     display: 'none' as const,
-    visibility: 'hidden' as const,
   },
 });
 

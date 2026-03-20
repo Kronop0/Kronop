@@ -31,6 +31,20 @@ const ReelPlayer: React.FC<ReelPlayerProps> = ({
     };
   }, [videoUrl]);
 
+  // PRE-LOAD next reel's first chunk in background
+  useEffect(() => {
+    if (videoUrl && isPlaying) {
+      preloadNextReel();
+    }
+  }, [videoUrl, isPlaying]);
+
+  const preloadNextReel = async () => {
+    // This would need access to next video URL from parent
+    // For now, we'll just log the intent
+    console.log('🚀 Pre-loading next reel chunk in background...');
+    // TODO: Implement pre-load logic when next video URL is available
+  };
+
   const startChunking = async () => {
     console.log('📥 Starting chunking for:', videoUrl);
     
@@ -42,6 +56,8 @@ const ReelPlayer: React.FC<ReelPlayerProps> = ({
       // onReady - when first chunk is written and file is ready
       (fileUri) => {
         console.log('✅ First chunk ready, setting local URI:', fileUri);
+        console.log('🎯 PROOF: This is LOCAL FILE from expo-file-system:', fileUri);
+        console.log('📁 File path starts with file://:', fileUri.startsWith('file://'));
         setLocalVideoUri(fileUri);
         setIsBuffering(false);
       },
@@ -53,8 +69,8 @@ const ReelPlayer: React.FC<ReelPlayerProps> = ({
       (error) => {
         console.error('❌ Chunking failed:', error);
         setIsBuffering(false);
-        // Fallback to direct URL if chunking fails
-        setLocalVideoUri(videoUrl);
+        // NO FALLBACK - Only local file allowed for true chunking
+        console.log('🚫 NO DIRECT URL FALLBACK - Waiting for local file only');
       }
     );
   };
@@ -71,13 +87,16 @@ const ReelPlayer: React.FC<ReelPlayerProps> = ({
     setIsBuffering(true);
   };
 
-  // Use local URI if available, otherwise fallback to original URL
-  const finalVideoUrl = localVideoUri || videoUrl;
+  // ONLY LOCAL FILE - NO DIRECT URL FALLBACK
+  const finalVideoUrl = localVideoUri;
 
-  // ZERO setup - Direct URL play with maximum quality
+  // ZERO setup - ONLY LOCAL FILE from chunking
   const player = useVideoPlayer(finalVideoUrl, (player) => {
     if (player) {
       console.log('⚡ Hardware acceleration enabled - MAX QUALITY');
+      console.log('🎯 PROOF: Player using LOCAL FILE:', finalVideoUrl);
+      console.log('📁 File type:', finalVideoUrl?.startsWith('file://') ? '✅ LOCAL FILE' : '❌ DIRECT URL');
+      
       player.loop = true;
       player.muted = false;
       
@@ -139,7 +158,7 @@ const ReelPlayer: React.FC<ReelPlayerProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: 'transparent', // Remove black background
   },
   video: {
     width: screenWidth,
