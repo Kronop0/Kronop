@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { StreamLogic } from '../chunking/StreamLogic';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
@@ -13,10 +14,68 @@ const ReelPlayer: React.FC<ReelPlayerProps> = ({
   videoUrl,
   isPlaying = true
 }) => {
-  console.log('🚀 Ultra-Fast ReelPlayer:', videoUrl);
+  console.log('🚀 Ultra-Fast ReelPlayer with Chunking:', videoUrl);
+
+  const [localVideoUri, setLocalVideoUri] = useState<string | null>(null);
+  const [isBuffering, setIsBuffering] = useState(true);
+  const streamLogicRef = React.useRef<StreamLogic | null>(null);
+
+  // Start chunking when videoUrl changes
+  useEffect(() => {
+    if (videoUrl) {
+      startChunking();
+    }
+
+    return () => {
+      cleanup();
+    };
+  }, [videoUrl]);
+
+  const startChunking = async () => {
+    console.log('📥 Starting chunking for:', videoUrl);
+    
+    const streamLogic = new StreamLogic();
+    streamLogicRef.current = streamLogic;
+
+    await streamLogic.startStreaming(
+      videoUrl,
+      // onReady - when first chunk is written and file is ready
+      (fileUri) => {
+        console.log('✅ First chunk ready, setting local URI:', fileUri);
+        setLocalVideoUri(fileUri);
+        setIsBuffering(false);
+      },
+      // onProgress - optional
+      (progress) => {
+        console.log(`📊 Chunking progress: ${Math.round(progress * 100)}%`);
+      },
+      // onError - handle errors
+      (error) => {
+        console.error('❌ Chunking failed:', error);
+        setIsBuffering(false);
+        // Fallback to direct URL if chunking fails
+        setLocalVideoUri(videoUrl);
+      }
+    );
+  };
+
+  const cleanup = async () => {
+    console.log('🧹 Cleaning up chunking');
+    
+    if (streamLogicRef.current) {
+      await streamLogicRef.current.cleanup();
+      streamLogicRef.current = null;
+    }
+    
+    setLocalVideoUri(null);
+    setIsBuffering(true);
+  };
+
+  // Use local URI if available, otherwise fallback to original URL
+  const finalVideoUrl = localVideoUri || videoUrl;
 
   // ZERO setup - Direct URL play with maximum quality
-  const player = useVideoPlayer(videoUrl, (player) => {
+  const player = useVideoPlayer(finalVideoUrl, (player) => {
     if (player) {
       console.log('⚡ Hardware acceleration enabled - MAX QUALITY');
       player.loop = true;
@@ -34,12 +93,16 @@ const ReelPlayer: React.FC<ReelPlayerProps> = ({
         console.log('🔧 Quality settings applied with available options');
       }
       
-      // Instant play at original resolution
+      // INSTANT PLAY - जैसे ही file path मिले, बिना delay के play करो
       if (isPlaying) {
         player.play();
+        console.log('🚀 INSTANT PLAY - First chunk received, playing immediately');
       }
     }
   });
+
+  // NEVER show controls - always false
+  const showControls = false;
 
   // Simple play/pause control
   useEffect(() => {
@@ -65,10 +128,10 @@ const ReelPlayer: React.FC<ReelPlayerProps> = ({
         style={styles.video}
         contentFit="cover" // Perfect fit without distortion
         allowsFullscreen={false}
-        // Maximum quality rendering settings (available props only)
+        // NO NATIVE CONTROLS - पूरी तरह से disable
+        allowsPictureInPicture={false}
+        nativeControls={false}
       />
-      {/* JUGAAD - Hide any remaining controls */}
-      <View style={styles.controlHider} />
     </View>
   );
 };
@@ -84,17 +147,6 @@ const styles = StyleSheet.create({
     zIndex: 1000, // Video on top
     // High fidelity rendering - no scaling artifacts
     backgroundColor: 'transparent',
-  },
-  controlHider: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-    opacity: 0,
-    zIndex: 999,
-    pointerEvents: 'none' as const,
   },
 });
 

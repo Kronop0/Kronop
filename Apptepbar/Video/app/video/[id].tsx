@@ -77,7 +77,7 @@ export default function VideoPlayerScreen() {
   const [showReport, setShowReport] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [showControls, setShowControls] = useState(false);
+  const [showControls, setShowControls] = useState(false); // NEVER show controls - always false
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const player = useVideoPlayer(video?.videoUrl || '', player => {
@@ -204,18 +204,11 @@ export default function VideoPlayerScreen() {
           <VideoView 
             style={styles.video}
             player={player}
-            allowsFullscreen
-            allowsPictureInPicture
+            allowsFullscreen={false}
+            allowsPictureInPicture={false}
+            nativeControls={false} // NO NATIVE CONTROLS - completely disabled
           />
-          <VideoControlsOverlay
-            isPlaying={isPlaying}
-            onPlayPause={handlePlayPause}
-            onPrevious={handlePreviousVideo}
-            onNext={handleNextVideo}
-            hasPrevious={currentIndex > 0}
-            hasNext={currentIndex < videos.length - 1}
-            visible={showControls}
-          />
+          {/* VideoControlsOverlay COMPLETELY REMOVED - no more buttons */}
         </Pressable>
 
         <View style={styles.userSection}>

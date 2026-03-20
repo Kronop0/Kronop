@@ -29,8 +29,9 @@ export function FullscreenVideoPlayer({ visible, onClose, player }: FullscreenVi
         <VideoView 
           style={styles.video}
           player={player}
-          allowsFullscreen
-          allowsPictureInPicture
+          allowsFullscreen={false}
+          allowsPictureInPicture={false}
+          nativeControls={false} // NO NATIVE CONTROLS - completely disabled
         />
         
         <Pressable style={styles.closeButton} onPress={handleClose}>
