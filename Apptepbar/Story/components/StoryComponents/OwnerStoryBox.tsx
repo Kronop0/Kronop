@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   TouchableOpacity,
   View,
@@ -10,8 +10,9 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { theme } from '../../../constants/theme';
+import { theme } from '../../../../constants/theme';
 import StoryViewCounter from './StoryViewCounter';
+import { StreamLogic } from '../../../reels/chunking/StreamLogic';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -35,6 +36,8 @@ export function OwnerStoryBox({
   const [viewCounterVisible, setViewCounterVisible] = useState(false);
   const [mediaError, setMediaError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [preloadedVideoUri, setPreloadedVideoUri] = useState<string | null>(null);
+  const streamLogicRef = useRef<StreamLogic | null>(null);
   
   // Owner story data - will be fetched from R2
   const ownerStory = {
@@ -60,6 +63,31 @@ export function OwnerStoryBox({
       onPress();
     } else {
       setStoryVisible(true);
+      // 🚀 IMMEDIATE PLAY - Start streaming immediately when modal opens
+      const videoUrl = ownerStory.videoUrl || ownerStory.fallbackUrl;
+      if (videoUrl) {
+        // Clean up previous stream
+        if (streamLogicRef.current) {
+          streamLogicRef.current.cleanup();
+        }
+        
+        const streamLogic = new StreamLogic();
+        streamLogicRef.current = streamLogic;
+        
+        streamLogic.startStreaming(
+          videoUrl,
+          (fileUri) => {
+            console.log('🚀 Owner story FIRST CHUNK READY!');
+            setPreloadedVideoUri(fileUri);
+          },
+          (progress) => {
+            console.log(`📥 Owner preload: ${(progress * 100).toFixed(1)}%`);
+          },
+          (error) => {
+            console.error('❌ Owner preload failed:', error);
+          }
+        );
+      }
     }
   };
 
@@ -211,7 +239,7 @@ export function OwnerStoryBox({
                 <ErrorPlaceholder type="video" onRetry={() => setMediaError(false)} />
               ) : (
                 <SimpleVideoStory 
-                  videoUrl={getMediaSource().uri}
+                  videoUrl={preloadedVideoUri || getMediaSource().uri}
                   style={styles.storyMedia}
                 />
               )

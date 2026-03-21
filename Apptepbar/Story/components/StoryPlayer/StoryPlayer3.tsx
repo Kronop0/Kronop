@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { VideoView, useVideoPlayer } from 'expo-video';
 
 export const useStoryPlayerSetup = (finalVideoUrl: string | null, isPlaying: boolean) => {
-  const isLocalFile = finalVideoUrl?.startsWith('file://');
+  const isLocalFile = finalVideoUrl?.startsWith('file://') || finalVideoUrl?.startsWith('/');
   const player = useVideoPlayer(finalVideoUrl || '', (p) => {
     if (p && isLocalFile) {
       p.loop = false;
@@ -20,7 +20,9 @@ export const useStoryPlayerSetup = (finalVideoUrl: string | null, isPlaying: boo
   }, [player, finalVideoUrl, isLocalFile, isPlaying]);
 
   useEffect(() => {
-    player && isLocalFile && (isPlaying ? player.play() : player.pause());
+    if (player && isLocalFile) {
+      isPlaying ? player.play() : player.pause();
+    }
   }, [isPlaying, player, isLocalFile]);
 
   return player;

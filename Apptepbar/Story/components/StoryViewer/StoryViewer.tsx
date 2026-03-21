@@ -17,6 +17,7 @@ export interface Story {
   timestamp?: Date;
   thumbnailUrl?: string;
   duration?: number;
+  _preloadUri?: string | null;
 }
 
 export interface StoryViewerProps {
@@ -26,4 +27,5 @@ export interface StoryViewerProps {
   onClose: () => void;
   onProfilePress?: (story: Story) => void;
   currentUserId?: string;
+  preloadedVideoUri?: string | null;
 }

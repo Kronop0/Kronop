@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity, Text, ActivityIndicator, Platform, Modal, Dimensions, TextInput, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -14,6 +14,7 @@ import { API_BASE_URL } from '../../constants/network';
 // import { Story } from '../../types/story'; // Removed - types folder deleted
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import { StreamLogic } from '../../Apptepbar/reels/chunking/StreamLogic';
 import StatusBarOverlay from '../../components/common/StatusBarOverlay';
 import AppLogo from '../../components/common/AppLogo';
 import HeaderButton from '../../components/common/HeaderButton';
@@ -59,6 +60,8 @@ export default function HomeScreen() {
   const [storyViewerVisible, setStoryViewerVisible] = useState(false);
   const [selectedStoryGroup, setSelectedStoryGroup] = useState<any[]>([]);
   const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
+  const [preloadedVideoUri, setPreloadedVideoUri] = useState<string | null>(null);
+  const preloadStreamRef = useRef<StreamLogic | null>(null);
   
   // Profile Modal State
   const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -101,28 +104,69 @@ export default function HomeScreen() {
 
 
   const handleStoryPress = async (story: StoryItem) => {
-    // View single story
-    const storyForViewer = [{
-      id: story.id,
-      userId: story.userId,
-      userName: story.userName || 'User',
-      userAvatar: story.userAvatar,
-      imageUrl: story.imageUrl,
-      videoUrl: story.videoUrl,
-      fallbackUrl: story.fallbackUrl,
-      story_type: story.story_type || story.type
-    }];
+    // 🚀 IMMEDIATE PLAY - Start streaming immediately on press
+    const videoUrl = story.videoUrl || story.imageUrl || story.fallbackUrl;
+    const isVideo = story.story_type === 'video' || story.type === 'video' || (videoUrl && videoUrl.includes('.mp4'));
     
-    console.log('[KRONOP-DEBUG] 📱 Story prepared for StoryViewer:', {
-      id: story.id,
-      userName: story.userName,
-      storyType: story.story_type,
-      fallbackUrl: story.fallbackUrl
-    });
-    
-    setSelectedStoryGroup(storyForViewer);
-    setSelectedStoryIndex(0);
-    setStoryViewerVisible(true);
+    if (isVideo && videoUrl) {
+      // Clean up previous stream
+      if (preloadStreamRef.current) {
+        preloadStreamRef.current.cleanup();
+      }
+      
+      // Start streaming immediately - trigger onReady when first chunk arrives
+      const streamLogic = new StreamLogic();
+      preloadStreamRef.current = streamLogic;
+      
+      // Show viewer immediately, streaming will start in background
+      const storyForViewer = [{
+        id: story.id,
+        userId: story.userId,
+        userName: story.userName || 'User',
+        userAvatar: story.userAvatar,
+        imageUrl: story.imageUrl,
+        videoUrl: story.videoUrl,
+        fallbackUrl: story.fallbackUrl,
+        story_type: story.story_type || story.type,
+        _preloadUri: null as string | null
+      }];
+      
+      setSelectedStoryGroup(storyForViewer);
+      setSelectedStoryIndex(0);
+      setPreloadedVideoUri(null);
+      setStoryViewerVisible(true);
+      
+      // Start streaming in background - will call onReady on first chunk
+      streamLogic.startStreaming(
+        videoUrl,
+        (fileUri) => {
+          console.log('🚀 FIRST CHUNK READY - Updating player!');
+          setPreloadedVideoUri(fileUri);
+        },
+        (progress) => {
+          console.log(`📥 Preload progress: ${(progress * 100).toFixed(1)}%`);
+        },
+        (error) => {
+          console.error('❌ Preload failed:', error);
+        }
+      );
+    } else {
+      // Image - show immediately
+      const storyForViewer = [{
+        id: story.id,
+        userId: story.userId,
+        userName: story.userName || 'User',
+        userAvatar: story.userAvatar,
+        imageUrl: story.imageUrl,
+        videoUrl: story.videoUrl,
+        fallbackUrl: story.fallbackUrl,
+        story_type: story.story_type || story.type
+      }];
+      
+      setSelectedStoryGroup(storyForViewer);
+      setSelectedStoryIndex(0);
+      setStoryViewerVisible(true);
+    }
   };
 
   // Handle Profile Press - Open Profile Modal
@@ -226,6 +270,7 @@ export default function HomeScreen() {
         visible={storyViewerVisible}
         stories={selectedStoryGroup}
         initialIndex={selectedStoryIndex}
+        preloadedVideoUri={preloadedVideoUri}
         onClose={() => setStoryViewerVisible(false)}
         onProfilePress={(story) => {
           console.log('[KRONOP-DEBUG] 👤 Profile pressed from StoryViewer for:', story.userName);

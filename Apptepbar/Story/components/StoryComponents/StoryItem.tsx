@@ -10,7 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../../../constants/theme';
+import { theme } from '../../../../constants/theme';
 
 // Simple Story interface
 interface Story {

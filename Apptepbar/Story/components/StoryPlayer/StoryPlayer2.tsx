@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { VideoView } from 'expo-video';
-import { StreamLogic } from '../../reels/chunking/StreamLogic';
+import { StreamLogic } from '../../../reels/chunking/StreamLogic';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 

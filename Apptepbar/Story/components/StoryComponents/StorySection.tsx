@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../../../constants/theme';
+import { theme } from '../../../../constants/theme';
 import OwnerStoryBox from './OwnerStoryBox';
 
 // [KRONOP-DEBUG] StorySection component initialized
@@ -117,7 +117,7 @@ export function StorySection({
     const getDisplayUrl = () => {
       // Check if story uses local asset
       if (item?.useLocalAsset) {
-        return require('../../../assets/images/logo.png');
+        return require('../../../../assets/images/logo.png');
       }
       if (item?.thumbnailUrl) return item.thumbnailUrl;
       if (item?.imageUrl) return item.imageUrl;

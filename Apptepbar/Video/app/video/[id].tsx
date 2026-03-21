@@ -7,7 +7,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { Image } from 'expo-image';
 import { colors, spacing, typography, borderRadius } from '@/Apptepbar/Video/ThemeConstants';
 import { getLongVideos, Video } from '@/Apptepbar/Video/services/videoService';
-import { AdsBanner, HorizontalVideoList, VideoQualitySelector, VideoStatsOverlay, FullscreenVideoPlayer, CommentsModal, ReportModal, VideoControlsOverlay } from '@/Apptepbar/Video/components';
+import { AdsBanner, HorizontalVideoList, VideoQualitySelector, VideoStatsOverlay, FullscreenVideoPlayer, CommentsModal, ReportModal } from '@/Apptepbar/Video/components';
 
 type VideoQuality = '360p' | '480p' | '720p' | '1080p' | 'Auto';
 
