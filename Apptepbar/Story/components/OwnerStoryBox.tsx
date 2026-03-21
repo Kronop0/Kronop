@@ -36,21 +36,21 @@ export function OwnerStoryBox({
   const [mediaError, setMediaError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   
-  // Owner story data
+  // Owner story data - will be fetched from R2
   const ownerStory = {
     id: 'owner-story',
     userId: 'owner123',
     userName: 'You',
     userAvatar: 'https://picsum.photos/40/40?random=owner',
-    imageUrl: undefined, // No image, using video
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    imageUrl: undefined,
+    videoUrl: undefined, // Will be set from R2
     thumbnailUrl: 'https://picsum.photos/78/110?random=owner',
     duration: 60,
     type: 'video' as 'image' | 'video',
     story_type: 'video' as 'image' | 'video',
     timestamp: new Date(),
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    fallbackUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    url: undefined, // Will be set from R2
+    fallbackUrl: undefined,
     useLocalAsset: false,
   };
   
