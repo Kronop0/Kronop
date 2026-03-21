@@ -5,10 +5,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { theme } from '../../../constants/theme';
-import videoHandler from './video.js';
 
-interface VideoData {
+interface ReelData {
   title: string;
   description: string;
   category: string;
@@ -16,352 +14,69 @@ interface VideoData {
   coverPhoto?: any;
 }
 
-interface VideoUploadProps {
+interface ReelsUploadProps {
   onClose: () => void;
   onUpload?: (fileUri: string, metadata: any) => Promise<void>;
   uploading?: boolean;
   uploadProgress?: number;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.primary,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.primary,
-  },
-  placeholder: {
-    width: 34,
-  },
-  uploadArea: {
-    padding: 8,
-  },
-  uploadButton: {
-    flex: 1,
-    borderWidth: 2,
-    borderColor: theme.colors.border.secondary,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
-  },
-  uploadButtonSelected: {
-    borderColor: theme.colors.primary.main,
-    backgroundColor: theme.colors.background.elevated,
-  },
-  coverPhotoOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: theme.borderRadius.lg,
-  },
-  coverPhotoLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  coverPhotoImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: theme.borderRadius.lg,
-  },
-  coverPhotoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.md,
-    borderWidth: 2,
-    borderColor: theme.colors.border.secondary,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.background.tertiary,
-  },
-  coverPhotoText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.secondary,
-    marginLeft: theme.spacing.sm,
-  },
-  coverPhotoSubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
-    marginLeft: theme.spacing.sm,
-  },
-  uploadText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.sm,
-  },
-  uploadTextSelected: {
-    color: theme.colors.primary.main,
-  },
-  uploadSubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
-    marginTop: theme.spacing.xs,
-  },
-  fileInfo: {
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background.elevated,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-  },
-  fileInfoItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.xs,
-  },
-  fileInfoLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.typography.fontWeight.medium,
-  },
-  fileInfoValue: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.primary,
-    fontWeight: theme.typography.fontWeight.semibold,
-  },
-  thumbnailSection: {
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background.elevated,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
-  },
-  thumbnailButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.md,
-    borderWidth: 2,
-    borderColor: theme.colors.border.secondary,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.background.tertiary,
-  },
-  thumbnailButtonSelected: {
-    borderColor: theme.colors.primary.main,
-    backgroundColor: theme.colors.background.elevated,
-  },
-  thumbnailPreview: {
-    width: 80,
-    height: 80,
-    borderRadius: theme.borderRadius.md,
-    marginTop: theme.spacing.md,
-  },
-  formSection: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xxl,
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.xl,
-  },
-  label: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.primary,
-    backgroundColor: theme.colors.background.elevated,
-  },
-  textArea: {
-    height: 100,
-    paddingTop: theme.spacing.md,
-  },
-  charCount: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.tertiary,
-    textAlign: 'right',
-    marginTop: theme.spacing.xs,
-  },
-  categoryScroll: {
-    marginTop: theme.spacing.sm,
-  },
-  categoryChip: {
-    backgroundColor: theme.colors.background.tertiary,
-    borderRadius: theme.borderRadius.xl,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    marginRight: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border.primary,
-  },
-  categoryChipSelected: {
-    backgroundColor: theme.colors.primary.main,
-    borderColor: theme.colors.primary.main,
-  },
-  categoryChipText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.typography.fontWeight.medium,
-  },
-  categoryChipTextSelected: {
-    color: '#FFFFFF',
-  },
-  tagInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.elevated,
-    borderWidth: 1,
-    borderColor: theme.colors.border.primary,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-  },
-  tagInput: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.text.primary,
-  },
-  addTagButton: {
-    padding: theme.spacing.sm,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.tertiary,
-    borderRadius: theme.borderRadius.xl,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  tagText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.typography.fontWeight.medium,
-  },
-  uploadButtonMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.primary.main,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
-    paddingVertical: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    gap: theme.spacing.sm,
-    ...theme.elevation.md,
-  },
-  uploadButtonDisabled: {
-    backgroundColor: theme.colors.border.primary,
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.semibold,
-  },
-});
-
-export default function VideoUpload({ 
+export default function ReelsUpload({ 
   onClose, 
   onUpload, 
   uploading = false, 
   uploadProgress = 0 
-}: VideoUploadProps) {
+}: ReelsUploadProps) {
   const router = useRouter();
   const [selectedFile, setSelectedFile] = useState<any>(null);
-  const [videoData, setVideoData] = useState<VideoData>({ title: '', description: '', category: '', tags: [], coverPhoto: null });
+  const [reelData, setReelData] = useState<ReelData>({ 
+    title: '', 
+    description: '', 
+    category: '', 
+    tags: [], 
+    coverPhoto: null 
+  });
   const [tagInput, setTagInput] = useState('');
 
-  const formatFileSize = (bytes?: number): string => {
-    if (!bytes) return '0 MB';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  };
+  const categories = [
+    'Entertainment', 'Music', 'Gaming', 'Sports', 'Comedy', 
+    'Education', 'Travel', 'Food', 'Fashion', 'Technology', 'Other'
+  ];
 
-  const pickVideo = async () => {
+  const pickReel = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['video/*'],
         copyToCacheDirectory: true,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        const fileName = file.name || '';
-        const extension = fileName.split('.').pop()?.toLowerCase();
-        const allowedExtensions = ['mp4', 'mov', 'avi', 'webm', '3gp', 'mkv'];
         
-        if (!extension || !allowedExtensions.includes(extension)) {
-          Alert.alert('Invalid File', `Please select a valid video file. Allowed: ${allowedExtensions.join(', ')}`);
-          return;
-        }
-
-        const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
+        // Basic validation
+        const MAX_SIZE = 100 * 1024 * 1024; // 100MB
         if (file.size && file.size > MAX_SIZE) {
-          Alert.alert('File Too Large', 'Video files must be less than 2GB');
+          Alert.alert('File Too Large', 'Video files must be less than 100MB');
           return;
         }
 
         setSelectedFile(file);
-        setVideoData(prev => ({ 
-          ...prev, 
-          title: prev.title || file.name.split('.')[0] 
-        }));
+        if (!reelData.title) {
+          setReelData(prev => ({
+            ...prev,
+            title: prev.title || file.name.split('.')[0]
+          }));
+        }
       }
     } catch (error) {
+      console.error('Error picking reel:', error);
       Alert.alert('Error', 'Failed to pick video file');
     }
   };
 
-  const pickCoverPhoto = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please allow access to your photos');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setVideoData(prev => ({ ...prev, coverPhoto: result.assets[0] }));
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick cover photo');
-    }
-  };
-
   const addTag = () => {
-    if (tagInput.trim() && !videoData.tags.includes(tagInput.trim())) {
-      setVideoData(prev => ({
+    if (tagInput.trim() && !reelData.tags.includes(tagInput.trim())) {
+      setReelData(prev => ({
         ...prev,
         tags: [...prev.tags, tagInput.trim()]
       }));
@@ -370,39 +85,39 @@ export default function VideoUpload({
   };
 
   const removeTag = (tagToRemove: string) => {
-    setVideoData(prev => ({
+    setReelData(prev => ({
       ...prev,
       tags: prev.tags.filter(tag => tag !== tagToRemove)
     }));
   };
 
-    const handleUpload = async () => {
+  const handleUpload = async () => {
     if (!selectedFile) {
-      Alert.alert('No File Selected', 'Please select a video file first');
+      Alert.alert('No File Selected', 'Please select a video file');
       return;
     }
 
-    if (!videoData.title.trim()) {
-      Alert.alert('Missing Title', 'Please enter a title for your video');
-      return;
-    }
-
-    if (!videoData.category.trim()) {
-      Alert.alert('Missing Category', 'Please select a category for your video');
+    if (!reelData.title.trim()) {
+      Alert.alert('Missing Title', 'Please enter a title for your reel');
       return;
     }
 
     // Direct connection to video.js folder
     try {
-      const result = await videoHandler.receiveFile(selectedFile.uri, {
-        ...videoData,
+      const reelsHandler = require('./video.js').default;
+      const result = await reelsHandler.receiveFile(selectedFile.uri, {
+        ...reelData,
         size: selectedFile.size,
         type: selectedFile.mimeType || 'video/mp4',
         name: selectedFile.name
       });
       
       if (result.success) {
-        Alert.alert('Success', result.message);
+        if (result.isDemo) {
+          Alert.alert('Demo Mode', result.message + '\n\nNote: This is a demo upload. No actual file was uploaded to cloud.');
+        } else {
+          Alert.alert('Success', result.message);
+        }
         onClose();
         router.replace('/');
       } else {
@@ -410,63 +125,30 @@ export default function VideoUpload({
       }
     } catch (error) {
       console.error('Upload error:', error);
-      Alert.alert('Error', 'Upload failed for Video');
+      Alert.alert('Error', 'Upload failed for Reels');
     }
   };
-
-
-
-
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.uploadArea}>
         <TouchableOpacity 
-          style={[styles.uploadButton, selectedFile && styles.uploadButtonSelected]}
-          onPress={pickVideo}
+          style={styles.uploadButton}
+          onPress={pickReel}
           disabled={uploading}
         >
-          {selectedFile && videoData.coverPhoto && (
-            <View style={styles.coverPhotoOverlay}>
-              <Image 
-                source={{ uri: videoData.coverPhoto.uri }} 
-                style={styles.coverPhotoImage}
-                contentFit="cover"
-              />
-            </View>
-          )}
-          
-          <MaterialIcons 
-            name="video-library" 
-            size={theme.iconSize.xl} 
-            color={selectedFile ? theme.colors.primary.main : theme.colors.text.tertiary} 
-          />
-          <Text style={[styles.uploadText, selectedFile && styles.uploadTextSelected]}>
-            {selectedFile ? 'Video Selected' : 'Choose Video'}
-          </Text>
-          <Text style={styles.uploadSubtext}>
-            {selectedFile ? `MP4 • ${formatFileSize(selectedFile.size)} • Max 2GB` : 'MP4, MOV, AVI (Max 2GB)'}
-          </Text>
+          <MaterialIcons name="video-library" size={32} color="#8B00FF" />
+          <Text style={styles.uploadButtonText}>Choose Video</Text>
+          <Text style={styles.uploadButtonSubtext}>Select MP4, MOV, AVI</Text>
         </TouchableOpacity>
 
-        {selectedFile && !videoData.coverPhoto && (
-          <TouchableOpacity 
-            style={styles.coverPhotoButton}
-            onPress={pickCoverPhoto}
-            disabled={uploading}
-          >
-            <MaterialIcons 
-              name="image" 
-              size={theme.iconSize.lg} 
-              color={theme.colors.text.tertiary} 
-            />
-            <Text style={styles.coverPhotoText}>
-              Add Cover Photo
+        {selectedFile && (
+          <View style={styles.selectedFileContainer}>
+            <Text style={styles.selectedFileName}>{selectedFile.name}</Text>
+            <Text style={styles.selectedFileSize}>
+              {selectedFile.size ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'}
             </Text>
-            <Text style={styles.coverPhotoSubtext}>
-              JPG, PNG (16:9)
-            </Text>
-          </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -475,35 +157,48 @@ export default function VideoUpload({
           <Text style={styles.label}>Title *</Text>
           <TextInput
             style={styles.input}
-            value={videoData.title}
-            onChangeText={(text) => setVideoData(prev => ({ ...prev, title: text }))}
-            placeholder="Enter video title..."
+            value={reelData.title}
+            onChangeText={(text) => setReelData(prev => ({ ...prev, title: text }))}
+            placeholder="Enter reel title..."
             placeholderTextColor="#666"
             maxLength={100}
           />
-          <Text style={styles.charCount}>{videoData.title.length}/100</Text>
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Description</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            value={videoData.description}
-            onChangeText={(text) => setVideoData(prev => ({ ...prev, description: text }))}
-            placeholder="Describe your video..."
+            value={reelData.description}
+            onChangeText={(text) => setReelData(prev => ({ ...prev, description: text }))}
+            placeholder="Add description..."
             placeholderTextColor="#666"
             multiline
-            numberOfLines={4}
-            textAlignVertical="top"
+            numberOfLines={3}
             maxLength={500}
           />
-          <Text style={styles.charCount}>{videoData.description.length}/500</Text>
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Category *</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-            {/* Categories will be imported from centralized source */}
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryChip,
+                  reelData.category === category && styles.categoryChipSelected
+                ]}
+                onPress={() => setReelData(prev => ({ ...prev, category }))}
+              >
+                <Text style={[
+                  styles.categoryChipText,
+                  reelData.category === category && styles.categoryChipTextSelected
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         </View>
 
@@ -520,17 +215,17 @@ export default function VideoUpload({
               returnKeyType="done"
             />
             <TouchableOpacity style={styles.addTagButton} onPress={addTag}>
-              <MaterialIcons name="add" size={theme.iconSize.md} color={theme.colors.primary.main} />
+              <MaterialIcons name="add" size={20} color="#8B00FF" />
             </TouchableOpacity>
           </View>
           
-          {videoData.tags.length > 0 && (
+          {reelData.tags.length > 0 && (
             <View style={styles.tagsContainer}>
-              {videoData.tags.map((tag, index) => (
+              {reelData.tags.map((tag, index) => (
                 <View key={index} style={styles.tag}>
                   <Text style={styles.tagText}>#{tag}</Text>
                   <TouchableOpacity onPress={() => removeTag(tag)}>
-                    <MaterialIcons name="close" size={theme.iconSize.sm} color={theme.colors.text.tertiary} />
+                    <MaterialIcons name="close" size={16} color="#666" />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -547,15 +242,173 @@ export default function VideoUpload({
         {uploading ? (
           <>
             <ActivityIndicator size="small" color="#FFFFFF" />
-            <Text style={styles.uploadButtonText}>Uploading...</Text>
+            <View style={{ width: 8 }} />
+            <Text style={styles.uploadButtonMainText}>
+              Uploading... {uploadProgress}%
+            </Text>
           </>
         ) : (
           <>
-            <MaterialIcons name="upload" size={theme.iconSize.md} color="#FFFFFF" />
-            <Text style={styles.uploadButtonText}>Upload Video</Text>
+            <MaterialIcons name="upload" size={24} color="#FFFFFF" />
+            <View style={{ width: 8 }} />
+            <Text style={styles.uploadButtonMainText}>Upload Reel</Text>
           </>
         )}
       </TouchableOpacity>
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  uploadArea: {
+    padding: 8,
+  },
+  uploadButton: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: '#333333',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 8,
+  },
+  uploadButtonSubtext: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 4,
+  },
+  selectedFileContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+  },
+  selectedFileName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  selectedFileSize: {
+    fontSize: 12,
+    color: '#CCCCCC',
+  },
+  formSection: {
+    padding: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#333333',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  textArea: {
+    height: 80,
+    paddingTop: 12,
+  },
+  categoryScroll: {
+    flexDirection: 'row',
+  },
+  categoryChip: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#333333',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+  },
+  categoryChipSelected: {
+    backgroundColor: '#8B00FF',
+    borderColor: '#8B00FF',
+  },
+  categoryChipText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  categoryChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  tagInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#333333',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+  },
+  tagInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  addTagButton: {
+    backgroundColor: '#8B00FF',
+    borderRadius: 6,
+    padding: 8,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8B00FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  tagText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  uploadButtonMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8B00FF',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 16,
+    borderRadius: 8,
+  },
+  uploadButtonDisabled: {
+    backgroundColor: '#333333',
+  },
+  uploadButtonMainText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+});
