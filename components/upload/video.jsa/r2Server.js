@@ -18,30 +18,57 @@ const r2Config = {
 // Initialize S3 client for R2
 const s3Client = new S3Client(r2Config);
 
+// Clean metadata validator - only allows essential data
+const validateCleanMetadata = (metadata) => {
+  const allowedKeys = [
+    'title', 'description', 'thumbnail', 'tags', 'category', 'userInfo',
+    'fileName', 'fileSize', 'fileType', 'uploadTime',
+    'originalName', 'category', 'title' // For backward compatibility
+  ];
+  
+  const clean = {};
+  Object.keys(metadata).forEach(key => {
+    if (allowedKeys.includes(key)) {
+      clean[key] = metadata[key];
+    } else {
+      console.warn(`r2Server: Filtering out unauthorized metadata: ${key}`);
+    }
+  });
+  
+  return clean;
+};
+
 const r2Server = {
   // Upload video to R2 bucket
   uploadVideo: async (fileData, metadata) => {
     try {
       const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO;
-      const fileName = `videos/${Date.now()}_${metadata.name || 'video.mp4'}`;
+      const fileName = `videos/${Date.now()}_${metadata.fileName || metadata.name || 'video.mp4'}`;
+      
+      // Validate and clean metadata
+      const cleanMetadata = validateCleanMetadata(metadata);
       
       console.log('Starting R2 upload:', {
         bucket: bucketName,
         file: fileName,
-        size: metadata.size
+        size: cleanMetadata.fileSize || metadata.size
       });
 
-      // Create upload parameters
+      // Create upload parameters with clean metadata
       const uploadParams = {
         Bucket: bucketName,
         Key: fileName,
         Body: fileData,
-        ContentType: metadata.type || 'video/mp4',
+        ContentType: cleanMetadata.fileType || metadata.type || 'video/mp4',
         Metadata: {
-          originalName: metadata.name,
-          uploadTime: new Date().toISOString(),
-          category: metadata.category || 'general',
-          title: metadata.title || 'Untitled Video'
+          originalName: cleanMetadata.fileName || metadata.name || 'video.mp4',
+          uploadTime: cleanMetadata.uploadTime || new Date().toISOString(),
+          category: cleanMetadata.category || 'general',
+          title: cleanMetadata.title || 'Untitled Video',
+          description: cleanMetadata.description || '',
+          tags: JSON.stringify(cleanMetadata.tags || []),
+          userInfo: JSON.stringify(cleanMetadata.userInfo || {}),
+          thumbnail: cleanMetadata.thumbnail || ''
         }
       };
 
@@ -249,20 +276,21 @@ const r2Server = {
   },
 
   // Upload individual chunk
-  uploadChunk: async (uploadId, chunkIndex, chunkData, metadata) => {
+  uploadChunk: async (uploadId, fileName, chunkIndex, chunkData, metadata) => {
     try {
       const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO;
-      const fileName = `videos/${Date.now()}_temp.mp4`; // This should be stored with uploadId
       
       console.log(`Uploading chunk ${chunkIndex + 1}/${metadata.totalChunks}:`, {
         uploadId,
+        fileName,
         chunkSize: chunkData.length,
         bucket: bucketName
       });
 
+      // chunkData is now already binary Buffer from the chunking logic
       const uploadPartCommand = new UploadPartCommand({
         Bucket: bucketName,
-        Key: fileName, // This should be the actual filename from initiate
+        Key: fileName,
         PartNumber: chunkIndex + 1,
         UploadId: uploadId,
         Body: chunkData
@@ -287,24 +315,47 @@ const r2Server = {
   },
 
   // Complete chunked upload
-  completeChunkedUpload: async (uploadId, metadata) => {
+  completeChunkedUpload: async (uploadId, fileName, uploadedParts) => {
     try {
       const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO;
-      const fileName = `videos/${Date.now()}_temp.mp4`; // This should be the actual filename
       
       console.log('Completing chunked upload:', {
         uploadId,
-        bucket: bucketName
+        fileName,
+        partsCount: uploadedParts.length,
+        bucket: bucketName,
+        uploadedParts: uploadedParts.map(p => ({ PartNumber: p.PartNumber, ETag: p.ETag }))
       });
 
-      // For now, we'll use the existing uploadLargeVideo method as a fallback
-      // In a real implementation, we would need to track the uploaded parts
+      // Validate all parts have ETags
+      const missingETags = uploadedParts.filter(part => !part.ETag);
+      if (missingETags.length > 0) {
+        throw new Error(`${missingETags.length} parts are missing ETags`);
+      }
+
+      // Sort parts by PartNumber to ensure correct order
+      const sortedParts = uploadedParts.sort((a, b) => a.PartNumber - b.PartNumber);
+
+      console.log('Sorted parts for completion:', sortedParts);
+
+      const completeCommand = new CompleteMultipartUploadCommand({
+        Bucket: bucketName,
+        Key: fileName,
+        UploadId: uploadId,
+        MultipartUpload: { Parts: sortedParts }
+      });
+
+      const completeResponse = await s3Client.send(completeCommand);
+
+      console.log('✅ Chunked upload completed successfully:', fileName);
+
       return {
         success: true,
         message: 'Chunked upload completed',
-        fileId: `chunked_${uploadId}`,
-        location: `${process.env.EXPO_PUBLIC_R2_ENDPOINT}/${bucketName}/chunked_${uploadId}`,
-        bucket: bucketName
+        fileId: fileName,
+        location: `${process.env.EXPO_PUBLIC_R2_ENDPOINT}/${bucketName}/${fileName}`,
+        bucket: bucketName,
+        etag: completeResponse.ETag
       };
 
     } catch (error) {
