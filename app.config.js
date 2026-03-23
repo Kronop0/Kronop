@@ -12,13 +12,15 @@ const appJson = {
       backgroundColor: "#ffffff"
     },
     assetBundlePatterns: [
-      "**/*"
+      "*/"
     ],
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
+      bundleIdentifier: "com.kronopaman.kronop"
     },
     android: {
-      package: "com.anonymous.kronop",
+      package: "com.kronopaman.kronop",
+      versionCode: 1,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
@@ -56,5 +58,3 @@ module.exports = () => ({
     EXPO_PUBLIC_BUCKET_SONG: process.env.EXPO_PUBLIC_BUCKET_SONG || '',
   },
 });
-
-
