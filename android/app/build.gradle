@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.kronop.app'
+    namespace 'com.anonymous.kronop'
     defaultConfig {
-        applicationId 'com.kronop.app'
+        applicationId 'com.anonymous.kronop'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

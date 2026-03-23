@@ -3,14 +3,46 @@
 
 import { S3Client, PutObjectCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
+import Constants from 'expo-constants';
 
-// R2 Configuration from environment
+// Expo environment variables - use process.env directly for React Native
+const r2AccountId = process.env.EXPO_PUBLIC_R2_ACCOUNT_ID;
+const r2AccessKeyId = process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID;
+const r2SecretAccessKey = process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY;
+const r2Endpoint = process.env.EXPO_PUBLIC_R2_ENDPOINT;
+const r2PublicUrl = process.env.EXPO_PUBLIC_R2_PUBLIC_URL;
+
+// CRITICAL: Validate environment variables
+if (!r2AccountId || !r2AccessKeyId || !r2SecretAccessKey) {
+  console.error('🚨 R2 CONFIGURATION ERROR: Missing environment variables!');
+  console.error('🚨 EXPO_PUBLIC_R2_ACCOUNT_ID:', !!r2AccountId);
+  console.error('🚨 EXPO_PUBLIC_R2_ACCESS_KEY_ID:', !!r2AccessKeyId);
+  console.error('🚨 EXPO_PUBLIC_R2_SECRET_ACCESS_KEY:', !!r2SecretAccessKey);
+  console.error('🚨 EXPO_PUBLIC_R2_PUBLIC_URL:', !!r2PublicUrl);
+  throw new Error('R2 credentials not properly configured');
+}
+
+// Determine the correct endpoint
+// For R2 S3 operations, we need the R2 API endpoint, not the public URL
+const r2ApiEndpoint = `https://${r2AccountId}.r2.cloudflarestorage.com`;
+const finalEndpoint = r2Endpoint || r2ApiEndpoint;
+
+console.log('🔧 R2 CONFIGURATION DEBUG:');
+console.log('🔧 Account ID:', r2AccountId);
+console.log('🔧 Access Key ID:', r2AccessKeyId);
+console.log('🔧 Secret Key Length:', r2SecretAccessKey?.length || 0);
+console.log('🔧 Provided Endpoint:', r2Endpoint);
+console.log('🔧 R2 API Endpoint:', r2ApiEndpoint);
+console.log('🔧 Final Endpoint:', finalEndpoint);
+console.log('🔧 Public URL:', r2PublicUrl);
+console.log('🔧==========================================');
+
 const r2Config = {
   region: 'auto',
-  endpoint: process.env.EXPO_PUBLIC_R2_ENDPOINT,
+  endpoint: finalEndpoint,
   credentials: {
-    accessKeyId: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY,
+    accessKeyId: r2AccessKeyId || '',
+    secretAccessKey: r2SecretAccessKey || '',
   },
   forcePathStyle: true,
 };
@@ -42,7 +74,7 @@ const r2Server = {
   // Upload video to R2 bucket
   uploadVideo: async (fileData, metadata) => {
     try {
-      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO;
+      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO || 'kronop-video';
       const fileName = `videos/${Date.now()}_${metadata.fileName || metadata.name || 'video.mp4'}`;
       
       // Validate and clean metadata
@@ -54,23 +86,30 @@ const r2Server = {
         size: cleanMetadata.fileSize || metadata.size
       });
 
-      // Create upload parameters with clean metadata
+      // Create upload parameters with CLEAN metadata to prevent signature issues
       const uploadParams = {
         Bucket: bucketName,
         Key: fileName,
         Body: fileData,
         ContentType: cleanMetadata.fileType || metadata.type || 'video/mp4',
         Metadata: {
+          // ONLY essential metadata - no extra data that could break signature
           originalName: cleanMetadata.fileName || metadata.name || 'video.mp4',
           uploadTime: cleanMetadata.uploadTime || new Date().toISOString(),
           category: cleanMetadata.category || 'general',
           title: cleanMetadata.title || 'Untitled Video',
-          description: cleanMetadata.description || '',
-          tags: JSON.stringify(cleanMetadata.tags || []),
-          userInfo: JSON.stringify(cleanMetadata.userInfo || {}),
-          thumbnail: cleanMetadata.thumbnail || ''
+          // Only include thumbnail if it's a simple string
+          ...(cleanMetadata.thumbnail && { thumbnail: cleanMetadata.thumbnail })
         }
       };
+
+      console.log('🔍 UPLOAD PAYLOAD DEBUG:', {
+        bucket: uploadParams.Bucket,
+        key: uploadParams.Key,
+        contentType: uploadParams.ContentType,
+        metadataKeys: Object.keys(uploadParams.Metadata),
+        bodySize: fileData.length
+      });
 
       // Perform upload using AWS SDK v3
       const command = new PutObjectCommand(uploadParams);
@@ -82,7 +121,7 @@ const r2Server = {
         success: true,
         message: 'Video uploaded successfully to R2',
         fileId: fileName,
-        location: `${process.env.EXPO_PUBLIC_R2_ENDPOINT}/${bucketName}/${fileName}`,
+        location: `${r2PublicUrl}/${fileName}`,
         bucket: bucketName,
         etag: result.ETag
       };
@@ -100,7 +139,7 @@ const r2Server = {
   // Multipart upload for large files
   uploadLargeVideo: async (fileData, metadata) => {
     try {
-      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO;
+      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO || 'kronop-video';
       const fileName = `videos/${Date.now()}_${metadata.name || 'video.mp4'}`;
       
       console.log('Starting multipart R2 upload:', {
@@ -185,7 +224,7 @@ const r2Server = {
         success: true,
         message: 'Large video uploaded successfully to R2',
         fileId: fileName,
-        location: `${process.env.EXPO_PUBLIC_R2_ENDPOINT}/${bucketName}/${fileName}`,
+        location: `${r2PublicUrl}/${fileName}`,
         bucket: bucketName,
         etag: completeResponse.ETag
       };
@@ -203,7 +242,7 @@ const r2Server = {
   // Get file from R2
   getVideo: async (fileId) => {
     try {
-      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO;
+      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO || 'kronop-video';
       
       const command = new GetObjectCommand({
         Bucket: bucketName,
@@ -232,7 +271,7 @@ const r2Server = {
   // Initiate chunked upload
   initiateChunkedUpload: async (metadata) => {
     try {
-      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO;
+      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO || 'kronop-video';
       const fileName = `videos/${Date.now()}_${metadata.fileName || 'video.mp4'}`;
       
       console.log('Initiating chunked upload:', {
@@ -252,7 +291,10 @@ const r2Server = {
           category: metadata.category || 'general',
           title: metadata.title || 'Untitled Video',
           totalChunks: metadata.totalChunks.toString(),
-          chunkSize: metadata.chunkSize.toString()
+          chunkSize: metadata.chunkSize.toString(),
+          // Add thumbnail metadata for tracking
+          thumbnail: metadata.thumbnail || '',
+          thumbnailType: metadata.thumbnail && metadata.thumbnail.startsWith('https://') ? 'cloud' : 'local'
         }
       });
       
@@ -278,7 +320,7 @@ const r2Server = {
   // Upload individual chunk
   uploadChunk: async (uploadId, fileName, chunkIndex, chunkData, metadata) => {
     try {
-      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO;
+      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO || 'kronop-video';
       
       console.log(`Uploading chunk ${chunkIndex + 1}/${metadata.totalChunks}:`, {
         uploadId,
@@ -317,7 +359,7 @@ const r2Server = {
   // Complete chunked upload
   completeChunkedUpload: async (uploadId, fileName, uploadedParts) => {
     try {
-      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO;
+      const bucketName = process.env.EXPO_PUBLIC_BUCKET_VIDEO || 'kronop-video';
       
       console.log('Completing chunked upload:', {
         uploadId,
@@ -353,7 +395,7 @@ const r2Server = {
         success: true,
         message: 'Chunked upload completed',
         fileId: fileName,
-        location: `${process.env.EXPO_PUBLIC_R2_ENDPOINT}/${bucketName}/${fileName}`,
+        location: `${r2PublicUrl}/${fileName}`,
         bucket: bucketName,
         etag: completeResponse.ETag
       };

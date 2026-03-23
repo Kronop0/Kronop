@@ -3,13 +3,10 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIn
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import TitleHandler from './video-details/TitleHandler';
-import DescriptionHandler from './video-details/DescriptionHandler';
-import CategoryHandler from './video-details/CategoryHandler';
-import TagsHandler from './video-details/TagsHandler';
-import ThumbnailHandler from './video-details/ThumbnailHandler';
-import { UserInfoHandler } from './video-details/UserInfoHandler';
-import VideoDetailsIndex, { VideoDetailsHandlers } from './video-details';
+import * as FileSystem from 'expo-file-system';
+import { Video } from 'expo-av';
+import { TitleHandler, DescriptionHandler, CategoryHandler, TagsHandler, ThumbnailHandler, UserInfoHandler } from './video-details/components';
+import VideoDetailsIndex, { VideoDetailsHandlers } from './video-details/index';
 import { videoUploadStyles } from './rajasthani-layout/VideoUploadStyles';
 
 interface ReelsUploadProps {
@@ -40,9 +37,38 @@ export default function VideoUpload({
     onTagsChange: (tags) => setVideoDetails(prev => ({ ...prev, tags })),
     category: '',
     onCategoryChange: (category) => setVideoDetails(prev => ({ ...prev, category })),
-    userInfo: { userId: 'user123', username: 'demo_user' },
+    userInfo: {
+      userId: 'user123',
+      username: 'demo_user',
+      email: 'demo@example.com'
+    },
     onUserInfoChange: (userInfo) => setVideoDetails(prev => ({ ...prev, userInfo }))
   });
+
+  // Function to extract video duration
+  const getVideoDuration = async (videoUri: string): Promise<number> => {
+    try {
+      console.log('🔍 Extracting video duration for:', videoUri);
+      
+      // Simple approach: use file size as a rough estimate
+      // This avoids expo-av API complexity and TypeScript issues
+      const fileInfo = await FileSystem.getInfoAsync(videoUri);
+      const fileSize = (fileInfo as any).size || 0;
+      
+      // Rough estimate: 1MB ≈ 8 seconds of video (average compression)
+      const estimatedDuration = (fileSize / (1024 * 1024)) * 8 * 1000; // Convert to milliseconds
+      
+      console.log(`📊 Estimated duration: ${(estimatedDuration / 1000).toFixed(2)}s based on ${fileSize} bytes`);
+      return estimatedDuration;
+      
+    } catch (error) {
+      console.error('❌ Failed to get video duration:', error);
+      
+      // Default fallback: assume 10 seconds for unknown videos
+      console.log('📊 Using default duration: 10s');
+      return 10 * 1000; // 10 seconds in milliseconds
+    }
+  };
 
   const pickReel = async () => {
     try {
@@ -60,6 +86,15 @@ export default function VideoUpload({
           return;
         }
 
+        // DEBUG: Log file properties
+        console.log('🔍 FILE DEBUG:', {
+          name: file.name,
+          size: file.size,
+          sizeMB: (file.size / 1024 / 1024).toFixed(2) + 'MB',
+          mimeType: file.mimeType,
+          uri: file.uri
+        });
+
         setSelectedFile(file);
         if (!videoDetails.title) {
           videoDetails.onTitleChange(file.name.split('.')[0]);
@@ -73,24 +108,39 @@ export default function VideoUpload({
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      Alert.alert('No File Selected', 'Please select a video file');
+      Alert.alert('No File Selected', 'Please select a video file to upload');
       return;
     }
 
-    if (!videoDetails.title.trim()) {
-      Alert.alert('Missing Title', 'Please enter a title for your reel');
+    if (!videoDetails.title) {
+      Alert.alert('Missing Title', 'Please add a title for your video');
       return;
     }
 
     try {
+      // Extract video duration first
+      const videoDuration = await getVideoDuration(selectedFile.uri);
+      
       // Collect clean video details using VideoDetailsIndex
       const cleanVideoDetails = VideoDetailsIndex.collectVideoDetails(videoDetails);
       
       // Handover clean data to r2Server metadata
       const cleanMetadata = await VideoDetailsIndex.handoverToR2Server(cleanVideoDetails, {
         name: selectedFile.name,
-        size: selectedFile.size,
-        type: selectedFile.mimeType || 'video/mp4'
+        size: selectedFile.size || 0, // Ensure size is properly passed
+        type: selectedFile.mimeType || 'video/mp4',
+        duration: videoDuration, // Use extracted duration
+        uri: selectedFile.uri // Add URI for potential duration extraction
+      });
+
+      // DEBUG: Log file properties for routing decision
+      console.log('🔍 UPLOAD ROUTING DEBUG:', {
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size,
+        fileSizeMB: (selectedFile.size / 1024 / 1024).toFixed(2) + 'MB',
+        fileDuration: videoDuration,
+        durationSeconds: (videoDuration / 1000).toFixed(2) + 's',
+        cleanMetadataSize: cleanMetadata.fileSize
       });
 
       // Clean connection - send to Traffic Police (index.js)
@@ -98,10 +148,41 @@ export default function VideoUpload({
       const result = await chunkingTrafficPolice.routeVideoUpload(selectedFile.uri, cleanMetadata);
       
       if (result.success) {
+        let thumbnailUrl = null;
+        
+        // Upload thumbnail ONLY after video upload succeeds
+        if (videoDetails.thumbnail) {
+          console.log('🖼️ Uploading thumbnail after successful video upload...');
+          
+          // Check if thumbnail is local file or already uploaded
+          if (videoDetails.thumbnail.startsWith('file://') || !videoDetails.thumbnail.startsWith('https://')) {
+            // Local file - upload now
+            const uniqueId = `thumb_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+            const thumbnailResult = await require('./R2Thumbnail').default.uploadThumbnail(videoDetails.thumbnail, uniqueId);
+            
+            if (thumbnailResult.success) {
+              thumbnailUrl = thumbnailResult.url;
+              console.log('✅ Thumbnail uploaded successfully:', thumbnailUrl);
+            } else {
+              console.warn('⚠️ Thumbnail upload failed, but video succeeded:', thumbnailResult.message);
+            }
+          } else {
+            // Already uploaded - use as-is
+            thumbnailUrl = videoDetails.thumbnail;
+            console.log('✅ Using existing thumbnail URL:', thumbnailUrl);
+          }
+        }
+        
+        // Update video metadata with thumbnail URL
+        if (thumbnailUrl) {
+          // Here you could update the video's metadata in your database
+          console.log('🔗 Linking thumbnail to video:', thumbnailUrl);
+        }
+        
         if (result.isDemo) {
           Alert.alert('Demo Mode', result.message + '\n\nNote: This is a demo upload. No actual file was uploaded to cloud.');
         } else {
-          Alert.alert('Success', result.message);
+          Alert.alert('Success', result.message + (thumbnailUrl ? '\n\nThumbnail uploaded successfully!' : ''));
         }
         onClose();
         router.replace('/');

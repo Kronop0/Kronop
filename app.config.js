@@ -18,6 +18,7 @@ const appJson = {
       supportsTablet: true
     },
     android: {
+      package: "com.anonymous.kronop",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
@@ -34,8 +35,6 @@ const appJson = {
   }
 };
 
-require('dotenv').config();
-
 module.exports = () => ({
   ...appJson.expo,
   plugins: [
@@ -48,9 +47,13 @@ module.exports = () => ({
     EXPO_PUBLIC_R2_ACCESS_KEY_ID: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID || '',
     EXPO_PUBLIC_R2_SECRET_ACCESS_KEY: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY || '',
     EXPO_PUBLIC_R2_ACCOUNT_ID: process.env.EXPO_PUBLIC_R2_ACCOUNT_ID || '',
-    EXPO_PUBLIC_BUCKET_REELS: process.env.EXPO_PUBLIC_BUCKET_REELS || '',
-    EXPO_PUBLIC_BUCKET_PHOTO: process.env.EXPO_PUBLIC_BUCKET_PHOTO || 'kronop-photos',
     EXPO_PUBLIC_R2_ENDPOINT: process.env.EXPO_PUBLIC_R2_ENDPOINT || '',
+    EXPO_PUBLIC_BUCKET_REELS: process.env.EXPO_PUBLIC_BUCKET_REELS || '',
+    EXPO_PUBLIC_BUCKET_VIDEO: process.env.EXPO_PUBLIC_BUCKET_VIDEO || 'kronop-video',
+    EXPO_PUBLIC_BUCKET_LIVE: process.env.EXPO_PUBLIC_BUCKET_LIVE || '',
+    EXPO_PUBLIC_BUCKET_STORY: process.env.EXPO_PUBLIC_BUCKET_STORY || '',
+    EXPO_PUBLIC_BUCKET_PHOTO: process.env.EXPO_PUBLIC_BUCKET_PHOTO || 'kronop-photos',
+    EXPO_PUBLIC_BUCKET_SONG: process.env.EXPO_PUBLIC_BUCKET_SONG || '',
   },
 });
 

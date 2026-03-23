@@ -1,4 +1,4 @@
-package com.kronop.app
+package com.anonymous.kronop
 
 import android.app.Application
 import android.content.res.Configuration

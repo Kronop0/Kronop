@@ -7,6 +7,7 @@ import ThumbnailHandler from './ThumbnailHandler';
 import TagsHandler from './TagsHandler';
 import CategoryHandler from './CategoryHandler';
 import { UserInfoHandler } from './UserInfoHandler';
+import R2Thumbnail from '../R2Thumbnail';
 
 export interface VideoDetails {
   title: string;
@@ -41,6 +42,27 @@ const VideoDetailsIndex = {
   collectVideoDetails: function(handlers: VideoDetailsHandlers): VideoDetails {
     try {
       console.log('VideoDetailsIndex: Collecting strict 6-point data');
+
+      // Validation: Check if all required data is present
+      const errors = [];
+      
+      if (!handlers.title || handlers.title.trim() === '') {
+        errors.push('Title is required');
+      }
+      
+      if (!handlers.userInfo || !handlers.userInfo.userId) {
+        errors.push('User ID is required');
+      }
+
+      // If validation errors, don't proceed
+      if (errors.length > 0) {
+        console.error('❌ VIDEO DETAILS VALIDATION FAILED:');
+        errors.forEach(error => console.error(`  - ${error}`));
+        console.log('==========================================');
+        console.log('🚫 UPLOAD BLOCKED: Missing required data prevents upload');
+        console.log('==========================================');
+        throw new Error(`Validation failed: ${errors.join(', ')}`);
+      }
 
       // Strict Filter: Only collect these 6 essential data points
       const strictData: VideoDetails = {
@@ -90,12 +112,41 @@ const VideoDetailsIndex = {
     try {
       console.log('VideoDetailsIndex: Handing over clean data to r2Server');
 
+      // Final validation before upload
+      if (!videoDetails.title || videoDetails.title.trim() === '') {
+        console.error('❌ UPLOAD BLOCKED: Title is required for upload');
+        console.log('==========================================');
+        throw new Error('Cannot upload without title');
+      }
+
+      if (!videoDetails.userInfo.userId) {
+        console.error('❌ UPLOAD BLOCKED: User ID is required for upload');
+        console.log('==========================================');
+        throw new Error('Cannot upload without user ID');
+      }
+
+      // Handle thumbnail - check if it's already a cloud URL or needs upload
+      let thumbnailUrl = null;
+      if (videoDetails.thumbnail) {
+        // Check if thumbnail is already a cloud URL (starts with https://)
+        if (videoDetails.thumbnail.startsWith('https://')) {
+          console.log('VideoDetailsIndex: Using existing cloud thumbnail URL:', videoDetails.thumbnail);
+          thumbnailUrl = videoDetails.thumbnail;
+        } else {
+          // It's a local file - DON'T upload here, let VideoUpload handle it
+          console.log('VideoDetailsIndex: Local thumbnail detected, will upload after video succeeds');
+          console.log('VideoDetailsIndex: Local URI:', videoDetails.thumbnail);
+          // Pass local URI as-is - VideoUpload will handle the upload
+          thumbnailUrl = videoDetails.thumbnail;
+        }
+      }
+
       // Create clean metadata for r2Server
       const cleanMetadata = {
         // Only the 6 essential data points
         title: videoDetails.title,
         description: videoDetails.description,
-        thumbnail: videoDetails.thumbnail,
+        thumbnail: thumbnailUrl, // Use R2 URL instead of local URI
         tags: videoDetails.tags,
         category: videoDetails.category,
         userInfo: videoDetails.userInfo,
@@ -122,6 +173,7 @@ const VideoDetailsIndex = {
 
       console.log('VideoDetailsIndex: Clean metadata prepared for r2Server', {
         dataPoints: Object.keys(cleanMetadata).length,
+        hasThumbnail: !!thumbnailUrl,
         isClean: true
       });
 
@@ -139,7 +191,8 @@ const VideoDetailsIndex = {
   ThumbnailHandler,
   TagsHandler,
   CategoryHandler,
-  UserInfoHandler
+  UserInfoHandler,
+  R2Thumbnail
 };
 
 export default VideoDetailsIndex;

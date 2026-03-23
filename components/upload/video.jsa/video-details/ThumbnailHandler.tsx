@@ -13,9 +13,8 @@ export default function ThumbnailHandler({ thumbnail, onThumbnailChange }: Thumb
   const pickThumbnail = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
+        mediaTypes: ['images'],
+        allowsEditing: false, // No editing, direct upload
         quality: 0.8,
       });
 
@@ -24,19 +23,35 @@ export default function ThumbnailHandler({ thumbnail, onThumbnailChange }: Thumb
         
         // Check file size (max 5MB for thumbnail)
         if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-          Alert.alert('File Too Large', 'Thumbnail must be less than 5MB');
+          // Terminal error print
+          const errorMsg = `❌ THUMBNAIL UPLOAD FAILED: File too large (${(asset.fileSize / 1024 / 1024).toFixed(2)}MB). Max allowed: 5MB`;
+          console.error(errorMsg);
+          console.log('==========================================');
+          Alert.alert('File Too Large', `Thumbnail must be less than 5MB. Selected file is ${(asset.fileSize / 1024 / 1024).toFixed(2)}MB`);
           return;
         }
 
+        // Store local URI for now - upload will happen after video upload
+        console.log('📱 THUMBNAIL SELECTED: Storing local URI for post-video upload...');
+        console.log(`🔗 THUMBNAIL LOCAL URI: ${asset.uri}`);
+        console.log('==========================================');
+        
+        // Return local URI instead of uploading immediately
         onThumbnailChange(asset.uri);
       }
     } catch (error) {
-      console.error('Error picking thumbnail:', error);
-      Alert.alert('Error', 'Failed to pick thumbnail image');
+      // Terminal error print
+      const errorMsg = `❌ THUMBNAIL PICK FAILED: ${error.message}`;
+      console.error(errorMsg);
+      console.log('==========================================');
+      Alert.alert('Error', 'Failed to pick thumbnail');
     }
   };
 
   const removeThumbnail = () => {
+    const successMsg = `✅ THUMBNAIL REMOVED: User removed thumbnail successfully`;
+    console.log(successMsg);
+    console.log('==========================================');
     onThumbnailChange(null);
   };
 

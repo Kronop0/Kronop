@@ -1,4 +1,4 @@
-package com.kronop.app
+package com.anonymous.kronop
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
