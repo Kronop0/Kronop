@@ -41,10 +41,11 @@ module.exports = () => ({
   ...appJson.expo,
   plugins: [
     '@react-native-google-signin/google-signin',
-[
+    [
       'expo-build-properties',
       {
         android: {
+          kotlinVersion: '2.0.20',
           extraMavenRepos: [
             'https://jitpack.io',
             'mavenCentral()'
