@@ -25,6 +25,7 @@
     "@aws-sdk/lib-storage": "^3.1009.0",
     "@babel/plugin-transform-runtime": "^7.29.0",
     "@coinbase/wallet-sdk": "^4.3.7",
+    "@config-plugins/ffmpeg-kit-react-native": "^9.0.0",
     "@craftzdog/react-native-buffer": "^6.1.1",
     "@expo-google-fonts/inter": "^0.4.1",
     "@expo/metro-runtime": "~6.1.2",
