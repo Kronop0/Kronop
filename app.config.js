@@ -42,7 +42,7 @@ module.exports = () => ({
   plugins: [
     '@react-native-google-signin/google-signin',
     [
-      '@config-plugins/ffmpeg-kit-react-native',
+      '@spreen/ffmpeg-kit-react-native-config',
       {
         package: 'https'
       }
