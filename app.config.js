@@ -41,13 +41,7 @@ module.exports = () => ({
   ...appJson.expo,
   plugins: [
     '@react-native-google-signin/google-signin',
-    [
-      '@spreen/ffmpeg-kit-react-native-config',
-      {
-        package: 'https'
-      }
-    ],
-    [
+[
       'expo-build-properties',
       {
         android: {
