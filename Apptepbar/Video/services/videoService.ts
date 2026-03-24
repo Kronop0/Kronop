@@ -18,6 +18,7 @@ export interface Video {
   };
   description: string;
   comments: number;
+  uploadTime: string; // ISO string for upload time
   videoKey?: string;
   chunkManager?: ChunkManager;
 }
@@ -50,6 +51,7 @@ function transformVideoData(videoData: VideoData): Video {
     },
     description: videoData.description,
     comments: videoData.comments,
+    uploadTime: videoData.createdAt, // Map createdAt to uploadTime
     videoKey: videoData.videoKey,
     chunkManager: undefined,
   };
@@ -186,6 +188,20 @@ export function getChunkUrl(video: Video, chunkIndex: number): string | null {
   //   return video.chunkManager.getChunkUrl(chunkIndex);
   // }
   return null;
+}
+
+/**
+ * Get video by ID
+ */
+export async function getVideoById(videoId: string): Promise<Video | null> {
+  try {
+    const videos = await getLongVideos();
+    const video = videos.find(v => v.id === videoId);
+    return video || null;
+  } catch (error) {
+    console.error('Error fetching video by ID:', error);
+    throw error;
+  }
 }
 
 /**

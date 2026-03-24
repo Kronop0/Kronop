@@ -327,16 +327,6 @@ export default function RootLayout() {
               />
 
               <Stack.Screen 
-                name="video/[id]" 
-                options={{ 
-                  headerShown: false,
-                  animation: 'none',
-                  presentation: 'modal',
-                  contentStyle: { backgroundColor: '#000' }
-                }} 
-              />
-
-              <Stack.Screen 
                 name="settings" 
                 options={{ 
                   headerShown: false,

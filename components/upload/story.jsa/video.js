@@ -10,30 +10,9 @@ const videoHandler = {
       console.log('🎥 Video file received:', fileData);
       console.log('📊 Metadata:', metadata);
 
-      // Get file as buffer - React Native ImagePicker handling
-      let fileBuffer;
-      if (fileData) {
-        try {
-          // Handle React Native file URI
-          const fileResponse = await fetch(fileData);
-          if (!fileResponse.ok) {
-            throw new Error(`Failed to fetch file: ${fileResponse.status} ${fileResponse.statusText}`);
-          }
-          fileBuffer = await fileResponse.arrayBuffer();
-          fileBuffer = Buffer.from(fileBuffer);
-        } catch (fetchError) {
-          console.error('❌ File fetch error:', fetchError);
-          throw new Error(`Failed to read file from URI: ${fetchError.message}`);
-        }
-      }
-
-      if (!fileBuffer) {
-        throw new Error('Failed to read file data');
-      }
-
-      // Call R2 server handler directly
+      // Call R2 server handler directly with file URI
       console.log('🚀 Sending to R2 server handler...');
-      const result = await r2UploadHandler.uploadVideo(fileBuffer, metadata?.name || 'video.mp4', metadata);
+      const result = await r2UploadHandler.uploadVideo(fileData, metadata?.name || 'video.mp4', metadata);
       
       if (result.success) {
         console.log('✅ R2 upload successful:', result);
