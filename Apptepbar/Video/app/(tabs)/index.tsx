@@ -35,8 +35,8 @@ export default function Index() {
 
   const handleVideoPress = (videoId: string) => {
     console.log('VideoList: Pressing video with ID:', videoId);
-    console.log('VideoList: Navigating to: video/[id]', { id: videoId, type: 'long' });
-    router.push({ pathname: 'video/[id]', params: { id: videoId, type: 'long' } });
+    console.log('VideoList: Navigating to:', `/video/${videoId}?type=long`);
+    router.push(`/video/${videoId}?type=long`);
   };
 
   return (

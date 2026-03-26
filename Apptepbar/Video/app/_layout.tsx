@@ -14,7 +14,6 @@ export default function RootLayout() {
             name="video/[id]" 
             options={{ 
               headerShown: false,
-              presentation: 'modal',
             }} 
           />
         </Stack>

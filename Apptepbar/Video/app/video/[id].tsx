@@ -7,7 +7,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { Image } from 'expo-image';
 import { colors, spacing, typography, borderRadius } from '@/Apptepbar/Video/ThemeConstants';
 import { getLongVideos, Video } from '@/Apptepbar/Video/services/videoService';
-import { AdsBanner, HorizontalVideoList, VideoQualitySelector, VideoStatsOverlay, FullscreenVideoPlayer, CommentsModal, ReportModal, VideoControlsOverlay } from '@/Apptepbar/Video/components';
+import { AdsBanner, HorizontalVideoList, VideoQualitySelector, VideoStatsOverlay, FullscreenVideoPlayer, CommentsModal, ReportModal } from '@/Apptepbar/Video/components';
 
 type VideoQuality = '360p' | '480p' | '720p' | '1080p' | 'Auto';
 
@@ -15,12 +15,9 @@ export default function VideoPlayerScreen() {
   const { id, type } = useLocalSearchParams<{ id: string; type: 'long' | 'reel' }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   
-  // Initialize all hooks at the top level (before any conditional returns)
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
   const [likes, setLikes] = useState(0);
   const [isSupported, setIsSupported] = useState(false);
@@ -35,60 +32,36 @@ export default function VideoPlayerScreen() {
   const [isSaved, setIsSaved] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showControls, setShowControls] = useState(false);
-  const controlsTimeoutRef = useRef<number | null>(null);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const [isVideoReady, setIsVideoReady] = useState(false);
+  const video = videos?.find((v: Video) => v.id === id);
+  const currentIndex = videos?.findIndex((v: Video) => v.id === id);
   
-  // Always call useVideoPlayer hook before any conditional returns
-  const video = videos.find((v: Video) => v.id === id);
   const player = useVideoPlayer(video?.videoUrl || '', player => {
-    player.loop = false;
-    player.play();
+    if (video?.videoUrl) {
+      player.loop = false;
+      player.play();
+      console.log('VideoPlayer: Starting playback for:', video?.videoUrl);
+    }
   });
   
-  // All useEffect hooks must be called before any conditional returns
   useEffect(() => {
-    const loadVideos = async () => {
-      try {
-        setIsLoading(true);
-        setHasError(false);
-        const videoList = await getLongVideos(); // For now, only long videos are supported
-        setVideos(videoList);
-      } catch (error) {
-        console.error('Error loading videos:', error);
-        setHasError(true);
-        setVideos([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadVideos();
-  }, [type, retryCount]);
-  
-  const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
-  };
-  
-  const currentIndex = videos.findIndex((v: Video) => v.id === id);
-  
-  // Update state when video changes
-  useEffect(() => {
-    if (video) {
-      setIsLiked(video?.isLiked || false);
-      setLikes(video?.likes || 0);
-      setIsSupported(video?.user.isSupported || false);
-      setSupporters(video?.user.supporters || 0);
+    // Auto-play video when it becomes available
+    if (player && video?.videoUrl && !loading) {
+      setTimeout(() => {
+        player.play();
+        setIsPlaying(true);
+        console.log('VideoPlayer: Auto-playing video:', video?.title);
+      }, 500); // Small delay to ensure video is ready
     }
-  }, [video]);
-
-  // Track video ready state
+  }, [player, video, loading]);
+  
   useEffect(() => {
+    // Listen for player state changes
     if (player) {
-      const subscription = player.addListener('statusChange', (status: any) => {
-        if (status.isLoaded) {
-          setIsVideoReady(true);
-        }
+      const subscription = player.addListener('playingChange', (event) => {
+        setIsPlaying(event.isPlaying);
+        console.log('VideoPlayer: Playing state changed:', event.isPlaying);
       });
       
       return () => {
@@ -97,7 +70,35 @@ export default function VideoPlayerScreen() {
     }
   }, [player]);
   
-  // Cleanup effect
+  useEffect(() => {
+    const loadVideos = async () => {
+      try {
+        console.log('VideoPlayer: Starting to load videos...');
+        // Only handle long videos for now - reels not implemented
+        const videoList = await getLongVideos();
+        console.log('VideoPlayer: Received', videoList.length, 'videos');
+        setVideos(videoList);
+      } catch (error) {
+        console.error('VideoPlayer: Error loading videos:', error);
+        setVideos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadVideos();
+  }, [type]);
+  
+  useEffect(() => {
+    // Update state when video data is available
+    if (video) {
+      setIsLiked(video.isLiked || false);
+      setLikes(video.likes || 0);
+      setIsSupported(video.user?.isSupported || false);
+      setSupporters(video.user?.supporters || 0);
+    }
+  }, [video]);
+  
   useEffect(() => {
     return () => {
       if (controlsTimeoutRef.current) {
@@ -105,8 +106,7 @@ export default function VideoPlayerScreen() {
       }
     };
   }, []);
-  
-  // useCallback hooks must also be before conditional returns
+
   const hideControlsAfterDelay = useCallback(() => {
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
@@ -168,53 +168,79 @@ export default function VideoPlayerScreen() {
   }, [isSupported]);
 
   const handleShare = useCallback(async () => {
-    if (!video) return;
     try {
       await Share.share({
         message: `Check out this video: ${video?.title}\n\nUploaded by ${video?.user?.name}`,
-        title: video?.title || '',
+        title: video?.title || 'Check out this video',
       });
     } catch (error) {
-      console.error('Error sharing:', error);
+      console.error('Error sharing video:', error);
     }
   }, [video]);
 
   const handleSave = useCallback(() => {
     setIsSaved(prev => !prev);
-    Alert.alert(
-      isSaved ? 'Removed from saved' : 'Saved',
-      isSaved ? 'Video removed from your saved list' : 'Video saved to your library'
-    );
-  }, [isSaved]);
-  
-  // Now conditional returns are allowed after all hooks
-  if (isLoading) {
+  }, []);
+
+  const handleToggleDescription = useCallback(() => {
+    setShowDescription(prev => !prev);
+  }, []);
+
+  const handleQualitySelector = useCallback(() => {
+    setShowQualitySelector(prev => !prev);
+  }, []);
+
+  const handleQualityChange = useCallback((quality: VideoQuality) => {
+    setVideoQuality(quality);
+    setShowQualitySelector(false);
+  }, []);
+
+  const handleStatsOverlay = useCallback(() => {
+    setShowStatsOverlay(prev => !prev);
+  }, []);
+
+  const handleComments = useCallback(() => {
+    setShowComments(true);
+  }, []);
+
+  const handleReport = useCallback(() => {
+    setShowReport(true);
+  }, []);
+
+  // Render loading state
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading video...</Text>
       </View>
     );
   }
   
-  if (hasError) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Failed to load videos</Text>
-        <Pressable style={styles.retryButton} onPress={handleRetry}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </Pressable>
-      </View>
-    );
-  }
-  
+  // Render video not found state
   if (!video) {
+    console.log('VideoPlayer: Looking for ID:', id);
+    console.log('VideoPlayer: Available videos:', videos?.length || 0);
+    console.log('VideoPlayer: Video IDs:', videos?.map(v => v.id) || []);
+    console.log('VideoPlayer: Found video:', video?.id || 'null');
+    
+    // Debug: Check if ID matches exactly
+    if (videos && videos.length > 0) {
+      const foundVideo = videos.find(v => v.id === id);
+      console.log('Direct match check:', foundVideo ? 'FOUND' : 'NOT FOUND');
+      console.log('Looking for:', `"${id}"`);
+      console.log('Available IDs:', videos.map(v => `"${v.id}"`));
+    }
+    
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Video not found</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Video not found</Text>
+        <Text style={styles.loadingText}>Looking for ID: {id}</Text>
+        <Text style={styles.loadingText}>Available: {videos?.length || 0} videos</Text>
       </View>
     );
   }
 
+  // Main render - all hooks have been called above
   return (
     <View style={styles.container}>
       <Stack.Screen 
@@ -229,8 +255,6 @@ export default function VideoPlayerScreen() {
           styles.content,
           { paddingTop: insets.top }
         ]}
-        contentInsetAdjustmentBehavior="automatic"
-        showsVerticalScrollIndicator={false}
       >
         <AdsBanner />
         
@@ -240,39 +264,21 @@ export default function VideoPlayerScreen() {
           </Text>
         </View>
 
-        <View style={styles.playerContainer}>
-          <VideoView 
-            style={[styles.video, { flex: 1, width: '100%', height: '100%', zIndex: 1 }]}
-            player={player}
-            fullscreenOptions={{
-              enable: true,
-            }}
-            allowsPictureInPicture
+        <Pressable style={styles.playerContainer} onPress={handleVideoPress}>
+          <VideoStatsOverlay 
+            duration={video.duration}
+            views={parseInt(video.views.replace(/[KM]/g, '')) * (video.views.includes('M') ? 1000000 : video.views.includes('K') ? 1000 : 1)}
+            visible={showStatsOverlay}
           />
-          {!isVideoReady && (
-            <Image 
-              source={{ uri: video.thumbnail }}
-              style={styles.thumbnailOverlay}
-              contentFit="cover"
-            />
-          )}
-          <Pressable style={styles.videoOverlay} onPress={handleVideoPress}>
-            <VideoStatsOverlay 
-              duration={video.duration}
-              views={parseInt(video.views.replace(/[KM]/g, '')) * (video.views.includes('M') ? 1000000 : video.views.includes('K') ? 1000 : 1)}
-              visible={showStatsOverlay}
-            />
-            <VideoControlsOverlay
-              isPlaying={isPlaying}
-              onPlayPause={handlePlayPause}
-              onPrevious={handlePreviousVideo}
-              onNext={handleNextVideo}
-              hasPrevious={currentIndex > 0}
-              hasNext={currentIndex < videos.length - 1}
-              visible={showControls}
-            />
-          </Pressable>
-        </View>
+          <VideoView 
+            style={styles.video}
+            player={player}
+            fullscreenOptions={{ enable: false }}
+            allowsPictureInPicture={false}
+            nativeControls={false} // NO NATIVE CONTROLS - completely disabled
+          />
+          {/* VideoControlsOverlay COMPLETELY REMOVED - no more buttons */}
+        </Pressable>
 
         <View style={styles.userSection}>
           <View style={styles.userHeaderRow}>
@@ -281,9 +287,6 @@ export default function VideoPlayerScreen() {
                 source={{ uri: video.user.avatar }}
                 style={styles.avatarSmall}
                 contentFit="cover"
-                onError={() => {
-                  // Avatar failed to load, but we'll keep the placeholder background
-                }}
               />
               <View style={styles.ownerTextCompact}>
                 <Text style={styles.userNameCompact}>{video.user.name}</Text>
@@ -469,31 +472,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  loadingText: {
-    fontSize: 16,
-    color: colors.text,
-    textAlign: 'center',
-    marginTop: 50,
-  },
-  errorText: {
-    fontSize: 16,
-    color: colors.error || '#ff6b6b',
-    textAlign: 'center',
-    marginTop: 50,
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignSelf: 'center',
-  },
-  retryButtonText: {
-    color: colors.background,
-    fontSize: 16,
-    fontWeight: '600',
-  },
   scrollView: {
     flex: 1,
   },
@@ -504,33 +482,10 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 16 / 9,
     backgroundColor: '#000',
-    zIndex: 10,
-    position: 'relative',
-    flex: 1,
   },
   video: {
     width: '100%',
     height: '100%',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    zIndex: 1,
-  },
-  videoOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 2,
-  },
-  thumbnailOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
   },
   userSection: {
     padding: spacing.md,
@@ -686,5 +641,15 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textSubtle,
     lineHeight: 22,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.text,
   },
 });
