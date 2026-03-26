@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { colors, spacing, typography, borderRadius } from '../../ThemeConstants';
 import { Video } from '../../services/videoService';
 
@@ -11,10 +12,14 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, onPress, onLike }: VideoCardProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <Pressable 
       style={({ pressed }) => [styles.container, pressed && styles.pressed]}
       onPress={onPress}
+      onHoverIn={() => setIsHovered(true)}
+      onHoverOut={() => setIsHovered(false)}
     >
       <View style={styles.thumbnailContainer}>
         <Image 
@@ -26,6 +31,13 @@ export function VideoCard({ video, onPress, onLike }: VideoCardProps) {
         <View style={styles.durationBadge}>
           <Text style={styles.duration}>{video.duration}</Text>
         </View>
+        
+        {/* YouTube-style Preview Overlay */}
+        <View style={[styles.previewOverlay, isHovered && styles.previewOverlayVisible]}>
+          <View style={styles.playButton}>
+            <MaterialIcons name="play-arrow" size={24} color={colors.text} />
+          </View>
+        </View>
       </View>
       
       <View style={styles.content}>
@@ -35,16 +47,6 @@ export function VideoCard({ video, onPress, onLike }: VideoCardProps) {
       </View>
     </Pressable>
   );
-}
-
-function formatNumber(num: number): string {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M';
-  }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'K';
-  }
-  return num.toString();
 }
 
 const styles = StyleSheet.create({
@@ -77,6 +79,28 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 12,
     fontWeight: '600',
+  },
+  previewOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0,
+  },
+  previewOverlayVisible: {
+    opacity: 1,
+  },
+  playButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     paddingVertical: spacing.sm,

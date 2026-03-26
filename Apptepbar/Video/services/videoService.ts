@@ -1,4 +1,5 @@
 import { cloudVideoManager, VideoData, ChunkManager } from './cloudVideoManager';
+import { EnhancedVideoData, fetchEnhancedVideoData, getVideoStreamingUrl as getEnhancedVideoStreamingUrl } from './videoDataService';
 
 export interface Video {
   id: string;
@@ -56,19 +57,48 @@ function transformVideoData(videoData: VideoData): Video {
 }
 
 /**
- * Fetch long videos from cloud
+ * Transform enhanced video data to app video format
+ */
+function transformEnhancedVideoData(enhancedVideoData: EnhancedVideoData): Video {
+  return {
+    id: enhancedVideoData.id,
+    title: enhancedVideoData.title,
+    thumbnail: enhancedVideoData.thumbnailUrl,
+    videoUrl: enhancedVideoData.videoUrl,
+    duration: enhancedVideoData.duration,
+    views: enhancedVideoData.views,
+    likes: enhancedVideoData.likes,
+    isLiked: false,
+    category: enhancedVideoData.category,
+    user: {
+      name: enhancedVideoData.user.name,
+      avatar: enhancedVideoData.user.avatarUrl,
+      isSupported: enhancedVideoData.user.isSupported,
+      supporters: enhancedVideoData.user.supporters,
+    },
+    description: enhancedVideoData.description,
+    comments: enhancedVideoData.comments,
+    videoKey: enhancedVideoData.videoUrl.split('/').pop() || '', // Extract videoKey from URL
+    chunkManager: enhancedVideoData.chunkManager,
+  };
+}
+
+/**
+ * Fetch long videos from cloud with enhanced metadata
  */
 export async function fetchLongVideos(): Promise<Video[]> {
   try {
-    const videoDataList = await cloudVideoManager.fetchLongVideos();
+    // Use enhanced video data service for better metadata handling
+    const enhancedVideoDataList = await fetchEnhancedVideoData();
     
     // Handle empty data gracefully
-    if (!videoDataList || videoDataList.length === 0) {
-      console.log('No videos available from cloud');
+    if (!enhancedVideoDataList || enhancedVideoDataList.length === 0) {
+      console.log('No videos available from enhanced service');
       return [];
     }
     
-    const videos = videoDataList.map(transformVideoData);
+    // Transform enhanced data to Video interface
+    const videos = enhancedVideoDataList.map(transformEnhancedVideoData);
     
     // Initialize chunk managers for videos with videoKey (DISABLED for now)
     return videos.map(video => {
@@ -76,8 +106,26 @@ export async function fetchLongVideos(): Promise<Video[]> {
       return { ...video, chunkManager: undefined };
     });
   } catch (error) {
-    console.error('Error fetching long videos from cloud:', error);
-    return [];
+    console.error('Error fetching long videos from enhanced service:', error);
+    
+    // Fallback to original method if enhanced service fails
+    try {
+      const videoDataList = await cloudVideoManager.fetchLongVideos();
+      
+      if (!videoDataList || videoDataList.length === 0) {
+        console.log('No videos available from cloud fallback');
+        return [];
+      }
+      
+      const videos = videoDataList.map(transformVideoData);
+      
+      return videos.map(video => {
+        return { ...video, chunkManager: undefined };
+      });
+    } catch (fallbackError) {
+      console.error('Both enhanced and fallback video fetching failed:', fallbackError);
+      return [];
+    }
   }
 }
 
@@ -95,15 +143,43 @@ export async function getLongVideos(): Promise<Video[]> {
 }
 
 /**
- * Get optimized streaming URL for video
+ * Get optimized streaming URL for video with enhanced metadata support
  */
 export function getVideoStreamingUrl(video: Video): string {
-  // Use direct R2 streaming URL instead of chunk manager
+  // Use enhanced video streaming URL if available
   if (video.videoKey) {
     return cloudVideoManager.getVideoUrl(video.videoKey);
   }
   
   return video.videoUrl;
+}
+
+/**
+ * Get video metadata bundle (Thumbnail, Title, Description) for UI
+ * @param videoId - Video ID
+ */
+export async function getVideoMetadataBundle(videoId: string): Promise<{
+  thumbnailUrl: string;
+  title: string;
+  description: string;
+} | null> {
+  try {
+    const videos = await fetchLongVideos();
+    const video = videos.find(v => v.id === videoId);
+    
+    if (!video) {
+      return null;
+    }
+    
+    return {
+      thumbnailUrl: video.thumbnail,
+      title: video.title,
+      description: video.description,
+    };
+  } catch (error) {
+    console.error('Error fetching video metadata bundle:', error);
+    return null;
+  }
 }
 
 /**
