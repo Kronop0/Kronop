@@ -9,7 +9,6 @@ import { VideoUserSection } from './components/3.VideoUserSection';
 import { VideoActions } from './components/4.VideoActions';
 import { VideoInfo } from './components/6.VideoInfo';
 import { VideoModals } from './components/7.VideoModals';
-import { AdsBanner } from '@/Apptepbar/Video/components/ui/AdsBanner';
 
 type VideoQuality = '360p' | '480p' | '720p' | '1080p' | 'Auto';
 
@@ -201,8 +200,6 @@ export default function VideoPlayerScreen() {
           metadataLoading={false}
           metadataError={null}
         />
-        
-        <AdsBanner />
         
       </ScrollView>
       

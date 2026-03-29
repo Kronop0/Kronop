@@ -1,4 +1,4 @@
-import { VideoQualitySelector, FullscreenVideoPlayer, CommentsModal, ReportModal, AdsBanner } from '@/Apptepbar/Video/components';
+import { VideoQualitySelector, FullscreenVideoPlayer, CommentsModal, ReportModal } from '@/Apptepbar/Video/components';
 
 interface VideoModalsProps {
   showQualitySelector: boolean;
@@ -33,8 +33,6 @@ export function VideoModals({
 }: VideoModalsProps) {
   return (
     <>
-      <AdsBanner />
-      
       <VideoQualitySelector 
         visible={showQualitySelector}
         onClose={onCloseQualitySelector}

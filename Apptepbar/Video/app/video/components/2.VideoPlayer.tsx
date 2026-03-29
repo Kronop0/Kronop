@@ -1,6 +1,6 @@
 import { View, StyleSheet, Pressable, Image } from 'react-native';
 import { VideoView } from 'expo-video';
-import { VideoStatsOverlay } from '@/Apptepbar/Video/components';
+import { VideoStatsOverlay } from '@/Apptepbar/Video/components/ui/VideoStatsOverlay';
 import { colors, spacing } from '@/Apptepbar/Video/ThemeConstants';
 
 interface VideoPlayerProps {
