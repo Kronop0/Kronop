@@ -18,13 +18,13 @@ import { AppColors } from '../../appColor/AppColors';
 import { useRouter } from 'expo-router';
 import WalletConnect from '../../frontend/WalletConnect';
 
-interface ContentStats {
-  total: number;
-  stars: number;
-  comments: number;
-  shares: number;
-  views: number;
-}
+// Import from centralized database index
+import { 
+  DatabaseAPI, 
+  DataProcessor, 
+  StatsCalculator,
+  type ContentStats 
+} from '../Databes';
 
 interface TotalData {
   totalContent: number;
@@ -55,12 +55,7 @@ export default function UserDataScreen() {
     totalViews: 0,
   });
 
-  const [sections, setSections] = useState<SectionData[]>([
-    { name: 'Photo Tool', screen: 'PhotoTool', icon: 'photo', stats: { total: 0, stars: 0, comments: 0, shares: 0, views: 0 } },
-    { name: 'Story Tool', screen: 'StoryTool', icon: 'auto-stories', stats: { total: 0, stars: 0, comments: 0, shares: 0, views: 0 } },
-    { name: 'Live Tool', screen: 'LiveTool', icon: 'live-tv', stats: { total: 0, stars: 0, comments: 0, shares: 0, views: 0 } },
-    { name: 'Song Tool', screen: 'SongTool', icon: 'music-note', stats: { total: 0, stars: 0, comments: 0, shares: 0, views: 0 } },
-  ]);
+  const [sections, setSections] = useState<SectionData[]>([]);
 
   useEffect(() => {
     loadData();
@@ -76,31 +71,59 @@ export default function UserDataScreen() {
     try {
       setLoading(true);
 
-      // Load summary data from AsyncStorage or API
-      // This is sample data - replace with actual API calls
-      const mockStats = [
-        { total: 12, stars: 345, comments: 89, shares: 45, views: 1234 },
-        { total: 8, stars: 567, comments: 123, shares: 67, views: 2345 },
-        { total: 25, stars: 789, comments: 234, shares: 89, views: 3456 },
-        { total: 15, stars: 234, comments: 56, shares: 34, views: 987 },
-        { total: 5, stars: 123, comments: 45, shares: 23, views: 654 },
-        { total: 20, stars: 456, comments: 78, shares: 56, views: 876 },
-      ];
+      // Load data using centralized API
+      const [
+        photosData, videosData, storiesData, 
+        liveData, reelsData, songsData
+      ] = await Promise.all([
+        DatabaseAPI.getPhotos(),
+        DatabaseAPI.getVideos(),
+        DatabaseAPI.getStories(),
+        DatabaseAPI.getLiveStreams(),
+        DatabaseAPI.getReels(),
+        DatabaseAPI.getSongs()
+      ]);
 
-      const newSections = sections.map((section, index) => ({
-        ...section,
-        stats: mockStats[index]
-      }));
+      // Process data using centralized processors
+      const processedPhotos = DataProcessor.processPhotos(photosData);
+      const processedVideos = DataProcessor.processVideos(videosData);
+      const processedStories = DataProcessor.processStories(storiesData);
+      const processedLive = DataProcessor.processLiveStreams(liveData);
+      const processedReels = DataProcessor.processReels(reelsData);
+      const processedSongs = DataProcessor.processSongs(songsData);
+
+      // Calculate stats using centralized calculator
+      const photoStats = StatsCalculator.calculatePhotoStats(processedPhotos);
+      const videoStats = StatsCalculator.calculateVideoStats(processedVideos);
+      const storyStats = StatsCalculator.calculateStoryStats(processedStories);
+      const liveStats = StatsCalculator.calculateLiveStats(processedLive);
+      const reelStats = StatsCalculator.calculateReelStats(processedReels);
+      const songStats = StatsCalculator.calculateSongStats(processedSongs);
+
+      // Update sections with real data
+      const newSections = [
+        { name: 'Photo Tool', screen: 'PhotoTool', icon: 'photo', stats: photoStats },
+        { name: 'Video Tool', screen: 'VideoTool', icon: 'videocam', stats: videoStats },
+        { name: 'Story Tool', screen: 'StoryTool', icon: 'auto-stories', stats: storyStats },
+        { name: 'Live Tool', screen: 'LiveTool', icon: 'live-tv', stats: liveStats },
+        { name: 'Reels Tool', screen: 'ReelsTool', icon: 'movie', stats: reelStats },
+        { name: 'Song Tool', screen: 'SongTool', icon: 'music-note', stats: songStats },
+      ];
 
       setSections(newSections);
 
+      // Calculate total data
       const total = newSections.reduce(
         (acc, section) => {
           acc.totalContent += section.stats.total;
           acc.totalStars += section.stats.stars;
           acc.totalComments += section.stats.comments;
           acc.totalShares += section.stats.shares;
-          acc.totalViews += section.stats.views;
+          // Handle different stat types safely
+          const views = (section.stats as any).views || 0;
+          const viewers = (section.stats as any).viewers || 0;
+          const plays = (section.stats as any).plays || 0;
+          acc.totalViews += views || viewers || plays;
           return acc;
         },
         { totalContent: 0, totalStars: 0, totalComments: 0, totalShares: 0, totalViews: 0 }
@@ -108,8 +131,7 @@ export default function UserDataScreen() {
 
       setTotalData(total);
     } catch (error) {
-      console.error('Error:', error);
-      console.log(error);
+      console.error('Error loading database data:', error);
     } finally {
       setLoading(false);
     }
@@ -119,8 +141,10 @@ export default function UserDataScreen() {
     // Navigate to respective screen with data using Expo Router
     const screenMap: Record<string, string> = {
       'PhotoTool': '/Databes/PhotoToolScreen',
+      'VideoTool': '/Databes/VideoToolScreen',
       'StoryTool': '/Databes/StoryToolScreen',
       'LiveTool': '/Databes/LiveToolScreen',
+      'ReelsTool': '/Databes/ReelsToolScreen',
       'SongTool': '/Databes/SongToolScreen',
       'BankAccount': '/Databes/BankAccount',
     };
