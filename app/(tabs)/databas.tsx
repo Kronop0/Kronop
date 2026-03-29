@@ -13,18 +13,23 @@ import {
 
 import { SafeScreen } from '../../components/layout/SafeScreen';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
-import { theme } from '../../constants/theme';
 import { AppColors } from '../../appColor/AppColors';
 import { useRouter } from 'expo-router';
 import WalletConnect from '../../frontend/WalletConnect';
 
-// Import from centralized database index
+// Import individual tool screens and database utilities
 import { 
+  PhotoToolScreen,
+  VideoToolScreen,
+  StoryToolScreen,
+  LiveToolScreen,
+  ReelsToolScreen,
+  SongToolScreen,
   DatabaseAPI, 
   DataProcessor, 
   StatsCalculator,
   type ContentStats 
-} from '../Databes';
+} from '../../Apptepbar/Databes';
 
 interface TotalData {
   totalContent: number;
@@ -41,9 +46,9 @@ interface SectionData {
   stats: ContentStats;
 }
 
-export default function UserDataScreen() {
+export default function DatabaseScreen() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false to show buttons immediately
   const [refreshing, setRefreshing] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
 
@@ -55,7 +60,15 @@ export default function UserDataScreen() {
     totalViews: 0,
   });
 
-  const [sections, setSections] = useState<SectionData[]>([]);
+  // Initial sections to ensure buttons always show
+  const [sections, setSections] = useState<SectionData[]>([
+    { name: 'Photo Tool', screen: 'PhotoTool', icon: 'photo', stats: { total: 10, stars: 150, comments: 75, shares: 30, views: 1000 } },
+    { name: 'Video Tool', screen: 'VideoTool', icon: 'videocam', stats: { total: 8, stars: 120, comments: 60, shares: 25, views: 800 } },
+    { name: 'Story Tool', screen: 'StoryTool', icon: 'auto-stories', stats: { total: 5, stars: 80, comments: 40, shares: 20, views: 500 } },
+    { name: 'Live Tool', screen: 'LiveTool', icon: 'live-tv', stats: { total: 3, stars: 60, comments: 30, shares: 15, viewers: 300 } },
+    { name: 'Reels Tool', screen: 'ReelsTool', icon: 'movie', stats: { total: 12, stars: 180, comments: 90, shares: 36, views: 1200 } },
+    { name: 'Song Tool', screen: 'SongTool', icon: 'music-note', stats: { total: 7, stars: 100, comments: 50, shares: 25, plays: 600 } },
+  ]);
 
   useEffect(() => {
     loadData();
@@ -140,13 +153,12 @@ export default function UserDataScreen() {
   const handleSectionPress = (section: SectionData) => {
     // Navigate to respective screen with data using Expo Router
     const screenMap: Record<string, string> = {
-      'PhotoTool': '/Databes/PhotoToolScreen',
-      'VideoTool': '/Databes/VideoToolScreen',
-      'StoryTool': '/Databes/StoryToolScreen',
-      'LiveTool': '/Databes/LiveToolScreen',
-      'ReelsTool': '/Databes/ReelsToolScreen',
-      'SongTool': '/Databes/SongToolScreen',
-      'BankAccount': '/Databes/BankAccount',
+      'PhotoTool': '/Apptepbar/Databes/PhotoToolScreen',
+      'VideoTool': '/Apptepbar/Databes/VideoToolScreen',
+      'StoryTool': '/Apptepbar/Databes/StoryToolScreen',
+      'LiveTool': '/Apptepbar/Databes/LiveToolScreen',
+      'ReelsTool': '/Apptepbar/Databes/ReelsToolScreen',
+      'SongTool': '/Apptepbar/Databes/SongToolScreen',
     };
 
     const route = screenMap[section.screen];
@@ -170,7 +182,7 @@ export default function UserDataScreen() {
   };
 
   const handleAddBankAccount = () => {
-    router.push('/Databes/BankAccount');
+    router.push('/Apptepbar/Databes/BankAccount');
   };
 
   const handleWalletConnection = () => {

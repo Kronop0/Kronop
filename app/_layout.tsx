@@ -345,7 +345,7 @@ export default function RootLayout() {
               />
 
               <Stack.Screen 
-                name="Databes/LiveToolScreen" 
+                name="Apptepbar/Databes/LiveToolScreen" 
                 options={{ 
                   headerShown: false,
                   animation: 'none',
@@ -353,11 +353,9 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: '#000' }
                 }} 
               />
-
-              
               
               <Stack.Screen 
-                name="Databes/PhotoToolScreen" 
+                name="Apptepbar/Databes/VideoToolScreen" 
                 options={{ 
                   headerShown: false,
                   animation: 'none',
@@ -365,9 +363,9 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: '#000' }
                 }} 
               />
-
+              
               <Stack.Screen 
-                name="Databes/StoryToolScreen" 
+                name="Apptepbar/Databes/ReelsToolScreen" 
                 options={{ 
                   headerShown: false,
                   animation: 'none',
@@ -375,9 +373,9 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: '#000' }
                 }} 
               />
-
+              
               <Stack.Screen 
-                name="Databes/SongToolScreen" 
+                name="Apptepbar/Databes/PhotoToolScreen" 
                 options={{ 
                   headerShown: false,
                   animation: 'none',
@@ -385,9 +383,29 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: '#000' }
                 }} 
               />
-
+              
               <Stack.Screen 
-                name="Databes/BankAccount" 
+                name="Apptepbar/Databes/StoryToolScreen" 
+                options={{ 
+                  headerShown: false,
+                  animation: 'none',
+                  presentation: 'modal',
+                  contentStyle: { backgroundColor: '#000' }
+                }} 
+              />
+              
+              <Stack.Screen 
+                name="Apptepbar/Databes/SongToolScreen" 
+                options={{ 
+                  headerShown: false,
+                  animation: 'none',
+                  presentation: 'modal',
+                  contentStyle: { backgroundColor: '#000' }
+                }} 
+              />
+              
+              <Stack.Screen 
+                name="Apptepbar/Databes/BankAccount" 
                 options={{ 
                   headerShown: false,
                   animation: 'none',

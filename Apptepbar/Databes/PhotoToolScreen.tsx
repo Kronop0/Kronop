@@ -1,72 +1,51 @@
 import React, { useState, useEffect } from 'react';
 
 import {
-
   View,
-
   Text,
-
   StyleSheet,
-
   TouchableOpacity,
-
   ActivityIndicator,
-
   RefreshControl,
-
   FlatList,
-
 } from 'react-native';
 
 import { SafeScreen } from '../../components/layout/SafeScreen';
-
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
-
-
+// Define PhotoItem interface locally to avoid circular import
+interface ImportedPhotoItem {
+  id: string;
+  title: string;
+  stars: number;
+  comments: number;
+  shares: number;
+  views: number;
+}
 
 // Photos API
-
-const photosApi = {
-
-  getPhotos: async () => {
-
-    try {
-
-      const response = await fetch(`${process.env.KOYEB_API_URL || process.env.EXPO_PUBLIC_API_URL}/content/photos`);
-
-      return response.json();
-
-    } catch (error) {
-
-      console.error('Error:', error);
-
-      return { data: [] };
-
-    }
-
+const DATABASE_CONFIG = {
+  BASE_URL: process.env.KOYEB_API_URL || process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
+  ENDPOINTS: {
+    PHOTOS: '/content/photos',
   }
-
 };
 
+const photosApi = {
+  getPhotos: async () => {
+    try {
+      const response = await fetch(`${DATABASE_CONFIG.BASE_URL}${DATABASE_CONFIG.ENDPOINTS.PHOTOS}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error:', error);
+      return { data: [] };
+    }
+  }
+};
 
-
-interface PhotoItem {
-
-  id: string;
-
-  title: string;
-
-  stars: number;
-
-  comments: number;
-
-  shares: number;
-
-  views: number;
-
-}
 
 
 
@@ -90,7 +69,7 @@ export default function PhotoToolScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [photos, setPhotos] = useState<ImportedPhotoItem[]>([]);
 
   const [summary, setSummary] = useState({
 
@@ -164,7 +143,7 @@ export default function PhotoToolScreen() {
 
       const newSummary = processedPhotos.reduce(
 
-        (acc: { total: number; stars: number; comments: number; shares: number; views: number }, photo: PhotoItem) => {
+        (acc: { total: number; stars: number; comments: number; shares: number; views: number }, photo: ImportedPhotoItem) => {
 
           acc.stars += photo.stars;
 
@@ -200,7 +179,7 @@ export default function PhotoToolScreen() {
 
 
 
-  const renderPhotoItem = ({ item }: { item: PhotoItem }) => (
+  const renderPhotoItem = ({ item }: { item: ImportedPhotoItem }) => (
 
     <View style={styles.photoItem}>
 
