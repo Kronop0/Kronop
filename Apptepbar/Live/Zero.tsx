@@ -113,9 +113,12 @@ const Zero: React.FC = () => {
   // Fetch videos from Kronop API
   const fetchVideosFromAPI = async () => {
     try {
+      // Get JWT token from environment or auth storage
+      const jwtToken = process.env.EXPO_PUBLIC_JWT_TOKEN || process.env.JWT_SECRET;
+      
       const response = await fetch(`${KRONOP_API_URL}/api/live`, {
         headers: {
-          'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
+          'Authorization': jwtToken ? `Bearer ${jwtToken}` : '',
           'Content-Type': 'application/json'
         }
       });

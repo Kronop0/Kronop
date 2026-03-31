@@ -3,16 +3,16 @@
 
 const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 
-// [KRONOP-DEBUG] Loading R2 Configuration from environment variables
+// [KRONOP-DEBUG] Loading R2 Configuration from environment variables ONLY
 console.log('[KRONOP-DEBUG] 🚀 Initializing R2 Story Service...');
 
 const R2_CONFIG = {
-  accountId: process.env.EXPO_PUBLIC_R2_ACCOUNT_ID || 'a59d5a6739a14835816a2c0d2e12fc46',
-  accessKeyId: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID || '465983939146a7cbb7167537d9d4ebd1',
-  secretAccessKey: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY || '7386255bccd5111ddd8bd3057bbe8995e2c02a74b3ef579cd6b0daf4c1500c94',
-  endpoint: process.env.EXPO_PUBLIC_R2_ENDPOINT || 'https://a59d5a6739a14835816a2c0d2e12fc46.r2.cloudflarestorage.com',
+  accountId: process.env.EXPO_PUBLIC_R2_ACCOUNT_ID,
+  accessKeyId: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID,
+  secretAccessKey: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY,
+  endpoint: process.env.EXPO_PUBLIC_R2_ENDPOINT,
   bucketName: process.env.EXPO_PUBLIC_BUCKET_STORY || 'kronop-story',
-  publicUrl: 'https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev',
+  publicUrl: process.env.EXPO_PUBLIC_R2_PUBLIC_URL,
 };
 
 // [KRONOP-DEBUG] Log environment variables status
@@ -22,6 +22,7 @@ console.log('[KRONOP-DEBUG]   - Access Key ID:', R2_CONFIG.accessKeyId ? '✅ Lo
 console.log('[KRONOP-DEBUG]   - Secret Access Key:', R2_CONFIG.secretAccessKey ? '✅ Loaded' : '❌ Missing');
 console.log('[KRONOP-DEBUG]   - Endpoint:', R2_CONFIG.endpoint ? '✅ Loaded' : '❌ Missing');
 console.log('[KRONOP-DEBUG]   - Bucket Name:', R2_CONFIG.bucketName);
+console.log('[KRONOP-DEBUG]   - Public URL:', R2_CONFIG.publicUrl ? '✅ Loaded' : '❌ Missing');
 
 class R2StoryService {
   constructor() {
@@ -209,13 +210,16 @@ class R2StoryService {
    * Get public URL for R2 object
    */
   getPublicUrl(key) {
-    // Public URL format for R2 bucket - HARDCODED FIX
-    // Using the correct public URL directly to avoid any old ID references
-    const publicEndpoint = 'https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev';
+    // Public URL format for R2 bucket - Using environment variable
+    const publicEndpoint = R2_CONFIG.publicUrl;
+    if (!publicEndpoint) {
+      console.error('[KRONOP-DEBUG] ❌ EXPO_PUBLIC_R2_PUBLIC_URL not set in environment');
+      return '';
+    }
     const publicUrl = `${publicEndpoint}/${key}`;
     
     console.log(`[KRONOP-DEBUG] 📎 Generated public URL: ${publicUrl}`);
-    console.log(`[KRONOP-DEBUG] 🔄 Using fixed public endpoint: ${publicEndpoint}`);
+    console.log(`[KRONOP-DEBUG] 🔄 Using public endpoint from env: ${publicEndpoint}`);
     
     return publicUrl;
   }
@@ -224,8 +228,12 @@ class R2StoryService {
    * Get fallback URL for when public access fails
    */
   getFallbackUrl(key, type = 'image') {
-    // Use real R2 URL instead of placeholders - they don't work
-    const publicEndpoint = 'https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev';
+    // Use environment variable for R2 URL
+    const publicEndpoint = R2_CONFIG.publicUrl;
+    if (!publicEndpoint) {
+      console.error('[KRONOP-DEBUG] ❌ EXPO_PUBLIC_R2_PUBLIC_URL not set in environment');
+      return '';
+    }
     const fileName = key.split('/').pop() || '';
     const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
     

@@ -1,7 +1,14 @@
 import { API_KEYS } from '@/constants/Config';
 import { getVideoUrl } from './CloudConfig';
+import { Share, Clipboard } from 'react-native';
 
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
+
+// Get JWT token helper
+const getAuthHeader = () => {
+  const jwtToken = process.env.EXPO_PUBLIC_JWT_TOKEN || process.env.JWT_SECRET;
+  return jwtToken ? `Bearer ${jwtToken}` : '';
+};
 
 // Like/Unlike API
 export const toggleLike = async (videoId: string, isCurrentlyLiked: boolean): Promise<boolean> => {
@@ -9,7 +16,7 @@ export const toggleLike = async (videoId: string, isCurrentlyLiked: boolean): Pr
     const response = await fetch(`${KRONOP_API_URL}/api/live/${videoId}/like`, {
       method: isCurrentlyLiked ? 'DELETE' : 'POST',
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
+        'Authorization': getAuthHeader(),
         'Content-Type': 'application/json'
       }
     });
@@ -24,7 +31,7 @@ export const getLikesCount = async (videoId: string): Promise<number> => {
   try {
     const response = await fetch(`${KRONOP_API_URL}/api/live/${videoId}/likes`, {
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
+        'Authorization': getAuthHeader(),
       }
     });
     if (response.ok) {
@@ -42,7 +49,7 @@ export const getCommentsCount = async (videoId: string): Promise<number> => {
   try {
     const response = await fetch(`${KRONOP_API_URL}/api/live/${videoId}/comments`, {
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
+        'Authorization': getAuthHeader(),
       }
     });
     if (response.ok) {
@@ -61,7 +68,7 @@ export const postComment = async (videoId: string, text: string): Promise<boolea
     const response = await fetch(`${KRONOP_API_URL}/api/live/${videoId}/comments`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
+        'Authorization': getAuthHeader(),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ text })
@@ -78,7 +85,7 @@ export const toggleSupport = async (channelName: string, isCurrentlySupported: b
     const response = await fetch(`${KRONOP_API_URL}/api/channels/${channelName}/support`, {
       method: isCurrentlySupported ? 'DELETE' : 'POST',
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
+        'Authorization': getAuthHeader(),
         'Content-Type': 'application/json'
       }
     });
@@ -95,17 +102,19 @@ export const shareReel = async (videoId: string, title: string, videoUrl: string
     const webUrl = `https://kronop.app/live/${videoId}`;
     const r2StreamingUrl = getVideoUrl(videoUrl);
     
-    // Try native share first
-    if (navigator.share) {
-      await navigator.share({
-        title: title,
-        url: r2StreamingUrl,
-      });
+    // Use React Native Share API
+    const result = await Share.share({
+      message: `${title}\n${r2StreamingUrl}`,
+      url: r2StreamingUrl,
+      title: title,
+    });
+    
+    if (result.action === Share.sharedAction) {
       return true;
     }
     
-    // Fallback: copy to clipboard
-    await navigator.clipboard.writeText(r2StreamingUrl);
+    // Fallback: copy to clipboard using React Native Clipboard
+    await Clipboard.setString(r2StreamingUrl);
     return true;
   } catch (error) {
     return false;
@@ -117,7 +126,7 @@ export const checkUserLiked = async (videoId: string): Promise<boolean> => {
   try {
     const response = await fetch(`${KRONOP_API_URL}/api/live/${videoId}/like/status`, {
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
+        'Authorization': getAuthHeader(),
       }
     });
     if (response.ok) {
@@ -135,7 +144,7 @@ export const getViewerCount = async (videoId: string): Promise<number> => {
   try {
     const response = await fetch(`${KRONOP_API_URL}/api/live/${videoId}/viewers`, {
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
+        'Authorization': getAuthHeader(),
       }
     });
     if (response.ok) {

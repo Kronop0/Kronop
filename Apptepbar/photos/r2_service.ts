@@ -18,8 +18,8 @@ const R2_CONFIG = {
   PUBLIC_BUCKET_URL: 'https://pub-e904e5818e734484a5ead6201a4cefe3.r2.dev',
   
   // Photo API Endpoints
-  KRONOP_API_URL: API_KEYS.KRONOP_API_URL,
-  PHOTO_API_BASE: `${API_KEYS.KRONOP_API_URL}/api/content`,
+  KRONOP_API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://kronop-76zy.onrender.com',
+  PHOTO_API_BASE: `${process.env.EXPO_PUBLIC_API_URL || 'https://kronop-76zy.onrender.com'}/api/content`,
   
   // Fallback Image APIs (if R2 fails)
   UNSPLASH_ACCESS_KEY: API_KEYS.UNSPLASH,
@@ -168,7 +168,7 @@ class R2PhotoService {
   async getSignedUploadUrl(fileName: string, fileType: string): Promise<string | null> {
     console.log(`[r2_service.ts] Getting Signed Upload URL... File: ${fileName}, Type: ${fileType}`);
     try {
-      const response = await fetch(`${API_KEYS.KRONOP_API_URL}/upload/url`, {
+      const response = await fetch(`${R2_CONFIG.KRONOP_API_URL}/upload/url`, {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify({

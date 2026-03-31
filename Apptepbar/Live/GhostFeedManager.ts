@@ -181,10 +181,13 @@ const GhostFeedManager: React.FC<GhostFeedManagerProps> = ({
   useEffect(() => {
     const initializeFeed = async () => {
       try {
+        // Get JWT token from environment
+        const jwtToken = process.env.EXPO_PUBLIC_JWT_TOKEN || process.env.JWT_SECRET;
+        
         // Try to fetch from API first
         const response = await fetch(`${KRONOP_API_URL}/api/live`, {
           headers: {
-            'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
+            'Authorization': jwtToken ? `Bearer ${jwtToken}` : '',
             'Content-Type': 'application/json'
           }
         });

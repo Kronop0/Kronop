@@ -1,6 +1,7 @@
 import { API_KEYS } from '@/constants/Config';
 import { getVideoUrl, getReelUrl } from './cloudin';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { Share, Clipboard } from 'react-native';
 
 const KRONOP_API_URL = 'https://kronop-76zy.onrender.com';
 
@@ -167,22 +168,24 @@ export const shareReel = async (videoId: string, title: string, videoUrl: string
   try {
     const shareUrl = `kronop://reels/${videoId}`;
     const webUrl = `https://kronop.app/reels/${videoId}`;
-    const r2StreamingUrl = getReelUrl(videoUrl); // Use getReelUrl for proper R2 integration
+    const r2StreamingUrl = getReelUrl(videoUrl);
     
     console.log('🎬 R2 Streaming URL:', r2StreamingUrl);
     
-    // Try native share first
-    if (navigator.share) {
-      await navigator.share({
-        title: title,
-        url: r2StreamingUrl,
-      });
-      console.log('✅ Shared via native share');
+    // Use React Native Share API
+    const result = await Share.share({
+      message: `${title}\n${r2StreamingUrl}`,
+      url: r2StreamingUrl,
+      title: title,
+    });
+    
+    if (result.action === Share.sharedAction) {
+      console.log('✅ Shared successfully');
       return true;
     }
     
-    // Fallback: copy to clipboard
-    await navigator.clipboard.writeText(r2StreamingUrl);
+    // Fallback: copy to clipboard using React Native Clipboard
+    await Clipboard.setString(r2StreamingUrl);
     console.log('✅ Copied to clipboard');
     return true;
   } catch (error) {
