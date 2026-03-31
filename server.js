@@ -8,6 +8,9 @@ const cors = require('cors');
 const axios = require('axios');
 const WebSocket = require('ws');
 
+// Middleware
+const { verifyToken } = require('./middleware/authMiddleware');
+
 // Models & Services
 const User = require('./models/User');
 const Content = require('./models/Content');
@@ -92,23 +95,51 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB connection
+// MongoDB connection with error boundaries
 if (!MONGO_URI) {
-  console.error('FATAL ERROR: MONGODB_URI is not defined in environment variables.');
+  console.error('❌ FATAL ERROR: MONGODB_URI is not defined in environment variables.');
+  console.error('🚀 Server will start but database features will be disabled');
 } else {
   mongoose.connection.once('connected', async () => {
     try {
       await User.syncIndexes();
+      console.log('✅ MongoDB connected and indexes synced');
     } catch (err) {
       console.error('❌ Database service initialization failed:', err.message);
     }
   });
 
-  mongoose.connection.on('error', (err) => console.error('❌ MongoDB connection error:', err));
+  mongoose.connection.on('error', (err) => {
+    console.error('❌ MongoDB connection error:', err.message);
+    console.log('🔄 Retrying connection...');
+  });
 
-  connectToDatabase().catch(err => {
-    console.error('❌ MongoDB CONNECTION FAILED:', err.message);
-    console.error('🚀 Server will continue running but database features disabled');
+  mongoose.connection.on('disconnected', () => {
+    console.warn('⚠️ MongoDB disconnected. Will attempt to reconnect...');
+  });
+
+  // Connect with retry logic
+  const connectWithRetry = async (retries = 5, delay = 5000) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        await connectToDatabase();
+        console.log('✅ MongoDB connection established');
+        return;
+      } catch (err) {
+        console.error(`❌ MongoDB connection attempt ${i + 1}/${retries} failed:`, err.message);
+        if (i < retries - 1) {
+          console.log(`🔄 Retrying in ${delay / 1000} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          console.error('❌ All MongoDB connection attempts failed');
+          console.error('🚀 Server will continue but database features are disabled');
+        }
+      }
+    }
+  };
+
+  connectWithRetry().catch(err => {
+    console.error('❌ MongoDB connection error:', err.message);
   });
 }
 
@@ -178,22 +209,11 @@ apiRouter.use('/support', supportRoutes);
 
 // Auto-sync routes - Service removed
 apiRouter.get('/sync/status', (req, res) => {
-  try {
-    // const status = AutoSyncService.getStatus(); // Service removed
-    res.json({ success: false, message: 'AutoSync service removed' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+  res.json({ success: false, message: 'AutoSync service removed' });
 });
 
 apiRouter.post('/sync/trigger', async (req, res) => {
-  try {
-    // await AutoSyncService.performFullSync(); // Service removed
-    // res.json({ success: true, message: 'Sync completed', data: AutoSyncService.getStatus() });
-    res.json({ success: false, message: 'AutoSync service removed' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+  res.json({ success: false, message: 'AutoSync service removed' });
 });
 
 app.use('/api', apiRouter);
@@ -505,27 +525,6 @@ app.post('/upload/story', (req, res) => createUploadEndpoint('story', { expires_
 app.post('/upload/shayari', (req, res) => createUploadEndpoint('shayari', { shayari_text: req.body.shayari_text, shayari_author: req.body.shayari_author })(req, res));
 app.post('/upload/photo', (req, res) => createUploadEndpoint('photo', { category: req.body.category })(req, res));
 
-// OneSignal client override - commented out to fix syntax error
-// const originalOneSignalClient = require('./services/oneSignalClient');
-// originalOneSignalClient.createNotification = async (notification) => {
-//   const url = process.env.EXPO_PUBLIC_ONESIGNAL_API_URL || process.env.ONESIGNAL_API_URL || 'https://onesignal.com/api/v1/notifications';
-//   const apiKey = (process.env.ONESIGNAL_REST_API_KEY || process.env.ONE_SIGNAL_REST_API_KEY || process.env.ONESIGNAL_API_KEY || process.env.EXPO_PUBLIC_ONESIGNAL_REST_API_KEY || '').trim();
-//   if (!apiKey) throw new Error('OneSignal REST API key is missing');
-
-//   const isV2Key = apiKey.startsWith('os_v2_');
-//   const primaryAuth = isV2Key ? `Key ${apiKey}` : `Basic ${apiKey}`;
-//   const fallbackAuth = isV2Key ? `Basic ${apiKey}` : `Key ${apiKey}`;
-
-//   try {
-//     return await axios.post(url, notification, { headers: { 'Content-Type': 'application/json', 'Authorization': primaryAuth } });
-//   } catch (error) {
-//     if ((error.response?.status === 401 || error.response?.status === 403) && fallbackAuth !== primaryAuth) {
-//       return await axios.post(url, notification, { headers: { 'Content-Type': 'application/json', 'Authorization': fallbackAuth } });
-//     }
-//     throw error;
-//   }
-// };
-
 // Story management endpoints
 apiRouter.get('/stories/stats', async (req, res) => {
   try {
@@ -594,22 +593,31 @@ const server = app.listen(PORT, HOST, async () => {
   
   try {
     await waitForMongoDB();
-    // ScalingOrchestrator removed
-  console.log('🔄 ScalingOrchestrator service removed');
+    console.log('🔄 ScalingOrchestrator service removed');
   } catch (error) {
     console.error('❌ Scaling System Failed:', error.message);
   }
   
-  // RealtimeService.initialize(server); // Service removed
-  // setInterval(() => RealtimeService.pingAllClients(), 30000); // Service removed
   console.log('🔄 RealtimeService removed');
 });
 
-// Delete endpoints for cleanup
+// Delete endpoints for cleanup (Protected with auth)
 ['videos', 'photos', 'shayari', 'stories'].forEach(type => {
-  app.delete(`/api/${type}/:id`, async (req, res) => {
+  app.delete(`/api/${type}/:id`, verifyToken, async (req, res) => {
     try {
-      const result = await Content.deleteOne({ _id: req.params.id, type: type.charAt(0).toUpperCase() + type.slice(1, -1) });
+      // Verify user owns the content before deleting
+      const content = await Content.findOne({ _id: req.params.id, type: type.charAt(0).toUpperCase() + type.slice(1, -1) });
+      if (!content) {
+        return res.status(404).json({ error: `${type.slice(0, -1)} not found` });
+      }
+      
+      // Check ownership - only allow deletion by content owner
+      const userId = req.user.sub || req.user.id || req.user.userId;
+      if (content.userId && content.userId.toString() !== userId) {
+        return res.status(403).json({ error: 'Forbidden: You can only delete your own content' });
+      }
+      
+      const result = await Content.deleteOne({ _id: req.params.id });
       result.deletedCount > 0 
         ? res.json({ success: true, message: `${type.slice(0, -1)} deleted successfully` })
         : res.status(404).json({ error: `${type.slice(0, -1)} not found` });
@@ -619,14 +627,38 @@ const server = app.listen(PORT, HOST, async () => {
   });
 });
 
-// WebSocket server
-const wss = new WebSocket.Server({ port: 8080 });
+// WebSocket server - Dynamic port
+const WS_PORT = process.env.WS_PORT || 8080;
+const wss = new WebSocket.Server({ port: WS_PORT });
 const clients = new Set();
 
-console.log('🚀 WebSocket Server started on port 8080');
+console.log(`🚀 WebSocket Server started on port ${WS_PORT}`);
 
 wss.on('connection', (ws, req) => {
-  console.log(`[WEBSOCKET]: New client connected from ${req.socket.remoteAddress}`);
+  // Extract token from query params or headers for WebSocket auth
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const token = url.searchParams.get('token') || req.headers['sec-websocket-protocol'];
+  
+  if (!token) {
+    console.log('[WEBSOCKET]: Connection rejected - no token provided');
+    ws.close(1008, 'Authentication required');
+    return;
+  }
+  
+  // Verify token
+  try {
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || process.env.EXPO_PUBLIC_JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
+    const decoded = jwt.verify(token, JWT_SECRET);
+    ws.userId = decoded.sub || decoded.id || decoded.userId;
+    ws.isAuthenticated = true;
+  } catch (error) {
+    console.log('[WEBSOCKET]: Connection rejected - invalid token');
+    ws.close(1008, 'Invalid token');
+    return;
+  }
+  
+  console.log(`[WEBSOCKET]: Authenticated client connected from ${req.socket.remoteAddress}, user: ${ws.userId}`);
   clients.add(ws);
   
   ws.send(JSON.stringify({ type: 'connected', message: 'WebSocket connection established', timestamp: new Date().toISOString() }));
@@ -706,17 +738,6 @@ mongoose.connection.once('open', () => {
   
   // Auto-Sync Scheduler - Service removed
   console.log('🔄 Auto-Sync Scheduler service removed');
-  // autoSyncIntegration.initialize()
-  //   .then((success) => {
-  //     if (success) {
-  //       console.log('✅ Auto-Sync Scheduler started successfully!');
-  //       console.log('📅 Background sync will run every minute');
-  //       console.log('🔗 External service sync disabled');
-  //     } else {
-  //       console.log('❌ Failed to start Auto-Sync Scheduler');
-  //     }
-  //   })
-  //   .catch((error) => console.error('❌ Auto-Sync initialization error:', error));
 });
 
 global.broadcastToClients = broadcast;

@@ -89,7 +89,6 @@ export const toggleLike = async (videoId: string, isCurrentlyLiked: boolean): Pr
     const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/like`, {
       method: isCurrentlyLiked ? 'DELETE' : 'POST',
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
         'Content-Type': 'application/json'
       }
     });
@@ -105,11 +104,7 @@ export const toggleLike = async (videoId: string, isCurrentlyLiked: boolean): Pr
 // Get likes count
 export const getLikesCount = async (videoId: string): Promise<number> => {
   try {
-    const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/likes`, {
-      headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
-      }
-    });
+    const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/likes`);
     if (response.ok) {
       const data = await response.json();
       return data.count || 0;
@@ -123,11 +118,7 @@ export const getLikesCount = async (videoId: string): Promise<number> => {
 // Get comments count
 export const getCommentsCount = async (videoId: string): Promise<number> => {
   try {
-    const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/comments`, {
-      headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
-      }
-    });
+    const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/comments`);
     if (response.ok) {
       const data = await response.json();
       return data.count || data.comments?.length || 0;
@@ -144,7 +135,6 @@ export const postComment = async (videoId: string, text: string): Promise<boolea
     const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/comments`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ text })
@@ -161,7 +151,6 @@ export const toggleSupport = async (channelName: string, isCurrentlySupported: b
     const response = await fetch(`${KRONOP_API_URL}/api/channels/${channelName}/support`, {
       method: isCurrentlySupported ? 'DELETE' : 'POST',
       headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
         'Content-Type': 'application/json'
       }
     });
@@ -205,11 +194,7 @@ export const shareReel = async (videoId: string, title: string, videoUrl: string
 // Check if user liked video
 export const checkUserLiked = async (videoId: string): Promise<boolean> => {
   try {
-    const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/like/status`, {
-      headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
-      }
-    });
+    const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/like/status`);
     if (response.ok) {
       const data = await response.json();
       return data.liked || false;
@@ -223,11 +208,7 @@ export const checkUserLiked = async (videoId: string): Promise<boolean> => {
 // Get viewer count
 export const getViewerCount = async (videoId: string): Promise<number> => {
   try {
-    const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/viewers`, {
-      headers: {
-        'Authorization': `Bearer ${API_KEYS.KRONOP_API_URL}`,
-      }
-    });
+    const response = await fetch(`${KRONOP_API_URL}/api/reels/${videoId}/viewers`);
     if (response.ok) {
       const data = await response.json();
       return data.count || 0;

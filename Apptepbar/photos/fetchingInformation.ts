@@ -122,18 +122,13 @@ class FetchingInformationService {
 
   // Get batch information for multiple media files
   async getBatchMediaInfo(fileKeys: string[]): Promise<MediaInfo[]> {
-    console.log(`[fetchingInformation.ts] Fetching batch info for ${fileKeys.length} files`);
+    console.log(`[fetchingInformation.ts] Fetching batch info for ${fileKeys.length} files in parallel...`);
     
-    const mediaInfos: MediaInfo[] = [];
-    
-    for (const fileKey of fileKeys) {
-      const info = await this.getMediaInfo(fileKey);
-      if (info) {
-        mediaInfos.push(info);
-      }
-    }
+    // Fetch all media info in parallel using Promise.all() - MUCH FASTER!
+    const mediaInfoPromises = fileKeys.map(fileKey => this.getMediaInfo(fileKey));
+    const mediaInfos = (await Promise.all(mediaInfoPromises)).filter((info): info is MediaInfo => info !== null);
 
-    console.log(`[fetchingInformation.ts] ✓ Batch info completed: ${mediaInfos.length} files processed`);
+    console.log(`[fetchingInformation.ts] ✓ Batch info completed: ${mediaInfos.length} files processed in parallel`);
     return mediaInfos;
   }
 
