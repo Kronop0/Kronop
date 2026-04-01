@@ -100,10 +100,12 @@ export async function fetchLongVideos(): Promise<Video[]> {
     // Transform enhanced data to Video interface
     const videos = enhancedVideoDataList.map(transformEnhancedVideoData);
     
-    // Initialize chunk managers for videos with videoKey (DISABLED for now)
+    // Initialize chunk managers for videos with videoKey (ENABLED)
     return videos.map(video => {
-      // Disable chunk manager to avoid 400 errors - use direct streaming
-      return { ...video, chunkManager: undefined };
+      if (video.videoKey) {
+        return initializeChunkManager(video);
+      }
+      return video;
     });
   } catch (error) {
     console.error('Error fetching long videos from enhanced service:', error);
@@ -120,7 +122,10 @@ export async function fetchLongVideos(): Promise<Video[]> {
       const videos = videoDataList.map(transformVideoData);
       
       return videos.map(video => {
-        return { ...video, chunkManager: undefined };
+        if (video.videoKey) {
+          return initializeChunkManager(video);
+        }
+        return video;
       });
     } catch (fallbackError) {
       console.error('Both enhanced and fallback video fetching failed:', fallbackError);
@@ -184,21 +189,11 @@ export async function getVideoMetadataBundle(videoId: string): Promise<{
 
 /**
  * Initialize chunk manager for video
+ * NOTE: Currently disabled - using direct URL play for better compatibility with expo-video
  */
 export function initializeChunkManager(video: Video): Video {
-  // DISABLED - Chunk manager causing 400 errors
-  // if (!video.videoKey) {
-  //   return video;
-  // }
-  
-  // const chunkManager = cloudVideoManager.initializeChunkManager(video.videoKey);
-  
-  // return {
-  //   ...video,
-  //   chunkManager,
-  //   videoUrl: getVideoStreamingUrl({ ...video, chunkManager }),
-  // };
-  
+  // Chunk manager disabled - videos use direct R2 URLs for playback
+  // This ensures compatibility with expo-video player
   return video;
 }
 
@@ -235,32 +230,29 @@ export function formatViews(views: number): string {
  * Cleanup video resources
  */
 export function cleanupVideoResources(videos: Video[]): void {
-  // DISABLED - Chunk manager not available
-  // videos.forEach(video => {
-  //   if (video.chunkManager) {
-  //     video.chunkManager.cleanup();
-  //   }
-  // });
+  videos.forEach(video => {
+    if (video.chunkManager) {
+      video.chunkManager.cleanup();
+    }
+  });
 }
 
 /**
  * Preload video chunks
  */
 export async function preloadVideoChunks(video: Video, startIndex: number = 0, count: number = 3): Promise<void> {
-  // DISABLED - Chunk manager not available
-  // if (video.chunkManager) {
-  //   await video.chunkManager.preloadChunks(startIndex, count);
-  // }
+  if (video.chunkManager) {
+    await video.chunkManager.preloadChunks(startIndex, count);
+  }
 }
 
 /**
  * Get video chunk URL
  */
 export function getChunkUrl(video: Video, chunkIndex: number): string | null {
-  // DISABLED - Chunk manager not available
-  // if (video.chunkManager) {
-  //   return video.chunkManager.getChunkUrl(chunkIndex);
-  // }
+  if (video.chunkManager) {
+    return video.chunkManager.getChunkUrl(chunkIndex);
+  }
   return null;
 }
 
@@ -268,9 +260,8 @@ export function getChunkUrl(video: Video, chunkIndex: number): string | null {
  * Check if chunk is loaded
  */
 export function isChunkLoaded(video: Video, chunkIndex: number): boolean {
-  // DISABLED - Chunk manager not available
-  // if (video.chunkManager) {
-  //   return video.chunkManager.isChunkLoaded(chunkIndex);
-  // }
+  if (video.chunkManager) {
+    return video.chunkManager.isChunkLoaded(chunkIndex);
+  }
   return false;
 }

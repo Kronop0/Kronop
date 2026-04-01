@@ -271,7 +271,7 @@ class ChunkManager {
   }
 
   /**
-   * Load a specific chunk
+   * Load a specific chunk with retry logic
    */
   private async loadChunk(index: number): Promise<void> {
     if (this.loadedChunks.has(index) || this.loadingChunks.has(index)) {
@@ -280,38 +280,59 @@ class ChunkManager {
 
     this.loadingChunks.add(index);
 
-    try {
-      const start = index * this.chunkSize;
-      const end = this.totalSize ? Math.min(start + this.chunkSize - 1, this.totalSize - 1) : start + this.chunkSize - 1;
-      
-      const url = `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${this.videoKey}`;
-      const response = await fetch(url, {
-        headers: {
-          'Range': `bytes=${start}-${end}`,
-        },
-      });
+    // Retry logic: up to 3 attempts with exponential backoff
+    const maxRetries = 3;
+    let retryCount = 0;
+    let lastError: Error | null = null;
 
-      if (!response.ok) {
-        throw new Error(`Failed to load chunk ${index}: ${response.status}`);
+    while (retryCount < maxRetries) {
+      try {
+        const start = index * this.chunkSize;
+        const end = this.totalSize ? Math.min(start + this.chunkSize - 1, this.totalSize - 1) : start + this.chunkSize - 1;
+
+        const url = `https://pub-ec9340c906bd4c20a0d2640524d276fe.r2.dev/${this.videoKey}`;
+        const response = await fetch(url, {
+          headers: {
+            'Range': `bytes=${start}-${end}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load chunk ${index}: ${response.status}`);
+        }
+
+        const chunk: ChunkInfo = {
+          index,
+          start,
+          end,
+          url: response.url,
+          loaded: true,
+          loading: false,
+        };
+
+        this.chunks.set(index, chunk);
+        this.loadedChunks.add(index);
+        this.loadingChunks.delete(index);
+
+        console.log(`✅ Chunk ${index} loaded successfully`);
+        return; // Success - exit the retry loop
+
+      } catch (error) {
+        lastError = error as Error;
+        retryCount++;
+
+        if (retryCount < maxRetries) {
+          const delayMs = 1000 * Math.pow(2, retryCount); // Exponential backoff: 2s, 4s
+          console.warn(`⚠️ Chunk ${index} load failed (attempt ${retryCount}/${maxRetries}), retrying in ${delayMs}ms:`, lastError.message);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
       }
-
-      const chunk: ChunkInfo = {
-        index,
-        start,
-        end,
-        url: response.url,
-        loaded: true,
-        loading: false,
-      };
-
-      this.chunks.set(index, chunk);
-      this.loadedChunks.add(index);
-      this.loadingChunks.delete(index);
-    } catch (error) {
-      this.loadingChunks.delete(index);
-      console.error(`Failed to load chunk ${index}:`, error);
-      throw error;
     }
+    
+    // All retries failed
+    this.loadingChunks.delete(index);
+    console.error(`🚫 Chunk ${index} failed after ${maxRetries} attempts:`, lastError);
+    // Don't throw - app should continue without this chunk
   }
 
   /**

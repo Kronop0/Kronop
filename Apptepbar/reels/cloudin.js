@@ -147,14 +147,11 @@ class ChunkManager {
       try {
         console.log(`📥 Loading chunk ${chunkIndex}: bytes ${start}-${end}`);
         
-        // For R2, use direct URL without Range headers for better compatibility
-        // R2 supports range requests but the format might be causing issues
-        // Let's try with a simpler approach first
+        // Use Range headers for Cloudflare R2 chunk streaming
         const response = await fetch(this.videoUrl, {
           headers: {
-            'User-Agent': 'KronopApp-ChunkStreamer/1.0'
-            // Temporarily remove Range header to test if this fixes HTTP 400
-            // 'Range': `bytes=${start}-${end}`
+            'User-Agent': 'KronopApp-ChunkStreamer/1.0',
+            'Range': `bytes=${start}-${end}`
           }
         });
 
@@ -179,7 +176,49 @@ class ChunkManager {
         return chunkData;
         
       } catch (error) {
-        console.error(`❌ Chunk ${chunkIndex} failed:`, error);
+        console.error(`❌ Chunk ${chunkIndex} failed (attempt 1):`, error);
+        
+        // Retry logic: Try 2 more times with exponential backoff
+        for (let attempt = 2; attempt <= 3; attempt++) {
+          try {
+            console.log(`🔄 Retrying chunk ${chunkIndex}, attempt ${attempt}...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            
+            const retryResponse = await fetch(this.videoUrl, {
+              headers: {
+                'User-Agent': 'KronopApp-ChunkStreamer/1.0',
+                'Range': `bytes=${start}-${end}`
+              }
+            });
+            
+            if (!retryResponse.ok) {
+              throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+            }
+            
+            const retryChunkData = await retryResponse.arrayBuffer();
+            
+            this.chunks.set(chunkIndex, {
+              data: retryChunkData,
+              start,
+              end,
+              size: retryChunkData.byteLength,
+              timestamp: Date.now()
+            });
+            
+            this.loadedChunks.add(chunkIndex);
+            
+            console.log(`✅ Chunk ${chunkIndex} loaded on retry ${attempt}: ${retryChunkData.byteLength} bytes`);
+            return retryChunkData;
+            
+          } catch (retryError) {
+            console.error(`❌ Chunk ${chunkIndex} retry ${attempt} failed:`, retryError);
+            if (attempt === 3) {
+              console.error(`🚫 Chunk ${chunkIndex} failed after 3 attempts`);
+              return null;
+            }
+          }
+        }
+        
         return null;
       }
     });
@@ -242,12 +281,12 @@ class ChunkManager {
     
     console.log(`✅ Chunk manager cleanup complete`);
   }
-}
+};
 
 // Direct URL Play - Maximum Quality
 export const getVideoUrl = (videoKey) => {
   const baseUrl = CLOUD_CONFIG.publicR2Url;
-  
+
   // Return direct URL with maximum quality parameters
   const fullUrl = `${baseUrl}/${videoKey}?quality=original&no-compression=true`;
   console.log(`🔗 Generated MAX QUALITY Video URL: ${fullUrl}`);
@@ -259,59 +298,122 @@ export const getReelUrl = (reelKey) => {
   return getVideoUrl(reelKey);
 };
 
-// Empty active managers for compatibility (no chunk system)
+// Active chunk managers for enabled chunk system
 export const activeChunkManagers = new Map();
 
-// Legacy functions for compatibility (no chunk system)
-export const getVideoChunk = async (videoUrl, chunkIndex) => {
-  console.log('🚀 Direct URL Play - No chunk system');
-  return null;
-};
+// Initialize chunk manager for a video URL
+export const initializeChunkManagerForUrl = async (videoUrl) => {
+  try {
+    // Check if already exists
+    if (activeChunkManagers.has(videoUrl)) {
+      return activeChunkManagers.get(videoUrl);
+    }
 
-export const getStreamingProgress = (videoUrl) => {
-  console.log('🚀 Direct URL Play - No chunk system');
-  return null;
-};
+    const chunkManager = new ChunkManager(videoUrl);
+    const initialized = await chunkManager.initialize();
 
-export const prefetchNextChunks = async (videoUrl, currentChunkIndex) => {
-  console.log('� Direct URL Play - No chunk system');
-};
+    if (initialized) {
+      activeChunkManagers.set(videoUrl, chunkManager);
+      console.log('✅ Chunk manager initialized for:', videoUrl);
+    }
 
-export const cleanupChunkManager = (videoUrl) => {
-  console.log('🚀 Direct URL Play - No chunk system');
-};
-
-/**
- * Check if URL is valid R2 streaming URL
- * @param {string} url - URL to validate
- * @returns {boolean} True if valid R2 URL
- */
-function isValidR2Url(url) {
-  return url && url.startsWith(CLOUD_CONFIG.publicR2Url);
-}
-
-/**
- * Extract video key from R2 URL
- * @param {string} url - Full R2 URL
- * @returns {string} Video key
- */
-function extractVideoKey(url) {
-  if (!isValidR2Url(url)) {
-    return '';
+    return chunkManager;
+  } catch (error) {
+    console.error('❌ Failed to initialize chunk manager:', error);
+    return null;
   }
-  
-  return url.replace(CLOUD_CONFIG.publicR2Url + '/', '');
-}
+};
 
-/**
- * Get optimized video URL based on network conditions
- * @param {string} videoKey - Video file key
- * @param {object} networkInfo - Network speed and type info
- * @returns {string} Optimized streaming URL
- */
+// Get streaming progress
+export const getStreamingProgress = (videoUrl) => {
+  const chunkManager = activeChunkManagers.get(videoUrl);
+  if (chunkManager) {
+    return chunkManager.getProgress();
+  }
+  return null;
+};
+
+// Get or create chunk manager for video
+export const getVideoChunk = async (videoUrl, chunkIndex) => {
+  try {
+    let chunkManager = activeChunkManagers.get(videoUrl);
+
+    // Initialize if not exists
+    if (!chunkManager) {
+      chunkManager = await initializeChunkManagerForUrl(videoUrl);
+    }
+
+    if (!chunkManager) {
+      console.warn('⚠️ No chunk manager available for:', videoUrl);
+      return null;
+    }
+
+    // Check if chunk is already loaded
+    if (chunkManager.isChunkLoaded(chunkIndex)) {
+      return chunkManager.getChunk(chunkIndex);
+    }
+
+    // Load the specific chunk with retry
+    const maxRetries = 3;
+    let retryCount = 0;
+    let chunk = null;
+
+    while (retryCount < maxRetries && !chunk) {
+      try {
+        await chunkManager.preloadChunks([chunkIndex]);
+        chunk = chunkManager.getChunk(chunkIndex);
+        if (!chunk) {
+          throw new Error(`Chunk ${chunkIndex} not found after preload`);
+        }
+      } catch (error) {
+        retryCount++;
+        console.warn(`⚠️ Chunk ${chunkIndex} load retry ${retryCount}/${maxRetries}:`, error.message);
+        if (retryCount >= maxRetries) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
+      }
+    }
+
+    return chunk;
+  } catch (error) {
+    console.error('❌ Failed to get video chunk:', error);
+    return null; // Return null instead of crashing
+  }
+};
+
+// Prefetch next chunks for smooth playback
+export const prefetchNextChunks = async (videoUrl, currentChunkIndex) => {
+  try {
+    const chunkManager = activeChunkManagers.get(videoUrl);
+    if (!chunkManager) {
+      return;
+    }
+
+    const nextChunks = chunkManager.getNextChunks(currentChunkIndex, 2);
+    if (nextChunks.length > 0) {
+      await chunkManager.preloadChunks(nextChunks);
+    }
+  } catch (error) {
+    console.warn('⚠️ Prefetch failed:', error);
+    // Don't crash on prefetch failure
+  }
+};
+
+// Cleanup chunk manager
+export const cleanupChunkManager = (videoUrl) => {
+  const chunkManager = activeChunkManagers.get(videoUrl);
+  if (chunkManager) {
+    chunkManager.cleanup();
+    activeChunkManagers.delete(videoUrl);
+    console.log('🧹 Chunk manager cleaned up for:', videoUrl);
+  }
+};
+
+// Get optimized video URL based on network conditions
 function getOptimizedUrl(videoKey, networkInfo = {}) {
   const { speed = 'fast', type = 'wifi' } = networkInfo;
-  
+
   // Auto-adjust quality based on network
   if (type === 'cellular' || speed === 'slow') {
     return getQualityStreamUrl(videoKey, 'low');
