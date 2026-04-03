@@ -1,7 +1,8 @@
 // Cloudflare R2 Service for fetching Stories
 // Simple fetch-only service for Story data (videos and photos)
 
-const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 // [KRONOP-DEBUG] Loading R2 Configuration from environment variables
 console.log('[KRONOP-DEBUG] 🚀 Initializing R2 Story Service...');
@@ -82,7 +83,8 @@ class R2StoryService {
       let validStories = 0;
       let skippedFiles = 0;
       
-      const storyFiles = response.Contents.map((item, index) => {
+      // Process all stories asynchronously
+      const storyPromises = response.Contents.map(async (item, index) => {
         const key = item.Key || '';
         const fileName = key.split('/').pop() || '';
         const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
@@ -130,19 +132,19 @@ class R2StoryService {
         const keyHash = key.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
         const uniqueId = eTag ? `${eTag}-${index}` : `story-${keyHash}-${index}`;
 
-        // Generate proper URLs - ENSURE NO UNDEFINED VALUES
-        const publicUrl = this.getPublicUrl(key);
-        const fallbackUrl = this.getFallbackUrl(key, detectedType);
-        const thumbnailUrl = isVideo ? this.generateThumbnailUrl(key) : publicUrl;
+        // Generate proper URLs - Use signed URLs for private bucket access
+        const signedUrl = await this.getSignedUrl(key);
+        const fallbackUrl = this.getPublicUrl(key, detectedType);
+        const thumbnailUrl = isVideo ? await this.generateThumbnailUrl(key) : signedUrl;
         
         // URL assignment logic - NO UNDEFINED VALUES
         let imageUrl = undefined;
         let videoUrl = undefined;
         
         if (isImage) {
-          imageUrl = publicUrl;
+          imageUrl = signedUrl;
         } else if (isVideo) {
-          videoUrl = publicUrl;
+          videoUrl = signedUrl;
         }
 
         const storyData = {
@@ -150,7 +152,7 @@ class R2StoryService {
           title: fileName.replace(/\.[^/.]+$/, ''), // Remove extension
           story_type: detectedType, // Always set
           type: detectedType,       // Always set - both for compatibility
-          url: publicUrl,           // ALWAYS set - main URL
+          url: signedUrl,           // ALWAYS set - main URL
           fallbackUrl: fallbackUrl,  // Fallback URL when public access fails
           imageUrl: imageUrl,       // Set only for images
           videoUrl: videoUrl,       // Set only for videos
@@ -188,7 +190,10 @@ class R2StoryService {
         console.log(`[KRONOP-DEBUG] ✅ Validation passed for ${fileName}`);
         
         return storyData;
-      }).filter(story => story !== null); // Remove null entries
+      });
+
+      // Await all promises and filter out nulls
+      const storyFiles = (await Promise.all(storyPromises)).filter(story => story !== null);
 
       console.log(`[KRONOP-DEBUG] 📊 Processing Summary:`);
       console.log(`[KRONOP-DEBUG]   - Total objects found: ${response.Contents.length}`);
@@ -221,25 +226,25 @@ class R2StoryService {
   }
 
   /**
-   * Get fallback URL for when public access fails
+   * Get signed URL for R2 object (for private access)
    */
-  getFallbackUrl(key, type = 'image') {
-    // Use real R2 URL instead of placeholders - they don't work
-    const publicEndpoint = 'https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev';
-    const fileName = key.split('/').pop() || '';
-    const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
-    
-    // Return the same R2 URL - if it fails, it fails, but no placeholders
-    return `${publicEndpoint}/${key}`;
+  getSignedUrl(key, expiresIn = 3600) {
+    // Generate signed URL for private bucket access
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+
+    return getSignedUrl(this.client, command, { expiresIn });
   }
 
   /**
    * Generate thumbnail URL for videos (placeholder logic)
    */
-  generateThumbnailUrl(videoKey) {
+  async generateThumbnailUrl(videoKey) {
     // For videos, we might need a separate thumbnail service
     // For now, return the video URL as thumbnail (will show video frame)
-    const thumbnailUrl = this.getPublicUrl(videoKey);
+    const thumbnailUrl = await this.getSignedUrl(videoKey);
     console.log(`[KRONOP-DEBUG] 🖼️ Generated thumbnail URL for video: ${thumbnailUrl}`);
     return thumbnailUrl;
   }
