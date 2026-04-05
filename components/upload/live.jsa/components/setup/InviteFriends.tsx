@@ -1,50 +1,45 @@
 // Powered by OnSpace.AI
 import React from 'react';
-import { View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Switch, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, FontSize } from '@/constants/theme';
 
 interface InviteFriendsProps {
   enabled: boolean;
   onToggle: (val: boolean) => void;
+  invitedIds: string[];
+  onInvitedChange: (ids: string[]) => void;
 }
 
-export default function InviteFriends({ enabled, onToggle }: InviteFriendsProps) {
+export default function InviteFriends({ enabled, onToggle, invitedIds, onInvitedChange }: InviteFriendsProps) {
   return (
-    <View style={styles.card}>
-      <View style={styles.row}>
-        <View style={styles.left}>
-          <View style={styles.iconBg}>
+    <View style={s.card}>
+      <View style={s.row}>
+        <View style={s.left}>
+          <View style={s.iconBg}>
             <Ionicons name="person-add" size={18} color={Colors.accent} />
           </View>
           <View>
-            <Text style={styles.title}>Invite Friends to Live</Text>
-            <Text style={styles.subtitle}>Let friends join as co-hosts</Text>
+            <Text style={s.title}>Invite Friends to Live</Text>
+            <Text style={s.subtitle}>Let friends join as co-hosts</Text>
           </View>
         </View>
         <Switch
           value={enabled}
-          onValueChange={onToggle}
-          trackColor={{ false: Colors.border, true: Colors.primary }}
+          onValueChange={(v) => { onToggle(v); if (!v) onInvitedChange([]); }}
+          trackColor={{ false: Colors.borderColor, true: Colors.primary.main }}
           thumbColor={Colors.textPrimary}
-          ios_backgroundColor={Colors.border}
+          ios_backgroundColor={Colors.borderColor}
         />
       </View>
-      {enabled ? (
-        <TouchableOpacity style={styles.selectBtn} activeOpacity={0.75}>
-          <Ionicons name="people-outline" size={16} color={Colors.accent} />
-          <Text style={styles.selectBtnText}>Select Friends to Invite</Text>
-          <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-        </TouchableOpacity>
-      ) : null}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   card: {
     backgroundColor: Colors.cardBg, borderRadius: Radius.lg,
-    padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm,
+    padding: Spacing.md, borderWidth: 1, borderColor: Colors.borderColor, gap: Spacing.sm,
   },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   left: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 },
@@ -54,10 +49,4 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: FontSize.md, fontWeight: '600', color: Colors.textPrimary },
   subtitle: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 2 },
-  selectBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.accentDim, borderRadius: Radius.md, padding: Spacing.sm + 2,
-    borderWidth: 1, borderColor: Colors.accent + '33', marginTop: Spacing.xs,
-  },
-  selectBtnText: { flex: 1, fontSize: FontSize.sm, fontWeight: '600', color: Colors.accent },
 });

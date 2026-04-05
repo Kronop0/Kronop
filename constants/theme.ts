@@ -54,3 +54,9 @@ export const theme = {
     md: {},
   },
 } as const;
+
+export const Colors = AppColors;
+
+export const Spacing = theme.spacing;
+export const Radius = theme.borderRadius;
+export const FontSize = theme.typography.fontSize;

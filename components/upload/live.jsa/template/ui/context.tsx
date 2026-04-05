@@ -3,15 +3,6 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Platform, Alert } from 'react-native';
 import { AlertButton, AlertState } from './types';
 
-// Internal Web Alert Modal Component
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-
 // Context type definition
 interface AlertContextType {
   showAlert: (title: string, message?: string, buttons?: AlertButton[]) => void;
@@ -111,6 +102,15 @@ export function useAlertContext(): AlertContextType {
   
   return context;
 }
+
+// Internal Web Alert Modal Component
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 
 interface WebAlertModalProps {
   alertState: AlertState;

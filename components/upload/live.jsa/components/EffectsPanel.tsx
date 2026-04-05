@@ -2,12 +2,11 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/theme';
-import { CameraEffect, EFFECTS } from '../constants/effectsData';
-import { effectsPanelStyles as s } from '../constants/effectsPanelStyles';
+import { Colors } from '@/constants/theme';
+import { CameraEffect, EFFECTS } from '@/constants/effectsData';
+import { effectsPanelStyles as s } from '@/constants/effectsPanelStyles';
 
-export type { CameraEffect } from '../constants/effectsData';
-export { EFFECTS } from '../constants/effectsData';
+export { CameraEffect, EFFECTS } from '@/constants/effectsData';
 
 interface EffectsPanelProps {
   visible: boolean;
@@ -44,7 +43,7 @@ export default function EffectsPanel({ visible, selectedEffect, onSelectEffect, 
           <Ionicons name="color-filter-outline" size={18} color={Colors.primary} />
           <Text style={s.headerTitle}>Camera Effects</Text>
           <TouchableOpacity onPress={onClose} style={s.closeBtn} activeOpacity={0.7}>
-            <Ionicons name="close" size={20} color={Colors.text.secondary} />
+            <Ionicons name="close" size={20} color={Colors.textSecondary} />
           </TouchableOpacity>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.effectsRow}>

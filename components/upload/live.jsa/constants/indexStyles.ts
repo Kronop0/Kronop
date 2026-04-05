@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native';
 import { Colors, Spacing, Radius, FontSize } from '@/constants/theme';
 
 export const indexStyles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000' },
+  root: { flex: 1, backgroundColor: Colors.bg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

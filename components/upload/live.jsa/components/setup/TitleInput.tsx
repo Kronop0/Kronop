@@ -13,7 +13,7 @@ export default function TitleInput({ value, onChange }: TitleInputProps) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Feather name="edit-3" size={16} color={Colors.primary} />
+        <Feather name="edit-3" size={16} color={Colors.primary.main} />
         <Text style={styles.title}>Live Title</Text>
       </View>
       <TextInput
@@ -33,7 +33,7 @@ export default function TitleInput({ value, onChange }: TitleInputProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.cardBg, borderRadius: Radius.lg,
-    padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm,
+    padding: Spacing.md, borderWidth: 1, borderColor: Colors.borderColor, gap: Spacing.sm,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   title: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface, borderRadius: Radius.md,
     paddingHorizontal: Spacing.md, paddingVertical: 2,
     fontSize: FontSize.md, color: Colors.textPrimary,
-    borderWidth: 1, borderColor: Colors.border, minHeight: 28,
+    borderWidth: 1, borderColor: Colors.borderColor, minHeight: 28,
   },
   count: { fontSize: FontSize.xs, color: Colors.textMuted, textAlign: 'right' },
 });

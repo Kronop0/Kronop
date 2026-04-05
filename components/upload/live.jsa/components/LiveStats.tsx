@@ -7,9 +7,9 @@ import { Spacing, Radius, FontSize } from '@/constants/theme';
 interface LiveStatsProps {
   liveSeconds: number;
   viewerCount: number;
-  connectionStatus: string;
-  connectionStatusColor: string;
-  connectionStatusLabel: string;
+  uploadStatus: string;
+  uploadStatusColor: string;
+  uploadStatusLabel: string;
 }
 
 function formatTime(secs: number) {
@@ -20,7 +20,7 @@ function formatTime(secs: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function LiveStats({ liveSeconds, viewerCount, connectionStatus, connectionStatusColor, connectionStatusLabel }: LiveStatsProps) {
+export default function LiveStats({ liveSeconds, viewerCount, uploadStatus, uploadStatusColor, uploadStatusLabel }: LiveStatsProps) {
   return (
     <View style={styles.row}>
       <View style={styles.chip}>
@@ -31,9 +31,9 @@ export default function LiveStats({ liveSeconds, viewerCount, connectionStatus, 
         <Ionicons name="eye-outline" size={12} color="#fff" />
         <Text style={styles.text}>{viewerCount}</Text>
       </View>
-      {connectionStatus !== 'idle' ? (
+      {uploadStatus !== 'idle' ? (
         <View style={[styles.chip, { backgroundColor: '#00000077' }]}>
-          <Text style={[styles.text, { color: connectionStatusColor, fontSize: 10 }]}>{connectionStatusLabel}</Text>
+          <Text style={[styles.text, { color: uploadStatusColor, fontSize: 10 }]}>{uploadStatusLabel}</Text>
         </View>
       ) : null}
     </View>

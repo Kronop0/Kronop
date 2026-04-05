@@ -19,7 +19,7 @@ export default function AudienceSelector({ selected, onSelect }: AudienceSelecto
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Ionicons name="eye-outline" size={16} color={Colors.primary} />
+        <Ionicons name="eye-outline" size={16} color={Colors.primary.main} />
         <Text style={styles.title}>Who Can Watch</Text>
       </View>
       <View style={styles.row}>
@@ -32,12 +32,12 @@ export default function AudienceSelector({ selected, onSelect }: AudienceSelecto
               activeOpacity={0.75}
               onPress={() => onSelect(opt.id)}
             >
-              <Ionicons name={opt.icon as any} size={20} color={active ? Colors.primary : Colors.textMuted} />
+              <Ionicons name={opt.icon as any} size={20} color={active ? Colors.primary.main : Colors.textMuted} />
               <Text style={[styles.label, active && styles.labelActive]}>{opt.label}</Text>
               <Text style={[styles.desc, active && styles.descActive]}>{opt.desc}</Text>
               {active ? (
                 <View style={styles.check}>
-                  <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
+                  <Ionicons name="checkmark-circle" size={14} color={Colors.primary.main} />
                 </View>
               ) : null}
             </TouchableOpacity>
@@ -51,7 +51,7 @@ export default function AudienceSelector({ selected, onSelect }: AudienceSelecto
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.cardBg, borderRadius: Radius.lg,
-    padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm,
+    padding: Spacing.md, borderWidth: 1, borderColor: Colors.borderColor, gap: Spacing.sm,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   title: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
@@ -59,12 +59,12 @@ const styles = StyleSheet.create({
   option: {
     flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.md,
     padding: Spacing.sm, alignItems: 'center', gap: 4,
-    borderWidth: 1.5, borderColor: Colors.border,
+    borderWidth: 1.5, borderColor: Colors.borderColor,
     position: 'relative', minHeight: 80, justifyContent: 'center',
   },
-  optionActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryDim },
+  optionActive: { borderColor: Colors.primary.main, backgroundColor: Colors.primaryDim },
   label: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.textSecondary },
-  labelActive: { color: Colors.textPrimary },
+  labelActive: { color: Colors.primary.main },
   desc: { fontSize: FontSize.xs, color: Colors.textMuted, textAlign: 'center', lineHeight: 14 },
   descActive: { color: Colors.textSecondary },
   check: { position: 'absolute', top: 6, right: 6 },

@@ -14,6 +14,7 @@ const appJson = {
     assetBundlePatterns: [
       "*/"
     ],
+    scheme: ["kronop"],
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.kronopaman.kronop"

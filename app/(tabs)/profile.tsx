@@ -22,7 +22,7 @@ import StoryUpload from '../../components/upload/story.jsa/StoryUpload.tsx';
 import PhotoUpload from '../../components/upload/photo.tsa/PhotoUpload.tsx';
 import ReelsUpload from '../../components/upload/reels.jsa/ReelsUpload.tsx';
 import VideoUpload from '../../components/upload/video.jsa/VideoUpload.tsx';
-import LiveUpload from '../../components/upload/live.jsa/LiveUpload.tsx';
+import LiveUpload from '../../components/upload/live.jsa/app/index';
 import SongUpload from '../../components/upload/song.jsa/SongUpload.tsx';
 
 const mockUserData = {

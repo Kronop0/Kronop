@@ -73,6 +73,19 @@ export const AppColors = {
   // Loading & Refresh
   loading: '#8B00FF',     // Loading spinner color
   refresh: '#8B00FF',     // Refresh control color
+
+  // Aliases for compatibility with live.jsa components
+  cardBg: '#141414',      // Card background (same as tertiary)
+  borderColor: '#333333', // Border color (same as border.primary)
+  textMuted: '#999999',   // Muted text (same as text.tertiary)
+  textPrimary: '#FFFFFF', // Primary text (same as text.primary)
+  textSecondary: '#CCCCCC', // Secondary text (same as text.secondary)
+  surface: '#0A0A0A',     // Surface color (same as background.secondary)
+  primaryDim: 'rgba(139, 0, 255, 0.15)', // Dimmed primary
+  bg: '#000000',          // Background (same as background.primary)
+  liveRed: '#FF3B30',     // Live indicator red
+  accent: '#00D4FF',      // Accent color (cyan)
+  accentDim: 'rgba(0, 212, 255, 0.15)', // Dimmed accent
 };
 
 // Export individual color categories for easy access

@@ -33,12 +33,12 @@ export default function GoLiveButton({ canGoLive, onPress, paddingBottom }: GoLi
 const styles = StyleSheet.create({
   bar: {
     paddingHorizontal: Spacing.md, paddingTop: Spacing.md,
-    backgroundColor: Colors.bg, borderTopWidth: 1, borderTopColor: Colors.border,
+    backgroundColor: Colors.bg, borderTopWidth: 1, borderTopColor: Colors.borderColor,
   },
   btn: {
     backgroundColor: Colors.surface, borderRadius: Radius.xl,
     paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xl,
-    borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center', opacity: 0.45,
+    borderWidth: 1.5, borderColor: Colors.borderColor, alignItems: 'center', opacity: 0.45,
   },
   btnActive: {
     backgroundColor: Colors.liveRed, borderColor: Colors.liveRed, opacity: 1,

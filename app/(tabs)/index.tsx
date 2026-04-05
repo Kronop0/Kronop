@@ -21,7 +21,7 @@ import HeaderButton from '../../components/common/HeaderButton';
 import StoryUpload from '../../components/upload/story.jsa/StoryUpload.tsx';
 import VideoUpload from '../../components/upload/video.jsa/VideoUpload.tsx';
 import ReelsUpload from '../../components/upload/reels.jsa/ReelsUpload.tsx';
-import LiveUpload from '../../components/upload/live.jsa/LiveUpload.tsx';
+import LiveUpload from '../../components/upload/live.jsa/app/index';
 import SongUpload from '../../components/upload/song.jsa/SongUpload.tsx';
 
 // Removed photo categories - no longer needed

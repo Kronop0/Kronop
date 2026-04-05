@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, FlatList, Animated, StyleSheet } from 'react-native';
 import { Colors, Spacing, Radius, FontSize } from '@/constants/theme';
-import { LiveComment, MOCK_COMMENTS } from '../constants/commentsData';
+import { LiveComment, MOCK_COMMENTS } from '@/constants/commentsData';
 
-export type { LiveComment } from '../constants/commentsData';
+export type { LiveComment } from '@/constants/commentsData';
 
 function CommentItem({ comment }: { comment: LiveComment }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
