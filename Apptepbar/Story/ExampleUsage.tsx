@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { StorySection } from './components/StorySection';
-import { StoryViewer } from './components/StoryViewer';
+import { StorySection } from './components/StoryComponents/StorySection';
+import { StoryViewer } from './components/StoryViewer/StoryViewer';
 import storyDataService from './services/storyDataService';
 
 // [KRONOP-DEBUG] Example Story Screen component
@@ -80,14 +80,34 @@ export default function ExampleStoryScreen() {
     }
   };
 
-  const handleStoryPress = (storyGroup: GroupedStory, storyIndex?: number) => {
-    console.log('[KRONOP-DEBUG] 👆 handleStoryPress called');
-    console.log(`[KRONOP-DEBUG]   - User: ${storyGroup.userName}`);
-    console.log(`[KRONOP-DEBUG]   - Stories in group: ${storyGroup.stories.length}`);
-    console.log(`[KRONOP-DEBUG]   - Selected story index: ${storyIndex || 0}`);
-    
-    setSelectedStoryGroup(storyGroup);
-    setViewerVisible(true);
+  // Transform grouped stories into individual StoryItem[] for StorySection
+  const flattenedStories = React.useMemo(() => {
+    return stories.flatMap(group => 
+      group.stories.map(story => ({
+        id: story.id,
+        userId: group.userId,
+        userName: group.userName,
+        userAvatar: group.userAvatar,
+        imageUrl: story.imageUrl,
+        videoUrl: story.videoUrl,
+        thumbnailUrl: story.thumbnailUrl,
+        duration: story.duration,
+        type: story.type,
+        story_type: story.story_type,
+        timestamp: story.timestamp,
+        url: story.url,
+      }))
+    );
+  }, [stories]);
+
+  const handleStoryPress = (story: any) => {
+    console.log('[KRONOP-DEBUG] 👆 Story pressed:', story);
+    // Find the original group for the viewer
+    const group = stories.find(g => g.userId === story.userId);
+    if (group) {
+      setSelectedStoryGroup(group);
+      setViewerVisible(true);
+    }
   };
 
   const handleCloseViewer = () => {
@@ -136,7 +156,7 @@ export default function ExampleStoryScreen() {
       </View>
 
       <StorySection
-        stories={stories}
+        stories={flattenedStories}
         loading={loading}
         onStoryPress={handleStoryPress}
       />
@@ -188,16 +208,20 @@ HOW TO USE THIS EXAMPLE:
 1. In your main app screen, import and use ExampleStoryScreen:
 
 import ExampleStoryScreen from './Apptepbar/Story/ExampleUsage';
+*/
 
+/*
 export default function HomeScreen() {
   return (
     <View style={{ flex: 1 }}>
       <ExampleStoryScreen />
-      {/* Your other components */}
+      {/* Your other components *\/}
     </View>
   );
 }
+*/
 
+/*
 2. Or integrate the logic directly into your existing screen:
 
 import { StorySection } from './Apptepbar/Story/components/StorySection';

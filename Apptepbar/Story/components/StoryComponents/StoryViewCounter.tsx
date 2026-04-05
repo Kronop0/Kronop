@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import StarButton from './StarButton';
+import StarButton from '../StarButton';
 
 // Story View Service for API calls
 class StoryViewService {

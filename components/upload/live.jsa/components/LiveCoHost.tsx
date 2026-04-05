@@ -1,4 +1,6 @@
 // Powered by OnSpace.AI
+// TODO: Future - Replace mock friend avatars with real Agora remote video streams (RtcSurfaceView)
+// Currently shows mock data, but should display actual co-host video from Agora SDK
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Image } from 'expo-image';
