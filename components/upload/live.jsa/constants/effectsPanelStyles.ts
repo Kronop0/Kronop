@@ -1,0 +1,131 @@
+// Powered by OnSpace.AI
+// Styles for EffectsPanel component
+import { StyleSheet } from 'react-native';
+import { Colors, Spacing, Radius, FontSize } from '@/constants/theme';
+
+export const effectsPanelStyles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    zIndex: 100,
+  },
+  backdropTouchable: {
+    flex: 1,
+    backgroundColor: '#00000055',
+  },
+  panel: {
+    backgroundColor: '#18181E',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 32,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderColor: Colors.border,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  effectsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.md,
+    paddingBottom: Spacing.md,
+  },
+  effectCard: {
+    alignItems: 'center',
+    gap: Spacing.xs,
+    width: 76,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    backgroundColor: Colors.surface,
+  },
+  effectCardSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryDim,
+  },
+  effectPreview: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  effectPreviewSelected: {
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  effectPreviewInner: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    opacity: 0.7,
+  },
+  effectIcon: { zIndex: 2 },
+  selectedCheck: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    zIndex: 3,
+  },
+  effectName: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  effectNameSelected: { color: Colors.primary },
+  effectDesc: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    textAlign: 'center',
+  },
+  infoBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.xs,
+  },
+  infoText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+  },
+});
