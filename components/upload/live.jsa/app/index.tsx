@@ -13,7 +13,11 @@ import InviteFriends from '../components/setup/InviteFriends';
 import CategoryPicker from '../components/setup/CategoryPicker';
 import GoLiveButton from '../components/setup/GoLiveButton';
 
-export default function GoLiveScreen() {
+interface GoLiveScreenProps {
+  onClose?: () => void;
+}
+
+export default function GoLiveScreen({ onClose }: GoLiveScreenProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [title, setTitle] = useState('');
@@ -36,12 +40,12 @@ export default function GoLiveScreen() {
   };
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
+    <View style={[s.root, { paddingTop: 0, marginTop: -50, paddingHorizontal: 0, width: '100%' }]}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background.primary} />
 
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity style={s.headerBack} activeOpacity={0.7}>
+        <TouchableOpacity style={s.headerBack} activeOpacity={0.7} onPress={onClose}>
           <Ionicons name="chevron-back" size={22} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Setup Live</Text>
