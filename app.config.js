@@ -43,13 +43,24 @@ module.exports = () => ({
   plugins: [
     '@react-native-google-signin/google-signin',
     [
+      '@spreen/ffmpeg-kit-react-native-config',
+      {
+        package: 'https-lts',
+        android: {
+          package: 'https-lts'
+        },
+        ios: {
+          package: 'https-lts'
+        }
+      }
+    ],
+    [
       'expo-build-properties',
       {
         android: {
           kotlinVersion: '2.0.20',
           extraMavenRepos: [
-            'https://jitpack.io',
-            'mavenCentral()'
+            'https://jitpack.io'
           ]
         }
       }
