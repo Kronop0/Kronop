@@ -12,7 +12,7 @@ export const indexStyles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm + 4,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: Colors.borderColor,
   },
   headerBack: {
     width: 36, height: 36, borderRadius: Radius.full,
@@ -22,15 +22,15 @@ export const indexStyles = StyleSheet.create({
   liveIndicator: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.primaryDim, paddingHorizontal: Spacing.sm, paddingVertical: 4,
-    borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.primary + '44', gap: 4,
+    borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.primary.main + '44', gap: 4,
   },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.liveRed },
-  liveText: { fontSize: FontSize.xs, fontWeight: '800', color: Colors.primary, letterSpacing: 1 },
+  liveText: { fontSize: FontSize.xs, fontWeight: '800', color: Colors.primary.main, letterSpacing: 1 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: Spacing.md, paddingTop: Spacing.md, gap: Spacing.md },
   card: {
     backgroundColor: Colors.cardBg, borderRadius: Radius.lg, padding: Spacing.md,
-    borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm,
+    borderWidth: 1, borderColor: Colors.borderColor, gap: Spacing.sm,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   cardTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
@@ -38,7 +38,7 @@ export const indexStyles = StyleSheet.create({
     backgroundColor: Colors.surface, borderRadius: Radius.md,
     paddingHorizontal: Spacing.md, paddingVertical: 2,
     fontSize: FontSize.md, color: Colors.textPrimary,
-    borderWidth: 1, borderColor: Colors.border, minHeight: 28,
+    borderWidth: 1, borderColor: Colors.borderColor, minHeight: 28,
   },
   charCount: { fontSize: FontSize.xs, color: Colors.textMuted, textAlign: 'right' },
   // Audience, toggle, category, and invite styles live in their own setup components.

@@ -16,11 +16,12 @@ buildscript {
 allprojects {
   ext {
     kotlinVersion = '2.0.20'
+    ffmpegKitPackage = "https-lts"
   }
   repositories {
-    maven { url 'https://maven.google.com' }
-    maven { url 'https://jitpack.io' }
+    google()
     mavenCentral()
+    maven { url 'https://jitpack.io' }
   }
 }
 
