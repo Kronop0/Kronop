@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, FontSize } from '@/constants/theme';
-import { MOCK_FRIENDS, Friend } from '@/constants/friendsData';
+import { MOCK_FRIENDS, Friend } from '../constants/friendsData';
 
 interface LiveCoHostProps {
   invitedIds: string[];

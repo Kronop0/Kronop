@@ -1,7 +1,7 @@
 // Powered by OnSpace.AI
 // Styles for EffectsPanel component
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, FontSize } from '@/constants/theme';
+import { Colors, Spacing, Radius, FontSize } from './theme';
 
 export const effectsPanelStyles = StyleSheet.create({
   backdrop: {

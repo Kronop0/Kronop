@@ -2,8 +2,8 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
-import { endLiveModalStyles as s } from '@/constants/endLiveModalStyles';
+import { Colors } from '../constants/theme';
+import { endLiveModalStyles as s } from '../constants/endLiveModalStyles';
 
 interface EndLiveModalProps {
   visible: boolean;

@@ -6,8 +6,8 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Spacing, Radius, FontSize } from '@/constants/theme';
-import { MOCK_FRIENDS, Friend } from '@/constants/friendsData';
+import { Colors, Spacing, Radius, FontSize } from '../../constants/theme';
+import { MOCK_FRIENDS, Friend } from '../../constants/friendsData';
 
 interface FriendPickerModalProps {
   visible: boolean;

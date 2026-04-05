@@ -2,11 +2,11 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
-import { CameraEffect, EFFECTS } from '@/constants/effectsData';
-import { effectsPanelStyles as s } from '@/constants/effectsPanelStyles';
+import { Colors } from '../constants/theme';
+import { CameraEffect, EFFECTS } from '../constants/effectsData';
+import { effectsPanelStyles as s } from '../constants/effectsPanelStyles';
 
-export { CameraEffect, EFFECTS } from '@/constants/effectsData';
+export { CameraEffect, EFFECTS } from '../constants/effectsData';
 
 interface EffectsPanelProps {
   visible: boolean;

@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, StatusBar } from 'react-native';
 import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/theme';
+import { AppColors as Colors } from '@/appColor/AppColors';
 import { indexStyles as s } from '@/constants/styles';
 import { useRouter } from 'expo-router';
 import TitleInput from '../components/setup/TitleInput';
@@ -29,7 +29,7 @@ export default function GoLiveScreen({ onClose }: GoLiveScreenProps) {
 
   const handleGoLive = () => {
     router.push({
-      pathname: '/live',
+      pathname: '/live/stream',
       params: {
         title,
         category: selectedCategory,

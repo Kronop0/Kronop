@@ -8,7 +8,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" options={{ headerShown: false, headerTransparent: true }} />
-          <Stack.Screen name="live" options={{ headerShown: false, headerTransparent: true, animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="stream" options={{ headerShown: false, headerTransparent: true, animation: 'slide_from_bottom' }} />
         </Stack>
       </SafeAreaProvider>
     </AlertProvider>
