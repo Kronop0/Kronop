@@ -1,0 +1,25 @@
+// Export all category components for easier imports
+export { AllCategory } from './All';
+export { FamilyCategory } from './Family';
+export { SportsCategory } from './Sports';
+export { TechnicalCategory } from './Technical';
+export { NatureCategory } from './Nature';
+export { AiArtCategory } from './AiArt';
+export { CarsCategory } from './Cars';
+export { TravelCategory } from './Travel';
+export { FoodCategory } from './Food';
+export { FashionCategory } from './Fashion';
+export { ArchitectureCategory } from './Architecture';
+export { AnimalsCategory } from './Animals';
+export { SpaceCategory } from './Space';
+export { MusicCategory } from './Music';
+export { ArtCategory } from './Art';
+export { GamingCategory } from './Gaming';
+export { PhotographyCategory } from './Photography';
+export { MinimalCategory } from './Minimal';
+export { VintageCategory } from './Vintage';
+export { WallpaperCategory } from './Wallpaper';
+export { CyberpunkCategory } from './Cyberpunk';
+export { AestheticCategory } from './Aesthetic';
+export { MacroCategory } from './Macro';
+export { StreetCategory } from './Street';

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "800188804977",
+    "project_id": "kronop-433a4",
+    "storage_bucket": "kronop-433a4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:800188804977:android:0d172539fffa01b9df10d0",
+        "android_client_info": {
+          "package_name": "kronopAndroid.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACTnBaLpePUaVNhTxQkq2uptXNPUBqHEU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

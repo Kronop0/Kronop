@@ -1,0 +1,17 @@
+diff --git a/node_modules/react-native-worklets/android/build.gradle b/node_modules/react-native-worklets/android/build.gradle
+index 61c565b..fd7271e 100644
+--- a/node_modules/react-native-worklets/android/build.gradle
++++ b/node_modules/react-native-worklets/android/build.gradle
+@@ -121,6 +121,12 @@ def JS_RUNTIME = {
+         return "hermes"
+     }
+ 
++    // Root gradle.properties (hermesEnabled) is not always visible on :app when this runs; RN 0.83+ has no JSC in core.
++    def rootHermes = rootProject.findProperty("hermesEnabled")?.toString()
++    if (rootHermes != null && rootHermes.toBoolean()) {
++        return "hermes"
++    }
++
+     // Use JavaScriptCore (JSC) by default
+     return "jsc"
+ }.call()
