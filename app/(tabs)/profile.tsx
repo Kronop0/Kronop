@@ -742,7 +742,7 @@ export default function ProfileScreen() {
                         <MaterialIcons name={section.icon as any} size={22} color="#8B00FF" />
                         <View style={styles.databaseInfo}>
                           <Text style={styles.databaseName}>{section.name}</Text>
-                          <Text style={styles.databaseCount}>{section.stats.total} items</Text>
+                          <Text style={styles.databaseCount}>{section.stats.total}</Text>
                         </View>
                       </View>
 

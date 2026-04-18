@@ -19,9 +19,9 @@ export default function NotFoundScreen() {
       
       <View style={styles.content}>
         <MaterialIcons name="photo-camera" size={80} color="#FFD700" />
-        <Text style={styles.title}>Page Not Found</Text>
+        <Text style={styles.title}>Video Not Found</Text>
         <Text style={styles.message}>
-          The moment you're looking for seems to have been lost in the shadows.
+          The video you're looking for seems to have been lost in the shadows.
         </Text>
         
         <TouchableOpacity 

@@ -1,80 +1,122 @@
-import { useState, useCallback, useEffect } from 'react';
-import { getLongVideos, initializeChunkManager, cleanupVideoResources, preloadVideoChunks, Video } from '../services/videoService';
+import { useState, useEffect } from 'react';
+import { Video } from '../types';
+import { listR2Videos, isR2Configured } from '../services/r2Service';
 
-export function useLongVideos() {
+// In-memory cache for likes/saves (since R2 is read-only for metadata)
+const videoInteractions: Map<
+  string,
+  { isLiked?: boolean; isSaved?: boolean; likes?: number }
+> = new Map();
+
+export function useVideos() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadVideos = useCallback(async () => {
+  useEffect(() => {
+    loadVideos();
+  }, []);
+
+  const loadVideos = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
+      // Check if R2 is configured
+      if (!isR2Configured()) {
+        console.warn("R2 not configured. Check .env file for R2 credentials.");
+        setVideos([]);
+        return;
+      }
+
+      console.log("Fetching videos from R2 cloud storage...");
       
-      const fetchedVideos = await getLongVideos();
-      
-      console.log(`Loaded ${fetchedVideos.length} videos from cloud`);
-      
-      // Preload first few chunks for better performance (DISABLED)
-      // for (const video of fetchedVideos) {
-      //   if (video.chunkManager) {
-      //     await preloadVideoChunks(video, 0, 2);
-      //   }
-      // }
-      
-      setVideos(fetchedVideos);
+      // Fetch list from R2
+      const data = await listR2Videos();
+
+      // Apply cached interactions
+      data.forEach((video) => {
+        const interactions = videoInteractions.get(video.id);
+        if (interactions) {
+          video.isLiked = interactions.isLiked || false;
+          video.isSaved = interactions.isSaved || false;
+          if (interactions.likes !== undefined) {
+            video.likes = interactions.likes;
+          }
+        }
+      });
+
+      setVideos(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load videos');
       console.error('Error loading videos:', err);
+      setError('Failed to load videos');
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const handleToggleLike = useCallback((videoId: string) => {
-    setVideos(prevVideos => {
-      const updatedVideos = prevVideos.map(video => {
-        if (video.id === videoId) {
-          return {
-            ...video,
-            isLiked: !video.isLiked,
-            likes: video.isLiked ? video.likes - 1 : video.likes + 1,
-          };
-        }
-        return video;
+  const toggleLike = async (videoId: string) => {
+    try {
+      const interactions = videoInteractions.get(videoId) || {};
+      const newIsLiked = !interactions.isLiked;
+      const currentLikes =
+        interactions.likes || Math.floor(Math.random() * 1000);
+
+      videoInteractions.set(videoId, {
+        ...interactions,
+        isLiked: newIsLiked,
+        likes: newIsLiked ? currentLikes + 1 : Math.max(0, currentLikes - 1),
       });
-      return updatedVideos;
-    });
-  }, []);
 
-  const handlePreloadVideo = useCallback(async (videoId: string) => {
-    // DISABLED - Chunk manager not available
-    // setVideos(prevVideos => {
-    //   const video = prevVideos.find(v => v.id === videoId);
-    //   if (video && video.chunkManager) {
-    //     preloadVideoChunks(video, 0, 5); // Preload more chunks for selected video
-    //   }
-    //   return prevVideos;
-    // });
-  }, []);
+      // Update local state
+      setVideos(prevVideos => 
+        prevVideos.map(v => {
+          if (v.id === videoId) {
+            return {
+              ...v,
+              isLiked: newIsLiked,
+              likes: newIsLiked ? currentLikes + 1 : Math.max(0, currentLikes - 1),
+            };
+          }
+          return v;
+        })
+      );
+    } catch (err) {
+      console.error('Error toggling like:', err);
+    }
+  };
 
-  useEffect(() => {
-    loadVideos();
-    
-    // Cleanup function
-    return () => {
-      if (videos.length > 0) {
-        cleanupVideoResources(videos);
-      }
-    };
-  }, []);
+  const toggleSave = async (videoId: string) => {
+    try {
+      const interactions = videoInteractions.get(videoId) || {};
 
-  return { 
-    videos, 
-    loading, 
-    error, 
-    toggleLike: handleToggleLike, 
-    refreshVideos: loadVideos,
-    preloadVideo: handlePreloadVideo
+      videoInteractions.set(videoId, {
+        ...interactions,
+        isSaved: !interactions.isSaved,
+      });
+
+      // Update local state
+      setVideos(prevVideos => 
+        prevVideos.map(v => {
+          if (v.id === videoId) {
+            return {
+              ...v,
+              isSaved: !v.isSaved,
+            };
+          }
+          return v;
+        })
+      );
+    } catch (err) {
+      console.error('Error toggling save:', err);
+    }
+  };
+
+  return {
+    videos,
+    loading,
+    error,
+    toggleLike,
+    toggleSave,
+    refresh: loadVideos,
   };
 }

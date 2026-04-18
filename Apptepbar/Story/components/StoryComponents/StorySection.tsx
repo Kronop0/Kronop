@@ -123,11 +123,16 @@ export function StorySection({
       if (item?.imageUrl) return item.imageUrl;
       if (item?.videoUrl) return item.videoUrl;
       if (item?.url) return item.url;
-      return item.userAvatar; // Fallback to user avatar
+      // Fallback to user avatar or default placeholder
+      if (item?.userAvatar) return item.userAvatar;
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.userName || 'Story')}&background=8B00FF&color=fff&size=128`;
     };
 
     const displayUrl = getDisplayUrl();
     console.log(`[KRONOP-DEBUG]   - Final display URL: ${displayUrl}`);
+
+    // Ensure displayUrl is a valid string URI for Image component
+    const safeDisplayUrl = typeof displayUrl === 'string' && displayUrl.startsWith('http') ? displayUrl : null;
 
     const handleStoryPress = () => {
       console.log(`[KRONOP-DEBUG] 👆 Story pressed: ${item.id}`);
@@ -149,16 +154,22 @@ export function StorySection({
         activeOpacity={0.8}
       >
         {/* Story Thumbnail Image */}
-        <Image
-          source={{ uri: displayUrl }}
-          style={styles.storyImage}
-          contentFit="cover"
-          onLoad={() => console.log(`[KRONOP-DEBUG] 🖼️ Story image loaded successfully for ${item.id}`)}
-          onError={(error) => {
-            console.log(`[KRONOP-DEBUG] ❌ Story image failed to load for ${item.id}:`, error);
-            console.log(`[KRONOP-DEBUG]   - Attempted URL: ${displayUrl}`);
-          }}
-        />
+        {safeDisplayUrl ? (
+          <Image
+            source={{ uri: safeDisplayUrl }}
+            style={styles.storyImage}
+            contentFit="cover"
+            onLoad={() => console.log(`[KRONOP-DEBUG] 🖼️ Story image loaded successfully for ${item.id}`)}
+            onError={(error) => {
+              console.log(`[KRONOP-DEBUG] ❌ Story image failed to load for ${item.id}:`, error);
+              console.log(`[KRONOP-DEBUG]   - Attempted URL: ${safeDisplayUrl}`);
+            }}
+          />
+        ) : (
+          <View style={[styles.storyImage, { backgroundColor: '#333', justifyContent: 'center', alignItems: 'center' }]}>
+            <MaterialIcons name="image" size={24} color="#666" />
+          </View>
+        )}
         
         {/* User Avatar Overlay - Top Left (Profile pe click) */}
         <TouchableOpacity 

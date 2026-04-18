@@ -1,1 +1,1 @@
-export { default } from '../../Apptepbar/Video/app/video/[id]';
+export { default } from '../../Apptepbar/Video/app/video-player';

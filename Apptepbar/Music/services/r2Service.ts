@@ -15,6 +15,18 @@ export interface SongMetadata {
 
 const AUDIO_EXTS = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'];
 
+// Debug function to log R2 configuration status
+export const debugR2Config = (): void => {
+  console.log('[R2] Configuration Debug:');
+  console.log('- Account ID:', R2_SONG_CONFIG.accountId ? '✓ Set' : '✗ Missing');
+  console.log('- Access Key ID:', R2_SONG_CONFIG.accessKeyId ? '✓ Set' : '✗ Missing');
+  console.log('- Secret Access Key:', R2_SONG_CONFIG.secretAccessKey ? '✓ Set' : '✗ Missing');
+  console.log('- Endpoint:', R2_SONG_CONFIG.endpoint || '✗ Missing');
+  console.log('- Public URL:', R2_SONG_CONFIG.publicUrl || '✗ Missing');
+  console.log('- Bucket Name:', R2_SONG_CONFIG.bucketSong);
+  console.log('- Overall Status:', isR2Configured() ? '✓ Configured' : '✗ Not Configured');
+};
+
 // URL Cache - prevents redundant computation
 const urlCache = new Map<string, { url: string; expiry: number }>();
 const CACHE_TTL_MS = 1000 * 60 * 55; // 55 minutes
@@ -35,27 +47,82 @@ async function getAudioUrl(key: string): Promise<string> {
   const cached = urlCache.get(key);
   
   if (cached && cached.expiry > now) {
+    console.log('[R2] Using cached URL for:', key, 'expires in:', Math.floor((cached.expiry - now) / 1000), 'seconds');
     return cached.url;
   }
   
-  try {
-    // Validate credentials before attempting
-    if (!R2_SONG_CONFIG.accessKeyId || !R2_SONG_CONFIG.secretAccessKey) {
-      throw new Error('R2 credentials not configured');
+  // Check if R2 is properly configured
+  if (!isR2Configured()) {
+    console.error('[R2] R2 not configured - missing credentials');
+    throw new Error('R2 credentials not configured. Please check your .env file.');
+  }
+  
+  // Try public URL first if available (more reliable)
+  if (R2_SONG_CONFIG.publicUrl) {
+    const publicUrl = `${R2_SONG_CONFIG.publicUrl}/${key}`;
+    console.log('[R2] Using public URL for:', key);
+    console.log('[R2] Public URL:', publicUrl);
+    
+    // Test public URL accessibility before caching
+    const isAccessible = await testUrlAccessibility(publicUrl);
+    if (isAccessible) {
+      // Cache public URL for longer period since it doesn't expire
+      urlCache.set(key, { url: publicUrl, expiry: now + CACHE_TTL_MS });
+      return publicUrl;
+    } else {
+      console.warn('[R2] Public URL not accessible, falling back to pre-signed URL');
     }
+  }
+  
+  try {
+    console.log('[R2] Generating new pre-signed URL for:', key);
+    debugR2Config();
     
     // Generate pre-signed URL valid for 1 hour
     const command = new GetObjectCommand({
       Bucket: R2_SONG_CONFIG.bucketSong,
       Key: key,
     });
+    
+    console.log('[R2] GetObject command:', {
+      Bucket: R2_SONG_CONFIG.bucketSong,
+      Key: key
+    });
+    
     const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
     urlCache.set(key, { url, expiry: now + CACHE_TTL_MS });
+    
     console.log('[R2] Generated pre-signed URL for:', key);
+    console.log('[R2] URL preview:', url.substring(0, 100) + '...');
+    console.log('[R2] URL length:', url.length);
+    
+    // Parse URL components for debugging
+    try {
+      const urlObj = new URL(url);
+      console.log('[R2] URL components:', {
+        protocol: urlObj.protocol,
+        hostname: urlObj.hostname,
+        pathname: urlObj.pathname,
+        searchParams: {
+          'X-Amz-Date': urlObj.searchParams.get('X-Amz-Date'),
+          'X-Amz-Expires': urlObj.searchParams.get('X-Amz-Expires'),
+          'X-Amz-SignedHeaders': urlObj.searchParams.get('X-Amz-SignedHeaders'),
+          'X-Amz-Signature': urlObj.searchParams.get('X-Amz-Signature')?.substring(0, 20) + '...'
+        }
+      });
+    } catch (parseError) {
+      console.warn('[R2] Failed to parse generated URL:', parseError);
+    }
+    
     return url;
   } catch (error) {
     console.error('[R2] Failed to generate pre-signed URL for:', key, error);
-    // Don't fallback to public URL if credentials are missing - it will 401
+    console.error('[R2] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'Unknown'
+    });
+    
     throw error;
   }
 }
@@ -63,6 +130,86 @@ async function getAudioUrl(key: string): Promise<string> {
 // Clear URL cache when needed
 export function clearUrlCache(): void {
   urlCache.clear();
+}
+
+// Clear specific URL from cache
+export function clearUrlForKey(key: string): void {
+  urlCache.delete(key);
+}
+
+// Check if cached URL is expired
+export function isUrlExpired(key: string): boolean {
+  const cached = urlCache.get(key);
+  if (!cached) return true;
+  return cached.expiry <= Date.now();
+}
+
+// Test if a URL is accessible (for debugging 403 issues)
+export async function testUrlAccessibility(url: string): Promise<boolean> {
+  try {
+    console.log('[R2] Testing URL accessibility:', url.substring(0, 100) + '...');
+    const response = await fetch(url, { method: 'HEAD' });
+    console.log('[R2] URL test response:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        'content-type': response.headers.get('content-type'),
+        'content-length': response.headers.get('content-length'),
+        'access-control-allow-origin': response.headers.get('access-control-allow-origin')
+      }
+    });
+    
+    // Log detailed error information for debugging
+    if (!response.ok) {
+      console.error('[R2] URL accessibility failed:', {
+        url: url.substring(0, 100) + '...',
+        status: response.status,
+        statusText: response.statusText,
+        isPublicUrl: !url.includes('X-Amz-Signature'),
+        suggestion: response.status === 401 ? 'Check R2 credentials and bucket permissions' : 
+                   response.status === 403 ? 'Check bucket CORS policy and public access settings' :
+                   'Unknown error - check R2 configuration'
+      });
+    }
+    
+    return response.ok;
+  } catch (error) {
+    console.error('[R2] URL test failed:', error);
+    return false;
+  }
+}
+
+// Try alternative URL method if primary fails
+export async function getAlternativeUrl(key: string, currentUrl: string): Promise<string> {
+  const isPublicUrl = !currentUrl.includes('X-Amz-Signature');
+  
+  if (isPublicUrl) {
+    console.log('[R2] Public URL failed, trying pre-signed URL...');
+    // Clear cache and try pre-signed URL
+    clearUrlForKey(key);
+    
+    try {
+      // Generate pre-signed URL
+      const command = new GetObjectCommand({
+        Bucket: R2_SONG_CONFIG.bucketSong,
+        Key: key,
+      });
+      const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+      console.log('[R2] Generated alternative pre-signed URL for:', key);
+      return signedUrl;
+    } catch (error) {
+      console.error('[R2] Failed to generate alternative URL:', error);
+      throw error;
+    }
+  } else {
+    console.log('[R2] Pre-signed URL failed, trying public URL...');
+    if (R2_SONG_CONFIG.publicUrl) {
+      const publicUrl = `${R2_SONG_CONFIG.publicUrl}/${key}`;
+      console.log('[R2] Generated alternative public URL for:', key);
+      return publicUrl;
+    }
+    throw new Error('No alternative URL available');
+  }
 }
 
 // List objects using S3 SDK (authenticated)
@@ -107,6 +254,11 @@ class R2SongService {
   }
 
   async fetchSongs(): Promise<Song[]> {
+    console.log('[R2] Starting fetchSongs...');
+    
+    // Run comprehensive R2 test first
+    await testR2Configuration();
+    
     if (!isR2Configured()) {
       console.log('[R2] Not configured - returning empty playlist');
       return [];
@@ -179,6 +331,19 @@ class R2SongService {
       return [];
     }
 
+    // Populate internal mappings for retry logic
+    this.r2Keys.clear();
+    this.etags.clear();
+    
+    metadata.forEach((m) => {
+      if (m.r2Key) {
+        this.r2Keys.set(m.id, m.r2Key);
+        this.etags.set(m.id, m.etag);
+      }
+    });
+
+    console.log('[R2] Populated mappings for', this.r2Keys.size, 'songs');
+
     const results = await Promise.allSettled(
       metadata.map(async (m) => {
         const audioUrl = await getAudioUrl(m.r2Key);
@@ -207,5 +372,66 @@ class R2SongService {
     return new Map(this.etags);
   }
 }
+
+// Simple test function to check R2 configuration
+export const testR2Configuration = async (): Promise<void> => {
+  console.log('=== R2 Configuration Test ===');
+  debugR2Config();
+  
+  if (!isR2Configured()) {
+    console.log('❌ R2 is not properly configured');
+    return;
+  }
+  
+  try {
+    // Test S3 client connection
+    const command = new ListObjectsV2Command({
+      Bucket: R2_SONG_CONFIG.bucketSong,
+      MaxKeys: 1,
+    });
+    
+    console.log('🔍 Testing S3 connection...');
+    const response = await s3Client.send(command);
+    console.log('✅ S3 connection successful');
+    console.log(`📁 Found ${response.Contents?.length || 0} objects in bucket`);
+    
+    if (response.Contents && response.Contents.length > 0) {
+      const firstObject = response.Contents[0];
+      console.log(`📄 First object: ${firstObject.Key}`);
+      
+      // Test URL generation for first object
+      try {
+        const testUrl = await getAudioUrl(firstObject.Key!);
+        console.log(`🔗 Generated test URL: ${testUrl.substring(0, 100)}...`);
+        
+        // Test URL accessibility
+        const isAccessible = await testUrlAccessibility(testUrl);
+        console.log(isAccessible ? '✅ URL is accessible' : '❌ URL is not accessible');
+      } catch (urlError) {
+        console.error('❌ URL generation failed:', urlError);
+      }
+    }
+  } catch (error) {
+    console.error('❌ S3 connection failed:', error);
+  }
+  
+  console.log('=== End R2 Configuration Test ===');
+};
+
+// Quick debug function - call this immediately to see R2 config
+export const quickR2Debug = (): void => {
+  console.log('🔍 QUICK R2 DEBUG:');
+  console.log('Account ID:', R2_SONG_CONFIG.accountId ? '✓ Set' : '✗ Missing');
+  console.log('Access Key ID:', R2_SONG_CONFIG.accessKeyId ? '✓ Set' : '✗ Missing');
+  console.log('Secret Access Key:', R2_SONG_CONFIG.secretAccessKey ? '✓ Set' : '✗ Missing');
+  console.log('Endpoint:', R2_SONG_CONFIG.endpoint || '✗ Missing');
+  console.log('Public URL:', R2_SONG_CONFIG.publicUrl || '✗ Missing');
+  console.log('Bucket:', R2_SONG_CONFIG.bucketSong);
+  console.log('Overall:', isR2Configured() ? '✓ Configured' : '✗ Not Configured');
+  console.log('🔍 END DEBUG');
+};
+
+// Run quick debug immediately when service loads
+quickR2Debug();
 
 export const r2SongService = new R2SongService();
