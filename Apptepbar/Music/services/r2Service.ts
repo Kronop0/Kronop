@@ -39,6 +39,7 @@ const s3Client = new S3Client({
     accessKeyId: R2_SONG_CONFIG.accessKeyId || '',
     secretAccessKey: R2_SONG_CONFIG.secretAccessKey || '',
   },
+  forcePathStyle: true,
 });
 
 // Get audio URL - uses pre-signed URL for authenticated access
@@ -57,25 +58,9 @@ async function getAudioUrl(key: string): Promise<string> {
     throw new Error('R2 credentials not configured. Please check your .env file.');
   }
   
-  // Try public URL first if available (more reliable)
-  if (R2_SONG_CONFIG.publicUrl) {
-    const publicUrl = `${R2_SONG_CONFIG.publicUrl}/${key}`;
-    console.log('[R2] Using public URL for:', key);
-    console.log('[R2] Public URL:', publicUrl);
-    
-    // Test public URL accessibility before caching
-    const isAccessible = await testUrlAccessibility(publicUrl);
-    if (isAccessible) {
-      // Cache public URL for longer period since it doesn't expire
-      urlCache.set(key, { url: publicUrl, expiry: now + CACHE_TTL_MS });
-      return publicUrl;
-    } else {
-      console.warn('[R2] Public URL not accessible, falling back to pre-signed URL');
-    }
-  }
-  
+  // Try pre-signed URL first (more reliable with proper credentials)
   try {
-    console.log('[R2] Generating new pre-signed URL for:', key);
+    console.log('[R2] Generating pre-signed URL for:', key);
     debugR2Config();
     
     // Generate pre-signed URL valid for 1 hour
@@ -90,7 +75,11 @@ async function getAudioUrl(key: string): Promise<string> {
     });
     
     const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-    urlCache.set(key, { url, expiry: now + CACHE_TTL_MS });
+    
+    // For R2 with forcePathStyle: true, the URL should already be correct
+    // Format: https://<account-id>.r2.cloudflarestorage.com/<bucket>/<key>
+    // No need for URL replacement
+    urlCache.set(key, { url: url, expiry: now + CACHE_TTL_MS });
     
     console.log('[R2] Generated pre-signed URL for:', key);
     console.log('[R2] URL preview:', url.substring(0, 100) + '...');
@@ -122,6 +111,16 @@ async function getAudioUrl(key: string): Promise<string> {
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : 'Unknown'
     });
+    
+    // Fall back to public URL if pre-signed fails
+    if (R2_SONG_CONFIG.publicUrl) {
+      console.log('[R2] Falling back to public URL for:', key);
+      const publicUrl = `${R2_SONG_CONFIG.publicUrl}/${key}`;
+      console.log('[R2] Public URL:', publicUrl);
+      
+      urlCache.set(key, { url: publicUrl, expiry: now + CACHE_TTL_MS });
+      return publicUrl;
+    }
     
     throw error;
   }
@@ -195,6 +194,8 @@ export async function getAlternativeUrl(key: string, currentUrl: string): Promis
         Key: key,
       });
       const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+      
+      // For R2 with forcePathStyle: true, the URL should already be correct
       console.log('[R2] Generated alternative pre-signed URL for:', key);
       return signedUrl;
     } catch (error) {
@@ -433,5 +434,8 @@ export const quickR2Debug = (): void => {
 
 // Run quick debug immediately when service loads
 quickR2Debug();
+
+// Clear cache on load to force fresh pre-signed URLs
+clearUrlCache();
 
 export const r2SongService = new R2SongService();

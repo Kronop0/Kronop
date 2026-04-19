@@ -179,7 +179,7 @@ export default function HomeScreen() {
   // Compressed header button handlers
   const handleNotificationPress = () => router.push('/notifications' as any);
   const handleSearchPress = () => router.push('/search-user' as any);
-  const handleChatPress = () => router.push('/chat' as any);
+  const handleChatPress = () => router.push('/chat/app/index' as any);
   const handleMusicPress = () => router.push('/music' as any);
   const handleUploadPress = () => setShowUploadModal(true);
 

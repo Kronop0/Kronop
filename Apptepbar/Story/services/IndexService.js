@@ -122,7 +122,7 @@ class IndexService {
       userId: userId || `user-${Date.now()}`,
       userName: userNames[index] || 'User',
       channelName: channelNames[index] || 'Channel',
-      avatar: `https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev/avatars/${userId || 'default'}.jpg`,
+      avatar: `${process.env.EXPO_PUBLIC_R2_PUBLIC_URL}/avatars/${userId || 'default'}.jpg`,
       supporters: supporters,
       supporting: supporting,
       isVerified: supporters > 5000,

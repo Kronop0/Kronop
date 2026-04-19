@@ -12,17 +12,12 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 console.log("[KRONOP-DEBUG] 🚀 Initializing R2 Story Service...");
 
 const R2_CONFIG = {
-  accountId:
-    process.env.EXPO_PUBLIC_R2_ACCOUNT_ID || "a59d5a6739a14835816a2c0d2e12fc46",
-  accessKeyId:
-    process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID ||
-    "465983939146a7cbb7167537d9d4ebd1",
-  secretAccessKey:
-    process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY ||
-    "7386255bccd5111ddd8bd3057bbe8995e2c02a74b3ef579cd6b0daf4c1500c94",
-  endpoint: "https://a59d5a6739a14835816a2c0d2e12fc46.r2.cloudflarestorage.com",
+  accountId: process.env.EXPO_PUBLIC_R2_ACCOUNT_ID,
+  accessKeyId: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID,
+  secretAccessKey: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY,
+  endpoint: process.env.EXPO_PUBLIC_R2_ENDPOINT,
   bucketName: process.env.EXPO_PUBLIC_BUCKET_STORY || "kronop-story",
-  publicUrl: "https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev",
+  publicUrl: process.env.EXPO_PUBLIC_R2_PUBLIC_URL,
 };
 
 // [KRONOP-DEBUG] Log environment variables status
@@ -50,6 +45,20 @@ class R2StoryService {
     // [KRONOP-DEBUG] Initialize S3 Client for Cloudflare R2
     console.log("[KRONOP-DEBUG] 🔧 Creating S3 Client for R2...");
 
+    // Check if credentials are available
+    const hasCredentials = R2_CONFIG.accessKeyId && R2_CONFIG.secretAccessKey;
+    const hasEndpoint = R2_CONFIG.endpoint;
+
+    if (!hasCredentials || !hasEndpoint) {
+      console.warn("[KRONOP-DEBUG] ⚠️ R2 credentials not configured - service will return empty data");
+      console.warn("[KRONOP-DEBUG]   - Access Key ID:", R2_CONFIG.accessKeyId ? "✅" : "❌ Missing");
+      console.warn("[KRONOP-DEBUG]   - Secret Access Key:", R2_CONFIG.secretAccessKey ? "✅" : "❌ Missing");
+      console.warn("[KRONOP-DEBUG]   - Endpoint:", R2_CONFIG.endpoint ? "✅" : "❌ Missing");
+      this.client = null;
+      this.bucketName = R2_CONFIG.bucketName;
+      return;
+    }
+
     try {
       this.client = new S3Client({
         region: "auto",
@@ -59,6 +68,7 @@ class R2StoryService {
           secretAccessKey: R2_CONFIG.secretAccessKey,
         },
         maxAttempts: 3,
+        forcePathStyle: true,
       });
       this.bucketName = R2_CONFIG.bucketName;
       console.log("[KRONOP-DEBUG] ✅ S3 Client created successfully");
@@ -67,7 +77,8 @@ class R2StoryService {
         "[KRONOP-DEBUG] ❌ Failed to create S3 Client:",
         error.message,
       );
-      throw error;
+      this.client = null;
+      this.bucketName = R2_CONFIG.bucketName;
     }
   }
 
@@ -79,6 +90,12 @@ class R2StoryService {
     console.log("[KRONOP-DEBUG] 📦 Bucket:", this.bucketName);
     console.log("[KRONOP-DEBUG] 🔑 Account ID:", R2_CONFIG.accountId);
     console.log("[KRONOP-DEBUG] 🌐 Endpoint:", R2_CONFIG.endpoint);
+
+    // Return empty data if client is not initialized
+    if (!this.client) {
+      console.warn("[KRONOP-DEBUG] ⚠️ R2 client not initialized - returning empty story list");
+      return [];
+    }
 
     try {
       const command = new ListObjectsV2Command({
@@ -308,14 +325,9 @@ class R2StoryService {
   getPublicUrl(key) {
     // Public URL format for R2 bucket - HARDCODED FIX
     // Using the correct public URL directly to avoid any old ID references
-    const publicEndpoint =
-      "https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev";
-    const publicUrl = `${publicEndpoint}/${key}`;
+    const publicUrl = `${R2_CONFIG.publicUrl}/${key}`;
 
     console.log(`[KRONOP-DEBUG] 📎 Generated public URL: ${publicUrl}`);
-    console.log(
-      `[KRONOP-DEBUG] 🔄 Using fixed public endpoint: ${publicEndpoint}`,
-    );
 
     return publicUrl;
   }
@@ -323,17 +335,35 @@ class R2StoryService {
   /**
    * Get signed URL for R2 object (for private access)
    */
-  getSignedUrl(key, expiresIn = 3600) {
+  async getSignedUrl(key, expiresIn = 3600) {
+    // Return public URL if client is not initialized
+    if (!this.client) {
+      console.warn("[KRONOP-DEBUG] ⚠️ R2 client not initialized - using public URL");
+      return this.getPublicUrl(key);
+    }
+
     // Generate signed URL for private bucket access
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: key,
     });
 
-    return getSignedUrl(this.client, command, { expiresIn });
+    const url = await getSignedUrl(this.client, command, { expiresIn });
+    
+    // Fix: Replace bucket.subdomain with account.subdomain for R2
+    const fixedUrl = url.replace(
+      new RegExp(`^https://${this.bucketName}\\.`),
+      `https://${R2_CONFIG.accountId}.`
+    );
+    
+    return fixedUrl;
   }
 
-  /**
+  /*if (!this.client) {
+      console.warn("[KRONOP-DEBUG] ⚠️ R2 client not initialized - using public URL for thumbnail");
+      return this.getPublicUrl(videoKey);
+    }
+    *
    * Generate thumbnail URL for videos (placeholder logic)
    */
   async generateThumbnailUrl(videoKey) {

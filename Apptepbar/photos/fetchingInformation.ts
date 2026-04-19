@@ -7,12 +7,12 @@ import { S3Client, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s
 
 // R2 Configuration
 const R2_CONFIG = {
-  R2_ACCOUNT_ID: process.env.EXPO_PUBLIC_R2_ACCOUNT_ID || '',
-  R2_ACCESS_KEY_ID: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID || '',
-  R2_SECRET_ACCESS_KEY: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY || '',
+  R2_ACCOUNT_ID: process.env.EXPO_PUBLIC_R2_ACCOUNT_ID,
+  R2_ACCESS_KEY_ID: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID,
+  R2_SECRET_ACCESS_KEY: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY,
   R2_BUCKET_NAME: process.env.EXPO_PUBLIC_R2_BUCKET_NAME || 'kronop-photos',
-  R2_ENDPOINT: process.env.EXPO_PUBLIC_R2_ENDPOINT || '',
-  PUBLIC_BUCKET_URL: 'https://pub-e904e5818e734484a5ead6201a4cefe3.r2.dev',
+  R2_ENDPOINT: process.env.EXPO_PUBLIC_R2_ENDPOINT,
+  PUBLIC_BUCKET_URL: process.env.EXPO_PUBLIC_R2_PUBLIC_URL,
 };
 
 // Extended Photo/Video Information
@@ -53,11 +53,12 @@ class FetchingInformationService {
     // Initialize S3 Client for R2
     this.s3Client = new S3Client({
       region: 'auto',
-      endpoint: `https://${R2_CONFIG.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      endpoint: R2_CONFIG.R2_ENDPOINT,
       credentials: {
         accessKeyId: R2_CONFIG.R2_ACCESS_KEY_ID,
         secretAccessKey: R2_CONFIG.R2_SECRET_ACCESS_KEY,
       },
+      forcePathStyle: true,
     });
   }
 

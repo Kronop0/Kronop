@@ -134,7 +134,7 @@ export function OwnerStoryBox({
       // Ensure complete R2 URL if it's a partial path
       if (finalUrl.startsWith('https://') && !finalUrl.includes('r2.dev')) {
         console.log('[KRONOP-DEBUG] 🔧 Completing R2 URL');
-        finalUrl = 'https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev/' + finalUrl.replace('https://', '');
+        finalUrl = process.env.EXPO_PUBLIC_R2_PUBLIC_URL + '/' + finalUrl.replace('https://', '');
       }
       
       console.log('[KRONOP-DEBUG] ✅ Validated video URL:', finalUrl);

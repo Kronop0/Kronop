@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Audio, AVPlaybackStatus } from 'expo-av';
-import { r2SongService, clearUrlForKey, testUrlAccessibility, getAlternativeUrl } from '../services/r2Service';
+import { r2SongService, clearUrlForKey } from '../services/r2Service';
 import { getCachedSongs, cacheSongs } from '../services/songCacheService';
 import { showMediaNotification, dismissMediaNotification, requestNotificationPermission, showMediaNotificationImmediate } from '../services/notificationService';
 import { Song } from '../types';
@@ -242,43 +242,9 @@ export function useAudioPlayer() {
       console.log('[Audio] Audio URL:', song.audioUrl);
       console.log('[Audio] URL length:', song.audioUrl.length);
       
-      // Test URL accessibility before attempting to load audio
-      console.log('[Audio] Testing URL accessibility...');
-      let audioUrl = song.audioUrl;
-      let isUrlAccessible = await testUrlAccessibility(audioUrl);
-      
-      // If URL is not accessible, try alternative URL method
-      if (!isUrlAccessible) {
-        console.warn('[Audio] URL is not accessible, trying alternative URL...');
-        try {
-          const r2Key = r2SongService.getR2Keys().get(song.id);
-          const keyToUse = r2Key || audioUrl.split('/').pop() || '';
-          audioUrl = await getAlternativeUrl(keyToUse, audioUrl);
-          
-          // Update song with new URL
-          song = { ...song, audioUrl };
-          
-          // Update playlist
-          const updatedList = [...list];
-          updatedList[index] = song;
-          playlistRef.current = updatedList;
-          setPlaylist(updatedList);
-          
-          // Test alternative URL
-          isUrlAccessible = await testUrlAccessibility(audioUrl);
-          if (!isUrlAccessible) {
-            console.warn('[Audio] Alternative URL also not accessible, this may cause loading failure');
-          } else {
-            console.log('[Audio] Alternative URL is accessible');
-          }
-        } catch (altError) {
-          console.error('[Audio] Failed to get alternative URL:', altError);
-        }
-      }
-      
-      // Create and load the sound
+      // Create and load the sound (URL accessibility testing disabled to avoid auth issues)
       const { sound } = await Audio.Sound.createAsync(
-        { uri: audioUrl },
+        { uri: song.audioUrl },
         { shouldPlay: true },
         (status: AVPlaybackStatus) => {
           if (!status.isLoaded) return;

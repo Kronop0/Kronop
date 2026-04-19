@@ -11,21 +11,14 @@ const API_ROOT = API_BASE_URL.replace(/\/api$/, "");
 // R2 Configuration from environment variables
 const R2_CONFIG = {
   // Cloudflare R2 Account and Bucket
-  R2_ACCOUNT_ID:
-    process.env.EXPO_PUBLIC_R2_ACCOUNT_ID || "a59d5a6739a14835816a2c0d2e12fc46",
-  R2_ACCESS_KEY_ID:
-    process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID ||
-    "465983939146a7cbb7167537d9d4ebd1",
-  R2_SECRET_ACCESS_KEY:
-    process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY ||
-    "7386255bccd5111ddd8bd3057bbe8995e2c02a74b3ef579cd6b0daf4c1500c94",
+  R2_ACCOUNT_ID: process.env.EXPO_PUBLIC_R2_ACCOUNT_ID,
+  R2_ACCESS_KEY_ID: process.env.EXPO_PUBLIC_R2_ACCESS_KEY_ID,
+  R2_SECRET_ACCESS_KEY: process.env.EXPO_PUBLIC_R2_SECRET_ACCESS_KEY,
   R2_BUCKET_NAME: process.env.EXPO_PUBLIC_R2_BUCKET_NAME || "kronop-photos",
-  R2_ENDPOINT:
-    process.env.EXPO_PUBLIC_R2_ENDPOINT ||
-    "https://a59d5a6739a14835816a2c0d2e12fc46.r2.cloudflarestorage.com",
+  R2_ENDPOINT: process.env.EXPO_PUBLIC_R2_ENDPOINT,
 
   // Public Bucket URL for direct access
-  PUBLIC_BUCKET_URL: "https://pub-e904e5818e734484a5ead6201a4cefe3.r2.dev",
+  PUBLIC_BUCKET_URL: process.env.EXPO_PUBLIC_R2_PUBLIC_URL,
 
   // Photo API Endpoints
   KRONOP_API_URL: API_ROOT,
@@ -86,7 +79,7 @@ export interface Photo {
 class R2PhotoService {
   private baseUrl: string;
   private headers: Record<string, string>;
-  private s3Client: S3Client;
+  private s3Client: S3Client | null;
 
   constructor() {
     this.baseUrl = R2_CONFIG.PHOTO_API_BASE;
@@ -96,15 +89,31 @@ class R2PhotoService {
       "X-R2-Access-Key-ID": R2_CONFIG.R2_ACCESS_KEY_ID,
     };
 
+    // Check if credentials are available
+    const hasCredentials = R2_CONFIG.R2_ACCESS_KEY_ID && R2_CONFIG.R2_SECRET_ACCESS_KEY;
+    const hasAccountId = R2_CONFIG.R2_ACCOUNT_ID;
+
+    if (!hasCredentials || !hasAccountId) {
+      console.warn("[r2_service.ts] ⚠️ R2 credentials not configured - service will return empty data");
+      this.s3Client = null;
+      return;
+    }
+
     // Initialize S3 Client for R2
-    this.s3Client = new S3Client({
-      region: "auto",
-      endpoint: `https://${R2_CONFIG.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-      credentials: {
-        accessKeyId: R2_CONFIG.R2_ACCESS_KEY_ID,
-        secretAccessKey: R2_CONFIG.R2_SECRET_ACCESS_KEY,
-      },
-    });
+    try {
+      this.s3Client = new S3Client({
+        region: "auto",
+        endpoint: `https://${R2_CONFIG.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        credentials: {
+          accessKeyId: R2_CONFIG.R2_ACCESS_KEY_ID,
+          secretAccessKey: R2_CONFIG.R2_SECRET_ACCESS_KEY,
+        },
+        forcePathStyle: true,
+      });
+    } catch (error) {
+      console.error("[r2_service.ts] ❌ Failed to create S3 Client:", error);
+      this.s3Client = null;
+    }
   }
 
   // Get photos by category
@@ -240,6 +249,12 @@ class R2PhotoService {
     console.log(
       `[r2_service.ts] REAL R2 Access: Fetching from bucket: ${R2_CONFIG.R2_BUCKET_NAME}`,
     );
+
+    // Return empty data if s3Client is not initialized
+    if (!this.s3Client) {
+      console.warn("[r2_service.ts] ⚠️ R2 client not initialized - returning empty photo list");
+      return [];
+    }
 
     try {
       const command = new ListObjectsV2Command({

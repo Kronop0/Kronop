@@ -30,7 +30,7 @@ export const StoryViewerComponent = ({ visible, stories, initialIndex, onClose, 
   useEffect(() => { setErr(false); setProg(0); setPlaying(false); interval.current && clearInterval(interval.current); }, [idx]);
   useEffect(() => { if (visible && story && !err) { setPlaying(true); setProg(0); interval.current = setInterval(() => setProg(p => { if (p >= 100) { clearInterval(interval.current!); setPlaying(false); idx < stories.length - 1 ? (setIdx(i => i + 1), setProg(0)) : setTimeout(() => onClose(), 0); return 100; } return p + (100 / 90); }), 100); } else { interval.current && clearInterval(interval.current); } return () => interval.current && clearInterval(interval.current); }, [visible, story, err, idx]);
 
-  const getUrl = () => { if (!story) return { uri: '' }; const u = story.videoUrl || story.imageUrl || story.url || ''; if (!u.startsWith('https://')) return { uri: 'https://' + u }; if (!u.includes('r2.dev')) return { uri: 'https://pub-a59d5a6739a14835816a2c0d2e12fc46.r2.dev/' + u.replace('https://', '') }; return { uri: u }; };
+  const getUrl = () => { if (!story) return { uri: '' }; const u = story.videoUrl || story.imageUrl || story.url || ''; if (!u.startsWith('https://')) return { uri: 'https://' + u }; if (!u.includes('r2.dev')) return { uri: process.env.EXPO_PUBLIC_R2_PUBLIC_URL + '/' + u.replace('https://', '') }; return { uri: u }; };
   const getAvatar = () => story?.userAvatar ? { uri: story.userAvatar } : require('../../../../assets/images/logo.png');
   const getNextUrl = () => idx + 1 < stories.length ? (stories[idx + 1].videoUrl || stories[idx + 1].imageUrl || stories[idx + 1].url || '') : undefined;
 

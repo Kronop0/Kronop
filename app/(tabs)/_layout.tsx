@@ -87,7 +87,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => <MaterialIcons name="notes" size={24} color={color} />,
           }}
         />
-        {/* --- 4. PROFILE SECTION --- */}
+                {/* --- 4. PROFILE SECTION --- */}
         <Tabs.Screen
           name="profile"
           options={{

@@ -287,7 +287,7 @@ export default function RootLayout() {
               <Stack.Screen name="help-center" />
 
               <Stack.Screen 
-                name="chat" 
+                name="chat/app/index" 
                 options={{ 
                   headerShown: false,
                   animation: 'none',

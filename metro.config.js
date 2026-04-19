@@ -7,6 +7,11 @@ config.resolver.nodeModulesPaths = [
   ...config.resolver.nodeModulesPaths,
 ];
 
+// Exclude scripts directory from bundling to prevent Node.js modules from being included
+config.resolver.blockList = [
+  /.*\/scripts\/.*/,
+];
+
 // Add crypto polyfill support
 config.resolver.alias = {
   crypto: 'react-native-crypto',
