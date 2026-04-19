@@ -103,12 +103,13 @@ android {
         }
 
         // Hermes/Worklets C++ linking के लिए
-        externalNativeBuild {
-            cmake {
-                cppFlags "-O2 -frtti -fexceptions -Wall"
-                arguments "-DANDROID_STL=c++_shared"
-            }
-        }
+        // Temporarily disabled to isolate Gradle build issue
+        // externalNativeBuild {
+        //     cmake {
+        //         cppFlags "-O2 -frtti -fexceptions -Wall"
+        //         arguments "-DANDROID_STL=c++_shared"
+        //     }
+        // }
     }
     signingConfigs {
         debug {
@@ -144,12 +145,13 @@ android {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
 
-    externalNativeBuild {
-        cmake {
-            // C++ libraries के लिए CMake configuration
-            version "3.22.1"
-        }
-    }
+    // Temporarily disabled to isolate Gradle build issue
+    // externalNativeBuild {
+    //     cmake {
+    //         // C++ libraries के लिए CMake configuration
+    //         version "3.22.1"
+    //     }
+    // }
 
     packagingOptions {
         pickFirst '**/libc++_shared.so'
