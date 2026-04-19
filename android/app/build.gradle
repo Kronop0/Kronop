@@ -217,6 +217,4 @@ dependencies {
         implementation jscFlavor
     }
 
-    // Reanimated और अन्य native modules के लिए STL shared library
-    implementation("com.android.ndk.thirdparty:cpufeatures:0.2.0")
 }
