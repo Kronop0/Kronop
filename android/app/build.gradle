@@ -184,12 +184,13 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    implementation "androidx.lifecycle:lifecycle-common-java8:2.6.2"
 
     // Reanimated और Worklets के लिए C++ shared library linking
     implementation("com.facebook.react:hermes-android")
     implementation("androidx.appcompat:appcompat:1.6.1")
 
-    // Native libraries crash से बचाने के लिए
+    // Native libraries crash 
     implementation("com.facebook.soloader:soloader:0.12.0")
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
