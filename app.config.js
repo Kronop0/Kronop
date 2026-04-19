@@ -155,9 +155,6 @@ const appJson = {
       "expo-dev-client"
     ],
     extra: {
-      eas: {
-        projectId: "61a99a9f-ea90-4fa5-aaec-132e2d8bb76c"
-      }
     }
   }
 };
