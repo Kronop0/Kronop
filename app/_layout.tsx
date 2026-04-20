@@ -239,18 +239,21 @@ import { walletConnect, coinbaseWallet } from 'wagmi/connectors';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
 
+const walletConnectProjectId = process.env.EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID ?? '';
+const wagmiConnectors = [
+  ...(walletConnectProjectId
+    ? [walletConnect({ projectId: walletConnectProjectId })]
+    : []),
+  coinbaseWallet({
+    appName: 'KRONOP',
+    appLogoUrl: 'https://example.com/logo.png',
+  }),
+];
+
 // Create wagmi config
 const config = createConfig({
   chains: [mainnet, polygon, arbitrum],
-  connectors: [
-    walletConnect({ 
-      projectId: 'your-project-id', // Replace with your WalletConnect project ID
-    }),
-    coinbaseWallet({
-      appName: 'KRONOP',
-      appLogoUrl: 'https://example.com/logo.png', // Replace with your app logo
-    }),
-  ],
+  connectors: wagmiConnectors,
   ssr: false,
   transports: {
     [mainnet.id]: http(),

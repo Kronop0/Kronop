@@ -16,6 +16,7 @@
     "development": {
       "extends": "base",
       "developmentClient": true,
+      "channel": "development",
       "distribution": "internal",
       "android": {
         "buildType": "apk",
@@ -29,6 +30,7 @@
     },
     "preview": {
       "extends": "base",
+      "channel": "preview",
       "android": {
         "buildType": "apk",
         "env": {
