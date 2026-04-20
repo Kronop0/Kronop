@@ -21,6 +21,9 @@ const appJson = {
       favicon: "./assets/favicon.png"
     },
     extra: {
+      eas: {
+        projectId: "6e4f88ba-5a75-4cf2-9e58-5d67b5eec08f"
+      }
     }
   }
 };
