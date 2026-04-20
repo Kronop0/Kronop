@@ -14,10 +14,7 @@ config.resolver.blockList = [
 
 // Add crypto polyfill support
 config.resolver.alias = {
-  crypto: 'react-native-crypto',
-  stream: 'react-native-stream',
   buffer: '@craftzdog/react-native-buffer',
-  randombytes: 'react-native-randombytes',
   '@': require('path').resolve(__dirname),
   '@/components': require('path').resolve(__dirname, 'components'),
   '@/app': require('path').resolve(__dirname, 'app'),

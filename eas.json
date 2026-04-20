@@ -15,7 +15,7 @@
     },
     "development": {
       "extends": "base",
-      "developmentClient": true,
+      "developmentClient": false,
       "channel": "development",
       "distribution": "internal",
       "android": {
